@@ -1,26 +1,14 @@
-import React, { useMemo, useState } from "react";
+const { useState } = React;
 
-/**
- * IYO Smart Pantry – UI Prototype (React + Tailwind)
- * Screens included:
- *  - Register
- *  - Login
- *  - Verification (2FA during registration)
- *  - Account Settings (tabs: Setting / My Details / Reset Password)
- *  - My Details inline edit modal
- *
- * Notes
- *  - Pure Tailwind for styling; no external UI lib needed.
- *  - Demo mode simulates API responses. Flip demoMode=false and set endpoints
- *    to wire up your real PHP endpoints from the previous message.
- */
+// IYO Smart Pantry – UI Prototype (React + Tailwind, plain JS)
+// Screens: Register, Login, Verify, Account Settings (Setting/My Details/Reset Password)
+// This is pure JSX (no TypeScript). Works with Vite (React) or with Babel Standalone.
 
-export default function SmartPantryUI() {
+function SmartPantryUI() {
   const [route, setRoute] = useState("register"); // 'register' | 'login' | 'verify' | 'acct:setting' | 'acct:details' | 'acct:reset'
-  const [banner, setBanner] = useState(null as null | { kind: "ok" | "err"; msg: string });
+  const [banner, setBanner] = useState(null);
 
-  // --- global theme helpers ---
-  const Frame: React.FC<{ children: React.ReactNode }> = ({ children }) => (
+  const Frame = ({ children }) => (
     <div className="min-h-screen bg-[#f6f5ea] text-[#1f2a24]">
       <div className="mx-auto max-w-[1150px] px-5 py-5">{children}</div>
     </div>
@@ -55,9 +43,9 @@ export default function SmartPantryUI() {
 }
 
 // ---------------------------------------------------------
-// Brand Header (shared)
+// Brand Header
 // ---------------------------------------------------------
-const Brand: React.FC<{ right?: React.ReactNode }>=({ right })=>{
+const Brand = ({ right }) => {
   return (
     <div className="mb-6 flex items-center justify-between">
       <div className="flex items-center gap-3">
@@ -72,24 +60,16 @@ const Brand: React.FC<{ right?: React.ReactNode }>=({ right })=>{
       <div>{right}</div>
     </div>
   );
-}
+};
 
 // ---------------------------------------------------------
 // Reusable bits
 // ---------------------------------------------------------
-const Exclaim: React.FC = () => (
+const Exclaim = () => (
   <span className="inline-grid h-6 w-6 place-items-center rounded-full bg-red-100 text-[13px] font-bold text-red-600">!</span>
 );
 
-const InputRow: React.FC<{
-  label: string;
-  type?: string;
-  value: string;
-  setValue: (v: string) => void;
-  placeholder?: string;
-  invalid?: boolean;
-  rightSlot?: React.ReactNode;
-}> = ({ label, type = "text", value, setValue, placeholder, invalid, rightSlot }) => (
+const InputRow = ({ label, type = "text", value, setValue, placeholder, invalid, rightSlot }) => (
   <label className="mb-5 block">
     <div className="mb-1 pl-1 text-sm tracking-wide text-[#1f2a24]">{label}</div>
     <div className="flex items-center gap-3 border-b border-[#1f2a24]/50 pb-2">
@@ -105,7 +85,7 @@ const InputRow: React.FC<{
   </label>
 );
 
-const PrimaryBtn: React.FC<React.ButtonHTMLAttributes<HTMLButtonElement>> = ({ children, className = "", ...props }) => (
+const PrimaryBtn = ({ children, className = "", ...props }) => (
   <button
     {...props}
     className={`rounded-xl bg-[#a9bf98] px-8 py-3 font-semibold tracking-wide text-[#243324] shadow hover:bg-[#9db58d] active:translate-y-[1px] ${className}`}
@@ -114,7 +94,7 @@ const PrimaryBtn: React.FC<React.ButtonHTMLAttributes<HTMLButtonElement>> = ({ c
   </button>
 );
 
-const SecondaryBtn: React.FC<React.ButtonHTMLAttributes<HTMLButtonElement>> = ({ children, className = "", ...props }) => (
+const SecondaryBtn = ({ children, className = "", ...props }) => (
   <button
     {...props}
     className={`rounded-xl bg-white px-6 py-2 font-semibold text-[#243324] shadow ring-1 ring-black/5 hover:bg-neutral-50 ${className}`}
@@ -123,7 +103,7 @@ const SecondaryBtn: React.FC<React.ButtonHTMLAttributes<HTMLButtonElement>> = ({
   </button>
 );
 
-const Toggle: React.FC<{ checked: boolean; onChange: (v:boolean)=>void }> = ({ checked, onChange }) => (
+const Toggle = ({ checked, onChange }) => (
   <button
     onClick={() => onChange(!checked)}
     className={`relative h-7 w-12 rounded-full transition-colors ${checked ? "bg-[#7ea36b]" : "bg-neutral-300"}`}
@@ -133,7 +113,7 @@ const Toggle: React.FC<{ checked: boolean; onChange: (v:boolean)=>void }> = ({ c
   </button>
 );
 
-const Stepper: React.FC<{ value:number; setValue:(n:number)=>void }> = ({ value, setValue }) => (
+const Stepper = ({ value, setValue }) => (
   <div className="inline-flex items-center gap-2">
     <button className="grid h-8 w-8 place-items-center rounded bg-white shadow ring-1 ring-black/5" onClick={()=>setValue(Math.max(1, value-1))}>-</button>
     <span className="inline-block w-6 text-center">{value}</span>
@@ -141,10 +121,10 @@ const Stepper: React.FC<{ value:number; setValue:(n:number)=>void }> = ({ value,
   </div>
 );
 
-const CheckRow: React.FC<{ title: string; checked:boolean; setChecked:(b:boolean)=>void; icon?: React.ReactNode; helper?:string }> = ({ title, checked, setChecked, icon, helper }) => (
+const CheckRow = ({ title, checked, setChecked, icon, helper }) => (
   <div className="flex items-center justify-between border-b py-5">
     <div className="flex items-center gap-3">
-      <div className="text-xl opacity-70">{icon ?? "🧩"}</div>
+      <div className="text-xl opacity-70">{icon || "🧩"}</div>
       <div>
         <div className="font-medium">{title}</div>
         {helper && <div className="text-sm text-black/50">{helper}</div>}
@@ -157,7 +137,7 @@ const CheckRow: React.FC<{ title: string; checked:boolean; setChecked:(b:boolean
 // ---------------------------------------------------------
 //  Register
 // ---------------------------------------------------------
-function RegisterPage({ goLogin, goVerify, setBanner }:{ goLogin:()=>void; goVerify:()=>void; setBanner:(v:any)=>void }) {
+function RegisterPage({ goLogin, goVerify, setBanner }) {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [pwd, setPwd] = useState("");
@@ -184,7 +164,7 @@ function RegisterPage({ goLogin, goVerify, setBanner }:{ goLogin:()=>void; goVer
       <Brand right={<PrimaryBtn onClick={goLogin}>Login</PrimaryBtn>} />
 
       <div className="grid grid-cols-1 gap-8 rounded-2xl border border-[#7ea36b] bg-[#f6f5ea] p-6 shadow md:grid-cols-2">
-        {/* Left hero with curved mask */}
+        {/* Left hero */}
         <div className="relative hidden overflow-hidden rounded-[48px] bg-[#e8efdE] md:block">
           <img src={heroImg} alt="garden" className="h-full w-full object-cover"/>
           <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-black/20 to-transparent"/>
@@ -223,7 +203,7 @@ function RegisterPage({ goLogin, goVerify, setBanner }:{ goLogin:()=>void; goVer
 // ---------------------------------------------------------
 //  Login
 // ---------------------------------------------------------
-function LoginPage({ goRegister, onLoggedIn, setBanner }:{ goRegister:()=>void; onLoggedIn:()=>void; setBanner:(v:any)=>void }) {
+function LoginPage({ goRegister, onLoggedIn, setBanner }) {
   const [email, setEmail] = useState("");
   const [pwd, setPwd] = useState("");
   const invalid = {
@@ -275,7 +255,7 @@ function LoginPage({ goRegister, onLoggedIn, setBanner }:{ goRegister:()=>void; 
 // ---------------------------------------------------------
 //  Verify (Two-Factor during registration)
 // ---------------------------------------------------------
-function VerifyPage({ goLogin, setBanner }:{ goLogin:()=>void; setBanner:(v:any)=>void }){
+function VerifyPage({ goLogin, setBanner }){
   const [code, setCode] = useState("");
   const [pwd, setPwd] = useState("");
 
@@ -314,7 +294,7 @@ function VerifyPage({ goLogin, setBanner }:{ goLogin:()=>void; setBanner:(v:any)
 // ---------------------------------------------------------
 //  Account Shell (top bar + tabs)
 // ---------------------------------------------------------
-function AccountShell({ route, setRoute, setBanner }:{ route:string; setRoute:(r:string)=>void; setBanner:(v:any)=>void }){
+function AccountShell({ route, setRoute, setBanner }){
   const [openEdit, setOpenEdit] = useState(false);
 
   return (
@@ -349,7 +329,7 @@ const TopIcons = () => (
   </div>
 );
 
-const SideTab: React.FC<{ label:string; active:boolean; onClick:()=>void }>=({ label, active, onClick })=>{
+const SideTab = ({ label, active, onClick })=>{
   return (
     <button
       onClick={onClick}
@@ -360,10 +340,10 @@ const SideTab: React.FC<{ label:string; active:boolean; onClick:()=>void }>=({ l
       {label}
     </button>
   );
-}
+};
 
 // ---- Setting Tab ----
-function SettingTab({ setBanner }:{ setBanner:(v:any)=>void }){
+function SettingTab({ setBanner }){
   const [twoFA, setTwoFA] = useState(true);
   const [visible, setVisible] = useState(false);
   const [notif, setNotif] = useState(true);
@@ -391,7 +371,7 @@ function SettingTab({ setBanner }:{ setBanner:(v:any)=>void }){
 }
 
 // ---- Details Tab ----
-function DetailsTab({ onEdit }:{ onEdit:()=>void }){
+function DetailsTab({ onEdit }){
   const [name, setName] = useState("Kuan Zhen Qing");
   const [hh, setHh] = useState(2);
   const [email, setEmail] = useState("kuanzhenqing@gmail.com");
@@ -435,7 +415,7 @@ function DetailsTab({ onEdit }:{ onEdit:()=>void }){
 }
 
 // ---- Reset Password Tab ----
-function ResetTab({ setBanner }:{ setBanner:(v:any)=>void }){
+function ResetTab({ setBanner }){
   const [cur, setCur] = useState("");
   const [pwd, setPwd] = useState("");
   const [cfm, setCfm] = useState("");
@@ -470,7 +450,7 @@ function ResetTab({ setBanner }:{ setBanner:(v:any)=>void }){
 }
 
 // ---- Edit Modal ----
-const EditModal: React.FC<{ onClose:()=>void }> = ({ onClose }) => {
+const EditModal = ({ onClose }) => {
   const [name, setName] = useState("Kuan Zhen Qing");
   const [hh, setHh] = useState(2);
   const [email, setEmail] = useState("kuanzhenqing@gmail.com");
@@ -506,3 +486,7 @@ const EditModal: React.FC<{ onClose:()=>void }> = ({ onClose }) => {
     </div>
   );
 };
+
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(<SmartPantryUI />);
+
