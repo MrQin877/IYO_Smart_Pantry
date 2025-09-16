@@ -1,4 +1,5 @@
 
+
 const {useState, useEffect} = React;
 
 // ---- API helpers (talk to PHP on same host) ----
@@ -13,10 +14,12 @@ async function postJSON(path, data){
   });
   return res.json();
 }
+
 async function getJSON(path){
   const res = await fetch(`${API_BASE}/${path}`, { credentials:"include" });
   return res.json();
 }
+
 function saveRegisterEmail(email){ localStorage.setItem("registerEmail", email); }
 function getRegisterEmail(){ return localStorage.getItem("registerEmail") || ""; }
 function saveUserID(id){ localStorage.setItem("userID", id); }
