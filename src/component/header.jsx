@@ -1,5 +1,6 @@
 import React from "react";
 import { NavLink, Link } from "react-router-dom";
+import "./header.css";
 
 export default function HeaderNav() {
   return (
@@ -30,8 +31,8 @@ export default function HeaderNav() {
         </div>
       </div>
     </header>
-  );
-}
+  )
+  };
 
 function NavItem({ to, children }) {
   return (
