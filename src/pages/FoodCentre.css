@@ -1,0 +1,124 @@
+:root {
+  --green: #7ea36b;
+  --ink: #1f2a24;
+  --paper: #f6f5ea;
+  --olive-100: #eae8d5;
+  --olive-300: #d8d3b6;
+
+  --shadow: 0 10px 24px rgba(0,0,0,.08);
+  --radius-xl: 18px;
+  --radius-2xl: 26px;
+}
+
+* { box-sizing: border-box; }
+body, #root { background: var(--olive-700); }
+
+.screen { min-height: 100vh; background: var(--olive-700); }
+.container { max-width: 980px; margin: 0 auto; padding: 24px; }
+
+.page-title {
+  color: #fff; font-weight: 600; margin: 8px 0 18px;
+}
+
+/* ===== header (white rounded card) ===== */
+.nav-wrap {
+  position: sticky; top: 0; z-index: 20;
+  padding: 22px 24px 0;
+  background: var(--olive-700);
+}
+.nav-inner {
+  background: #fff;
+  border-radius: var(--radius-2xl);
+  box-shadow: var(--shadow);
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 16px;
+  padding: 14px 20px;
+}
+.brand { display: flex; align-items: center; gap: 10px; text-decoration: none; }
+.brand-logo { width: 48px; height: 48px; object-fit: contain; }
+.brand-text { display: grid; line-height: 1.05; color: var(--ink); }
+.brand-line1 { letter-spacing: .3em; font-size: 12px; }
+.brand-line2 { font-weight: 700; font-size: 14px; }
+
+.nav-links { display: flex; gap: 26px; justify-content: center; }
+.nav-link {
+  color: var(--ink); text-decoration: none; font-weight: 500; opacity: .85;
+}
+.nav-link.active, .nav-link:hover { opacity: 1; text-decoration: underline; text-underline-offset: 6px; }
+
+.nav-actions { display: flex; gap: 8px; }
+.icon-btn {
+  background: #f4f4f4; border: none; border-radius: 999px;
+  width: 36px; height: 36px; display: grid; place-items: center;
+  cursor: pointer;
+}
+.icon-btn:hover { background: #eee; }
+
+/* ===== tabs ===== */
+.tabs {
+  display: flex; gap: 0; margin: 18px auto 14px; width: 460px; background: #fff;
+  border-radius: 999px; box-shadow: var(--shadow); overflow: hidden;
+}
+.tab {
+  flex: 1; padding: 12px 18px; border: 0; background: #f3f3f3; cursor: pointer; font-weight: 600;
+}
+.tab.active { background: var(--green); color: #fff; }
+
+/* ===== card ===== */
+.card {
+  background: #fff; border-radius: var(--radius-xl); box-shadow: var(--shadow);
+  padding: 18px; margin: 0 auto; max-width: 980px;
+}
+.card-head { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
+.spacer { flex: 1; }
+
+.btn {
+  border-radius: 12px; padding: 10px 16px; font-weight: 600; cursor: pointer; border: 1px solid #ddd;
+}
+.btn.solid { background: var(--green); border-color: var(--green); color: #fff; }
+.btn.ghost { background: #f0f0f0; }
+.btn:disabled { opacity: .6; cursor: not-allowed; }
+
+.filter-icon {
+  display: inline-block; width: 0; height: 0; margin-right: 8px;
+  border-left: 6px solid transparent; border-right: 6px solid transparent; border-top: 8px solid var(--ink);
+  transform: translateY(2px);
+}
+
+/* ===== table ===== */
+.table-wrap { overflow: auto; border-radius: 14px; }
+.table { width: 100%; border-collapse: collapse; }
+.table thead th {
+  font-weight: 700; text-align: left; padding: 14px 14px; background: var(--olive-100); color: var(--ink);
+  white-space: nowrap;
+}
+.table tbody td { padding: 16px 14px; border-top: 1px solid #eee; color: var(--ink); }
+.center { text-align: center; }
+
+.th-btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: transparent; border: 0; cursor: pointer; color: inherit; font: inherit;
+}
+.th-dir { opacity: .6; }
+
+.pill {
+  display: inline-block; padding: 6px 12px; border-radius: 999px; font-size: 12px; font-weight: 700;
+  background: #e6efe2; color: #3a5c2f; border: 1px solid #cfe0cc;
+}
+.pill.danger { background: #f2d7d7; color: #8f3a3a; border-color: #e7bcbc; }
+
+.row-actions { display: flex; gap: 6px; align-items: center; justify-content: flex-end; }
+.actions-col { width: 100px; }
+
+/* ===== pager ===== */
+.pager {
+  display: flex; align-items: center; justify-content: center; gap: 14px;
+  padding: 18px 0 4px;
+}
+.pager-btn {
+  width: 36px; height: 36px; border-radius: 10px; border: 1px solid #ddd; background: #f7f7f7; cursor: pointer;
+}
+.pager-btn:disabled { opacity: .5; cursor: not-allowed; }
+.pager-text { color: var(--ink); font-weight: 600; }

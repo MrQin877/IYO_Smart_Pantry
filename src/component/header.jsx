@@ -8,11 +8,7 @@ export default function HeaderNav() {
       <div className="nav-pill">
         {/* logo + wordmark */}
         <Link to="/" className="brand" aria-label="IYO Smart Pantry – Home">
-          <span className="logo">🥬</span>
-          <span className="wordmark">
-            <span className="line1">I&nbsp; Smart</span>
-            <span className="line2">Pantry</span>
-          </span>
+          <img className="logo" src="/logo.svg" alt='IYO Logo' />
         </Link>
 
         {/* centered navigation */}
