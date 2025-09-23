@@ -1,5 +1,4 @@
 :root{
-  --paper:#F4F1DD;   /* page bg like your mock */
   --ink:#1f2a24;
   --green:#7ea36b;
   --pill:#ffffff;    /* header pill */
@@ -35,13 +34,8 @@
 }
 
 .logo{
-  width:56px;height:56px;
+  width:215px;height:70px;
   display:grid;place-items:center;
-  border-radius:999px;
-  background: var(--green);
-  color:#fff;
-  font-size:26px;
-  line-height:1;
   box-shadow: inset 0 0 0 2px rgba(255,255,255,.25);
 }
 
