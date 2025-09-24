@@ -1,6 +1,9 @@
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
 import { useMemo, useState } from "react";
 =======
+=======
+>>>>>>> Stashed changes
 import { useMemo, useState, useEffect } from "react";
 import { NavLink, Outlet } from "react-router-dom";
 >>>>>>> Stashed changes
@@ -105,6 +108,9 @@ function MyFoodSection({ initialRows = [] }) {
       {/* toolbar: Add left, Filter right */}
       <div className="toolbar">
         <button className="btn btn-green" onClick={() => setOpenAdd(true)}>+ Add Item</button>
+<<<<<<< Updated upstream
+>>>>>>> Stashed changes
+=======
 >>>>>>> Stashed changes
         <div className="spacer" />
         <button className="btn ghost" aria-label="Filter">
@@ -171,6 +177,9 @@ function MyFoodSection({ initialRows = [] }) {
       <Pager page={page} pageCount={pageCount} setPage={setPage} />
             {/* The modal */}
       <AddFoodModal open={openAdd} onClose={() => setOpenAdd(false)} onSave={handleAdd} />
+<<<<<<< Updated upstream
+>>>>>>> Stashed changes
+=======
 >>>>>>> Stashed changes
     </>
   );
@@ -240,8 +249,11 @@ function MyDonationSection({ initialRows = [], onAdd, onFilter }) {
 }
 
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
 /* --- shared util --- */
 =======
+=======
+>>>>>>> Stashed changes
 /* ------------------ Add Food Modal ------------------ */
 function AddFoodModal({ open, onClose, onSave }) {
   const [f, setF] = useState({
