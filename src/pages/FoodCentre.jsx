@@ -1,4 +1,5 @@
-import { useMemo, useState } from "react";
+
+import { useMemo, useState, useEffect } from "react";
 import { NavLink, Outlet } from "react-router-dom";
 import "./FoodCentre.css";
 
@@ -46,6 +47,7 @@ export function MyFoodSection({ initialRows = seedFoods }) {
   const [rows] = useState(initialRows);
   const [sort, setSort] = useState({ key: "name", dir: "asc" });
   const [page, setPage] = useState(1);
+  const [openAdd, setOpenAdd] = useState(false);
   const pageSize = 5;
 
   const sorted = useMemo(() => {
@@ -72,11 +74,30 @@ export function MyFoodSection({ initialRows = seedFoods }) {
   const toggleSort = (key) =>
     setSort((s) => (s.key === key ? { key, dir: s.dir === "asc" ? "desc" : "asc" } : { key, dir: "asc" }));
 
+  function handleAdd(newItem) {
+    setRows((prev) => {
+      const next = [
+        ...prev,
+        {
+          ...newItem,
+          id: (prev.at(-1)?.id || 0) + 1,
+          status: new Date(newItem.expiry) < new Date() ? "Expired" : "Available",
+        },
+      ];
+      return next;
+    });
+    setOpenAdd(false);
+    // jump to last page after adding:
+    setPage((p) => Math.max(p, Math.ceil((rows.length + 1) / pageSize)));
+  }
+  
   return (
     <>
       {/* toolbar: Add left, Filter right */}
       <div className="toolbar">
-        <button className="btn btn-green">+ Add Item</button>
+
+        <button className="btn btn-green" onClick={() => setOpenAdd(true)}>+ Add Item</button>
+
         <div className="spacer" />
         <button className="btn btn-filter">
           <span className="i-filter" />
@@ -122,6 +143,10 @@ export function MyFoodSection({ initialRows = seedFoods }) {
       </div>
 
       <Pager page={page} pageCount={pageCount} setPage={setPage} />
+
+            {/* The modal */}
+      <AddFoodModal open={openAdd} onClose={() => setOpenAdd(false)} onSave={handleAdd} />
+
     </>
   );
 }
@@ -187,6 +212,98 @@ export function MyDonationSection({ initialRows = seedDonations }) {
   );
 }
 
+
+/* ------------------ Add Food Modal ------------------ */
+function AddFoodModal({ open, onClose, onSave }) {
+  const [f, setF] = useState({
+    name: "", qty: 1, unit: "ps", category: "Grains",
+    expiry: "", location: "", remark: ""
+  });
+
+  useEffect(() => {
+    const onKey = (e) => e.key === "Escape" && onClose();
+    if (open) document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [open, onClose]);
+
+  if (!open) return null;
+
+  const canSave = f.name.trim() && f.expiry;
+  const save = () => {
+    if (!canSave) return;
+    onSave(f);
+  };
+  const step = (delta) =>
+    setF((s) => ({ ...s, qty: Math.max(1, s.qty + delta) }));
+
+  return (
+    <div className="modal" onClick={onClose}>
+      <div className="panel" onClick={(e) => e.stopPropagation()}>
+        <button className="close" onClick={onClose}>✕</button>
+        <h3 className="modal-title">Add Food</h3>
+
+        <div className="form-grid">
+          <div className="form-row">
+            <label>Item name</label>
+            <input className="input" placeholder="Eg.(Egg)" value={f.name}
+                   onChange={(e) => setF({ ...f, name: e.target.value })} />
+          </div>
+
+          <div className="form-row">
+            <label>Category</label>
+            <select className="input" value={f.category}
+                    onChange={(e) => setF({ ...f, category: e.target.value })}>
+              <option>Grains</option><option>Protein</option>
+              <option>Vegetables</option><option>Fruits</option>
+              <option>Dairy</option><option>Other</option>
+            </select>
+          </div>
+
+          <div className="form-row">
+            <label>Quantity</label>
+            <div className="qty-row">
+              <button className="step" onClick={() => step(-1)}>-</button>
+              <span className="qty-num">{f.qty}</span>
+              <button className="step" onClick={() => step(1)}>+</button>
+              <select className="input unit" value={f.unit}
+                      onChange={(e) => setF({ ...f, unit: e.target.value })}>
+                <option value="ps">ps</option>
+                <option value="kg">kg</option>
+                <option value="g">g</option>
+                <option value="L">L</option>
+                <option value="ml">ml</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="form-row">
+            <label>Expiry date</label>
+            <input type="date" className="input" value={f.expiry}
+                   onChange={(e) => setF({ ...f, expiry: e.target.value })} />
+          </div>
+
+          <div className="form-row">
+            <label>Storage Location</label>
+            <input className="input" placeholder="Optional"
+                   value={f.location} onChange={(e) => setF({ ...f, location: e.target.value })} />
+          </div>
+
+          <div className="form-row">
+            <label>Remark</label>
+            <input className="input" placeholder="Optional"
+                   value={f.remark} onChange={(e) => setF({ ...f, remark: e.target.value })} />
+          </div>
+        </div>
+
+        <div className="modal-actions">
+          <button className="btn secondary" onClick={onClose}>Cancel</button>
+          <button className="btn primary" disabled={!canSave} onClick={save}>Save</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /* ---------- shared bits ---------- */
 function Th({ label, k, sort, onSort, center }) {
   const dir = sort.key === k ? (sort.dir === "asc" ? "↑" : "↓") : "↕";
@@ -201,6 +318,22 @@ function Th({ label, k, sort, onSort, center }) {
 
 function Pager({ page, pageCount, setPage }) {
   return (
+=======
+/* ---------- shared bits ---------- */
+function Th({ label, k, sort, onSort, center }) {
+  const dir = sort.key === k ? (sort.dir === "asc" ? "↑" : "↓") : "↕";
+  return (
+    <th className={center ? "center" : ""}>
+      <button className="th-btn" onClick={() => onSort(k)} aria-label={`Sort by ${label}`}>
+        {label} <span className="th-dir">{dir}</span>
+      </button>
+    </th>
+  );
+}
+
+function Pager({ page, pageCount, setPage }) {
+  return (
+
     <div className="pager">
       <button
         className="pager-btn"
