@@ -318,21 +318,6 @@ function Th({ label, k, sort, onSort, center }) {
 
 function Pager({ page, pageCount, setPage }) {
   return (
-=======
-/* ---------- shared bits ---------- */
-function Th({ label, k, sort, onSort, center }) {
-  const dir = sort.key === k ? (sort.dir === "asc" ? "↑" : "↓") : "↕";
-  return (
-    <th className={center ? "center" : ""}>
-      <button className="th-btn" onClick={() => onSort(k)} aria-label={`Sort by ${label}`}>
-        {label} <span className="th-dir">{dir}</span>
-      </button>
-    </th>
-  );
-}
-
-function Pager({ page, pageCount, setPage }) {
-  return (
 
     <div className="pager">
       <button
