@@ -1,46 +1,48 @@
 import { useMemo, useState } from "react";
+import { NavLink, Outlet } from "react-router-dom";
 import "./FoodCentre.css";
 
-/* --- seed demo data --- */
-const seedFoods = [
-  { id: 1, name: "Egg",    category: "Protein",    qty: 1, unit: "pcs", expiry: "2025-10-20", status: "Available" },
-  { id: 2, name: "Rice",   category: "Grains",     qty: 1, unit: "pcs", expiry: "2025-10-03", status: "Expired"   },
-  { id: 3, name: "Tomato", category: "Vegetables", qty: 1, unit: "pcs", expiry: "2025-11-06", status: "Available" },
-  { id: 4, name: "Potato", category: "Vegetables", qty: 1, unit: "pcs", expiry: "2025-09-20", status: "Available" },
-  { id: 5, name: "Elain Liow", category: "Bone",   qty: 1, unit: "pcs", expiry: "8520-14-13", status: "Available" },
-];
-
-const seedDonations = [
-  { id: "d1", name: "Egg", category: "Protein",    qty: 2, expiry: "2025-10-20", pickup: "Jalan…..", slot: "02/10/2025, 11:47 am -12:47 pm" },
-  { id: "d2", name: "Egg", category: "Grains",     qty: 2, expiry: "2025-10-03", pickup: "Jalan…..", slot: "02/10/2025, 11:47 am -12:47 pm" },
-  { id: "d3", name: "Egg", category: "Vegetables", qty: 2, expiry: "2025-11-06", pickup: "Jalan…..", slot: "02/10/2025, 11:47 am -12:47 pm" },
-];
-
-/* --- Page shell --- */
-export default function FoodCenter() {
-  const [tab, setTab] = useState("my"); // 'my' | 'donation'
-
+/* ---------- Page shell with segmented tabs ---------- */
+export default function FoodCentre() {
   return (
     <section className="fc">
-      <h1 className="page-title">Food Center</h1>
-
       <div className="card">
-        <Tabs active={tab} onChange={setTab} />
+        {/* Segmented control */}
+        <div className="seg">
+          <NavLink
+            end
+            to="."
+            className={({ isActive }) => "seg__btn" + (isActive ? " is-active" : "")}
+          >
+            My Food
+          </NavLink>
+          <NavLink
+            to="donation"
+            className={({ isActive }) => "seg__btn" + (isActive ? " is-active" : "")}
+          >
+            Donation
+          </NavLink>
+        </div>
 
-        {tab === "my" ? (
-          <MyFoodSection initialRows={seedFoods} />
-        ) : (
-          <MyDonationSection initialRows={seedDonations} />
-        )}
+        {/* Tab content renders here */}
+        <Outlet />
       </div>
     </section>
   );
 }
 
 /* =======================================================
-   Section: MyFood
+   Section: My Food
    ======================================================= */
-function MyFoodSection({ initialRows = [] }) {
+const seedFoods = [
+  { id: 1, name: "Egg",    category: "Protein",    qty: 1, unit: "ps", expiry: "2025-10-20", status: "Available" },
+  { id: 2, name: "Rice",   category: "Grains",     qty: 1, unit: "ps", expiry: "2025-10-03", status: "Expired"   },
+  { id: 3, name: "Tomato", category: "Vegetables", qty: 1, unit: "ps", expiry: "2025-11-06", status: "Available" },
+  { id: 4, name: "Potato", category: "Vegetables", qty: 1, unit: "ps", expiry: "2025-09-20", status: "Available" },
+  { id: 5, name: "Elain Liow", category: "Bone",   qty: 1, unit: "ps", expiry: "8520-14-13", status: "Available" },
+];
+
+export function MyFoodSection({ initialRows = seedFoods }) {
   const [rows] = useState(initialRows);
   const [sort, setSort] = useState({ key: "name", dir: "asc" });
   const [page, setPage] = useState(1);
@@ -67,19 +69,18 @@ function MyFoodSection({ initialRows = [] }) {
   const pageCount = Math.max(1, Math.ceil(sorted.length / pageSize));
   const view = sorted.slice((page - 1) * pageSize, page * pageSize);
 
-  function toggleSort(key) {
-    setSort((s) =>
-      s.key === key ? { key, dir: s.dir === "asc" ? "desc" : "asc" } : { key, dir: "asc" }
-    );
-  }
+  const toggleSort = (key) =>
+    setSort((s) => (s.key === key ? { key, dir: s.dir === "asc" ? "desc" : "asc" } : { key, dir: "asc" }));
 
   return (
     <>
-      <div className="card-head">
-        <button className="btn solid">+ Add Item</button>
+      {/* toolbar: Add left, Filter right */}
+      <div className="toolbar">
+        <button className="btn btn-green">+ Add Item</button>
         <div className="spacer" />
-        <button className="btn ghost" aria-label="Filter">
-          <span className="filter-icon" /> Filter
+        <button className="btn btn-filter">
+          <span className="i-filter" />
+          Filter
         </button>
       </div>
 
@@ -120,54 +121,36 @@ function MyFoodSection({ initialRows = [] }) {
         </table>
       </div>
 
-      <div className="pager">
-        <button
-          className="pager-btn"
-          disabled={page === 1}
-          onClick={() => setPage((p) => Math.max(1, p - 1))}
-        >
-          &lt;
-        </button>
-        <span className="pager-text">{page} / {pageCount} Page</span>
-        <button
-          className="pager-btn"
-          disabled={page === pageCount}
-          onClick={() => setPage((p) => Math.min(pageCount, p + 1))}
-        >
-          &gt;
-        </button>
-      </div>
+      <Pager page={page} pageCount={pageCount} setPage={setPage} />
     </>
   );
 }
 
-function Th({ label, k, sort, onSort, center }) {
-  const dir = sort.key === k ? (sort.dir === "asc" ? "↑" : "↓") : "↕";
-  return (
-    <th className={center ? "center" : ""}>
-      <button className="th-btn" onClick={() => onSort(k)} aria-label={`Sort by ${label}`}>
-        {label} <span className="th-dir">{dir}</span>
-      </button>
-    </th>
-  );
-}
-
 /* =======================================================
-   Section: MyDonation
+   Section: Donation (My Donation list)
    ======================================================= */
-function MyDonationSection({ initialRows = [], onAdd, onFilter }) {
+const seedDonations = [
+  { id: "d1", name: "Egg", category: "Protein",    qty: 2, expiry: "2025-10-20", pickup: "Jalan…..", slot: "02/10/2025, 11:47 am -12:47 pm" },
+  { id: "d2", name: "Egg", category: "Grains",     qty: 2, expiry: "2025-10-03", pickup: "Jalan…..", slot: "02/10/2025, 11:47 am -12:47 pm" },
+  { id: "d3", name: "Egg", category: "Vegetables", qty: 2, expiry: "2025-11-06", pickup: "Jalan…..", slot: "02/10/2025, 11:47 am -12:47 pm" },
+];
+
+export function MyDonationSection({ initialRows = seedDonations }) {
   const [rows] = useState(initialRows);
 
   return (
     <>
-      <div className="don-toolbar">
-        <button className="btn solid">+ Add Donation</button>   {/* left */}
-        <div className="spacer" />                               {/* pushes next to right */}
-        <button className="btn ghost"><span className="filter-icon" /> Filter</button>  {/* right */}
+      {/* toolbar: Add left, Filter right (same as MyFood) */}
+      <div className="toolbar">
+        <button className="btn btn-green">+ Add Donation</button>
+        <div className="spacer" />
+        <button className="btn btn-filter">
+          <span className="i-filter" />
+          Filter
+        </button>
       </div>
 
-
-      <div className="soft-panel">
+      <div className="table-soft">
         <div className="table-wrap">
           <table className="table">
             <thead>
@@ -204,29 +187,44 @@ function MyDonationSection({ initialRows = [], onAdd, onFilter }) {
   );
 }
 
-/* --- shared util --- */
+/* ---------- shared bits ---------- */
+function Th({ label, k, sort, onSort, center }) {
+  const dir = sort.key === k ? (sort.dir === "asc" ? "↑" : "↓") : "↕";
+  return (
+    <th className={center ? "center" : ""}>
+      <button className="th-btn" onClick={() => onSort(k)} aria-label={`Sort by ${label}`}>
+        {label} <span className="th-dir">{dir}</span>
+      </button>
+    </th>
+  );
+}
+
+function Pager({ page, pageCount, setPage }) {
+  return (
+    <div className="pager">
+      <button
+        className="pager-btn"
+        disabled={page === 1}
+        onClick={() => setPage((p) => Math.max(1, p - 1))}
+      >
+        &lt;
+      </button>
+      <span className="pager-text">
+        {page} / {pageCount} Page
+      </span>
+      <button
+        className="pager-btn"
+        disabled={page === pageCount}
+        onClick={() => setPage((p) => Math.min(pageCount, p + 1))}
+      >
+        &gt;
+      </button>
+    </div>
+  );
+}
+
 function formatDate(iso) {
   const d = new Date(iso);
   if (isNaN(d)) return iso;
   return d.toLocaleDateString("en-GB");
-}
-
-/* --- tabs --- */
-function Tabs({ active, onChange }) {
-  return (
-    <div className="tabs">
-      <button
-        className={`tab ${active === "my" ? "active" : ""}`}
-        onClick={() => onChange("my")}
-      >
-        My Food
-      </button>
-      <button
-        className={`tab ${active === "donation" ? "active" : ""}`}
-        onClick={() => onChange("donation")}
-      >
-        Donation
-      </button>
-    </div>
-  );
 }
