@@ -124,9 +124,6 @@ body, #root { background: var(--olive-700); }
 .pager-btn:disabled { opacity: .5; cursor: not-allowed; }
 .pager-text { color: var(--ink); font-weight: 600; }
 
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
 /* MyDonation toolbar + soft panel look */
 .don-toolbar { display:flex; align-items:center; gap:12px; margin:8px 0 12px; }
 .soft-panel{
@@ -150,11 +147,6 @@ body, #root { background: var(--olive-700); }
 
 /* subtle grey text for category cell */
 .subtle{ color:#0009; }
-=======
-=======
->>>>>>> Stashed changes
-=======
->>>>>>> Stashed changes
 
 /* ===== modal ===== */
 .modal{
@@ -213,10 +205,4 @@ body, #root { background: var(--olive-700); }
 
 /* (optional) softer table container for donation */
 .soft-panel{ background: #fff9e6; border-radius:16px; padding: 2px; }
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
->>>>>>> Stashed changes
-=======
->>>>>>> Stashed changes
-=======
->>>>>>> Stashed changes
+
