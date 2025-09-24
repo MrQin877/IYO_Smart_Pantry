@@ -1,7 +1,10 @@
 <<<<<<< Updated upstream
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
 import { useMemo, useState } from "react";
 =======
+=======
+>>>>>>> Stashed changes
 =======
 >>>>>>> Stashed changes
 import { useMemo, useState, useEffect } from "react";
@@ -109,6 +112,9 @@ function MyFoodSection({ initialRows = [] }) {
       <div className="toolbar">
         <button className="btn btn-green" onClick={() => setOpenAdd(true)}>+ Add Item</button>
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
+>>>>>>> Stashed changes
+=======
 >>>>>>> Stashed changes
 =======
 >>>>>>> Stashed changes
@@ -178,6 +184,9 @@ function MyFoodSection({ initialRows = [] }) {
             {/* The modal */}
       <AddFoodModal open={openAdd} onClose={() => setOpenAdd(false)} onSave={handleAdd} />
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
+>>>>>>> Stashed changes
+=======
 >>>>>>> Stashed changes
 =======
 >>>>>>> Stashed changes
@@ -250,8 +259,11 @@ function MyDonationSection({ initialRows = [], onAdd, onFilter }) {
 
 <<<<<<< Updated upstream
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
 /* --- shared util --- */
 =======
+=======
+>>>>>>> Stashed changes
 =======
 >>>>>>> Stashed changes
 /* ------------------ Add Food Modal ------------------ */
