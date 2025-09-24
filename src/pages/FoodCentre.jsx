@@ -1,3 +1,4 @@
+
 import { useMemo, useState, useEffect } from "react";
 import { NavLink, Outlet } from "react-router-dom";
 import "./FoodCentre.css";
@@ -94,7 +95,9 @@ export function MyFoodSection({ initialRows = seedFoods }) {
     <>
       {/* toolbar: Add left, Filter right */}
       <div className="toolbar">
+
         <button className="btn btn-green" onClick={() => setOpenAdd(true)}>+ Add Item</button>
+
         <div className="spacer" />
         <button className="btn btn-filter">
           <span className="i-filter" />
@@ -140,8 +143,10 @@ export function MyFoodSection({ initialRows = seedFoods }) {
       </div>
 
       <Pager page={page} pageCount={pageCount} setPage={setPage} />
+
             {/* The modal */}
       <AddFoodModal open={openAdd} onClose={() => setOpenAdd(false)} onSave={handleAdd} />
+
     </>
   );
 }
@@ -206,6 +211,7 @@ export function MyDonationSection({ initialRows = seedDonations }) {
     </>
   );
 }
+
 
 /* ------------------ Add Food Modal ------------------ */
 function AddFoodModal({ open, onClose, onSave }) {
@@ -312,6 +318,22 @@ function Th({ label, k, sort, onSort, center }) {
 
 function Pager({ page, pageCount, setPage }) {
   return (
+=======
+/* ---------- shared bits ---------- */
+function Th({ label, k, sort, onSort, center }) {
+  const dir = sort.key === k ? (sort.dir === "asc" ? "↑" : "↓") : "↕";
+  return (
+    <th className={center ? "center" : ""}>
+      <button className="th-btn" onClick={() => onSort(k)} aria-label={`Sort by ${label}`}>
+        {label} <span className="th-dir">{dir}</span>
+      </button>
+    </th>
+  );
+}
+
+function Pager({ page, pageCount, setPage }) {
+  return (
+
     <div className="pager">
       <button
         className="pager-btn"
