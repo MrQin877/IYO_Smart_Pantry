@@ -56,7 +56,6 @@ export default function MyDonation({ initialRows = seedDonations }) {
 }
 
 // inside MyDonation component
-const [rows, setRows] = useState(initialRows);
 
 async function handleDeleteDonation(id) {
   if (!window.confirm("Delete this donation?")) return;

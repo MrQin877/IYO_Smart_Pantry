@@ -98,7 +98,8 @@ export default function MyFood() {
                 <td className="row-actions">
                   <button className="icon-btn" title="View" onClick={() => setDetailItem(r)}>👁️</button>
                   <button className="icon-btn" title="Edit" onClick={() => setEditItem(r)}>✏️</button>
-                  <button className="icon-btn" title="Delete" onClick={() => handleDelete(r.id)}>🗑️</button>
+                  <button className="icon-btn" title="Delete" onClick={() => setRows(rows.filter(x=>x.id!==r.id))}>🗑️</button>
+                  {/*<button className="icon-btn" title="Delete" onClick={() => handleDelete(r.id)}>🗑️</button>*/}
                 </td>
               </tr>
             ))}
