@@ -1,10 +1,13 @@
+// src/main.jsx
 import React from "react";
 import ReactDOM from "react-dom/client";
-import { RouterProvider, createBrowserRouter, Navigate } from "react-router-dom";
+import { RouterProvider, createBrowserRouter } from "react-router-dom";
 import App from "./App.jsx";
 import Home from "./pages/Home.jsx";
+import FoodCentre from "./pages/FoodCentre.jsx";
+import MyFood from "./pages/MyFood.jsx";
+import MyDonation from "./pages/MyDonation.jsx";
 import Dashboard from "./pages/Dashboard.jsx";
-import FoodCentre, { MyFoodSection, MyDonationSection } from "./pages/FoodCentre.jsx";
 import "./main.css";
 
 const router = createBrowserRouter([
@@ -17,8 +20,8 @@ const router = createBrowserRouter([
         path: "food",
         element: <FoodCentre />,
         children: [
-          { index: true, element: <MyFoodSection /> },          // /food
-          { path: "donation", element: <MyDonationSection /> }, // /food/donation
+          { index: true, element: <MyFood /> },        // /food
+          { path: "donation", element: <MyDonation /> } // /food/donation
         ],
       },
       { path: "dashboard", element: <Dashboard /> },
