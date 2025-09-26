@@ -72,127 +72,23 @@ export default function MyFood() {
     setEditItem(null);
   }
 
-  const applyFilters = (type = "food") => {
-    let filtered;
+const applyFilters = (type = "food") => {
+  let source = type === "food" ? seedFoods : seedDonations; // use seed data or backend data later
+  let filtered = source.filter(r => {
+    if (filters.category && r.category !== filters.category) return false;
+    if (type === "food" && filters.status && r.status !== filters.status) return false;
+    if (filters.expiryFrom && new Date(r.expiry) < new Date(filters.expiryFrom)) return false;
+    if (filters.expiryTo && new Date(r.expiry) > new Date(filters.expiryTo)) return false;
+    if (type !== "food" && filters.pickupArea && !r.pickupArea?.toLowerCase().includes(filters.pickupArea.toLowerCase()))
+      return false;
+    return true;
+  });
 
-    if (type === "food") {
-      filtered = seedFoods.filter(r => {
-        if (filters.category && r.category !== filters.category) return false;
-        if (filters.status && r.status !== filters.status) return false;
-        if (filters.expiryFrom && new Date(r.expiry) < new Date(filters.expiryFrom)) return false;
-        if (filters.expiryTo && new Date(r.expiry) > new Date(filters.expiryTo)) return false;
-        return true;
-      });
-    } else {
-      // For donations: categories, expiry date, pickup area
-      filtered = seedDonations.filter(r => {
-        if (filters.category && r.category !== filters.category) return false;
-        if (filters.expiryFrom && new Date(r.expiry) < new Date(filters.expiryFrom)) return false;
-        if (filters.expiryTo && new Date(r.expiry) > new Date(filters.expiryTo)) return false;
-        if (filters.pickupArea && !r.pickupArea.toLowerCase().includes(filters.pickupArea.toLowerCase()))
-          return false;
-        return true;
-      });
-    }
+  setRows(filtered);
+  setFilterOpen(false);
+  setPage(1);
+};
 
-    setRows(filtered);
-
-    if (filtered.length === 0) {
-      alert("No items found. Please adjust your filters");
-    }
-
-    setFilterOpen(false);
-    setPage(1);
-  };
-
-
-  const FilterModal = ({ type = "food" }) => (
-    <div className="modal" onClick={() => setFilterOpen(false)}>
-      <div className="panel" onClick={(e) => e.stopPropagation()}>
-        <button className="close" onClick={() => setFilterOpen(false)}>✕</button>
-        <h3 className="modal-title">Filter {type === "food" ? "Foods" : "Donations"}</h3>
-
-        <div className="form-grid">
-          {/* Category */}
-          <div className="form-row">
-            <label>Category</label>
-            <select
-              value={filters.category}
-              onChange={(e) => setFilters({ ...filters, category: e.target.value })}
-            >
-              <option value="">All</option>
-              <option value="Protein">Protein</option>
-              <option value="Grains">Grains</option>
-              <option value="Vegetables">Vegetables</option>
-              <option value="Fruits">Fruits</option>
-              <option value="Dairy">Dairy</option>
-              <option value="Other">Other</option>
-            </select>
-          </div>
-
-          {/* Status (only for My Food) */}
-          {type === "food" && (
-            <div className="form-row">
-              <label>Status</label>
-              <select
-                value={filters.status}
-                onChange={(e) => setFilters({ ...filters, status: e.target.value })}
-              >
-                <option value="">All</option>
-                <option value="Available">Available</option>
-                <option value="Expired">Expired</option>
-              </select>
-            </div>
-          )}
-
-          {/* Expiry Date */}
-          <div className="form-row">
-            <label>Expiry From</label>
-            <input
-              type="date"
-              value={filters.expiryFrom}
-              onChange={(e) => setFilters({ ...filters, expiryFrom: e.target.value })}
-            />
-          </div>
-          <div className="form-row">
-            <label>Expiry To</label>
-            <input
-              type="date"
-              value={filters.expiryTo}
-              onChange={(e) => setFilters({ ...filters, expiryTo: e.target.value })}
-            />
-          </div>
-
-          {/* Pickup Area (only for Donation tabs) */}
-          {type !== "food" && (
-            <div className="form-row">
-              <label>Pickup Area</label>
-              <input
-                type="text"
-                placeholder="Any"
-                value={filters.pickupArea}
-                onChange={(e) => setFilters({ ...filters, pickupArea: e.target.value })}
-              />
-            </div>
-          )}
-        </div>
-
-        <div className="modal-actions">
-          <button
-            className="btn secondary"
-            onClick={() =>
-              setFilters({ category: "", status: "", expiryFrom: "", expiryTo: "", pickupArea: "" })
-            }
-          >
-            Clear
-          </button>
-          <button className="btn primary" onClick={() => applyFilters(type)}>
-            Apply
-          </button>
-        </div>
-      </div>
-    </div>
-  );
 
   return (
     <>
@@ -221,8 +117,10 @@ export default function MyFood() {
           <tbody>
             {view.length === 0 ? (
               <tr>
-                <td colSpan={7} className="no-items">
-                  No items found. Please adjust your filters.
+                <td colSpan={7}>
+                  <div className="no-items">
+                    No items found. Please adjust your filters.
+                  </div>
                 </td>
               </tr>
             ) : (
@@ -234,7 +132,9 @@ export default function MyFood() {
                   <td className="center">{r.unit}</td>
                   <td>{formatDate(r.expiry)}</td>
                   <td>
-                    <span className={`pill ${r.status === "Expired" ? "danger" : "ok"}`}>{r.status}</span>
+                    <span className={`pill ${r.status === "Expired" ? "danger" : "ok"}`}>
+                      {r.status}
+                    </span>
                   </td>
                   <td className="row-actions">
                     <button className="icon-btn" title="View" onClick={() => setDetailItem(r)}>👁️</button>
@@ -245,6 +145,7 @@ export default function MyFood() {
               ))
             )}
           </tbody>
+
         </table>
       </div>
 
@@ -254,7 +155,7 @@ export default function MyFood() {
       <AddFoodModal   open={openAdd}     onClose={() => setOpenAdd(false)}  onSave={handleAdd} />
       <EditFoodModal  open={!!editItem}  item={editItem} onClose={() => setEditItem(null)} onSave={handleUpdate} />
       <FoodDetailModal open={!!detailItem} item={detailItem} onClose={() => setDetailItem(null)} />
-      {filterOpen && <FilterModal />}
+      <FilterModal open={filterOpen} onClose={() => setFilterOpen(false)} filters={filters} setFilters={setFilters} onApply={applyFilters}/>
     </>
   );
 }
@@ -509,3 +410,102 @@ function FormGrid({ f, setF, step }) {
     </div>
   );
 }
+
+function FilterModal({ open, onClose, filters, setFilters, onApply, type = "food" }) {
+  if (!open) return null;
+
+  return (
+    <div className="modal" onClick={onClose}>
+      <div className="panel" onClick={(e) => e.stopPropagation()}>
+        <button className="close" onClick={onClose}>✕</button>
+        <h3 className="modal-title">Filter {type === "food" ? "Foods" : "Donations"}</h3>
+
+        <div className="form-grid">
+          {/* Category */}
+          <div className="form-row">
+            <label>Category</label>
+            <select
+              className="input"
+              value={filters.category}
+              onChange={(e) => setFilters({ ...filters, category: e.target.value })}
+            >
+              <option value="">All</option>
+              <option value="Protein">Protein</option>
+              <option value="Grains">Grains</option>
+              <option value="Vegetables">Vegetables</option>
+              <option value="Fruits">Fruits</option>
+              <option value="Dairy">Dairy</option>
+              <option value="Other">Other</option>
+            </select>
+          </div>
+
+          {/* Status (only for My Food) */}
+          {type === "food" && (
+            <div className="form-row">
+              <label>Status</label>
+              <select
+                className="input"
+                value={filters.status}
+                onChange={(e) => setFilters({ ...filters, status: e.target.value })}
+              >
+                <option value="">All</option>
+                <option value="Available">Available</option>
+                <option value="Expired">Expired</option>
+              </select>
+            </div>
+          )}
+
+          {/* Expiry From / To */}
+          <div className="form-row">
+            <label>Expiry From</label>
+            <input
+              type="date"
+              className="input"
+              value={filters.expiryFrom}
+              onChange={(e) => setFilters({ ...filters, expiryFrom: e.target.value })}
+            />
+          </div>
+          <div className="form-row">
+            <label>Expiry To</label>
+            <input
+              type="date"
+              className="input"
+              value={filters.expiryTo}
+              onChange={(e) => setFilters({ ...filters, expiryTo: e.target.value })}
+            />
+          </div>
+
+          {/* Pickup Area (only for Donations) */}
+          {type !== "food" && (
+            <div className="form-row">
+              <label>Pickup Area</label>
+              <input
+                type="text"
+                className="input"
+                placeholder="Any"
+                value={filters.pickupArea}
+                onChange={(e) => setFilters({ ...filters, pickupArea: e.target.value })}
+              />
+            </div>
+          )}
+        </div>
+
+        <div className="modal-actions">
+          <button
+            className="btn secondary"
+            onClick={() =>
+              setFilters({ category: "", status: "", expiryFrom: "", expiryTo: "", pickupArea: "" })
+            }
+          >
+            Clear
+          </button>
+          <button className="btn primary" onClick={() => onApply(type)}>
+            Apply
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+

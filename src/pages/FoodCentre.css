@@ -219,3 +219,15 @@
   .seg { width: 100%; }
   .form-grid { grid-template-columns: 1fr; }
 }
+
+
+
+/* No items found message inside table */
+.no-items {
+  text-align: center;
+  padding: 40px 0;   /* More top & bottom spacing */
+  font-size: 15px;
+  font-weight: 600;
+  color: #000a;
+}
+
