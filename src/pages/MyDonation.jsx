@@ -182,7 +182,6 @@ export default function MyDonation({ initialRows = seedDonations }) {
   );
 }
 
-/* helpers */
 function formatDate(iso) {
   const d = new Date(iso);
   return isNaN(d) ? iso : d.toLocaleDateString("en-GB");
