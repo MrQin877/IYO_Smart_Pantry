@@ -1,6 +1,7 @@
 import { useState } from "react";
 import AddDonationModal from "../component/AddDonationModal.jsx";
 import EditDonationModal from "../component/EditDonationModal.jsx";
+import FilterModal from "../component/FilterModal.jsx";
 
 const seedDonations = [
   {
@@ -40,6 +41,17 @@ export default function MyDonation({ initialRows = seedDonations }) {
   const [rows, setRows] = useState(initialRows);
   const [openAdd, setOpenAdd] = useState(false);
   const [editItem, setEditItem] = useState(null);
+  const [filterOpen, setFilterOpen] = useState(false);
+  const [filters, setFilters] = useState({
+    category: "",
+    expiryFrom: "",
+    expiryTo: "",
+    pickupArea: "",  // donation specific
+  });
+
+  const appliedFilterCount = Object.values(filters)
+  .filter((val) => val && val.trim() !== "").length;
+
 
   function handlePublish(payload) {
     const item = payload.item ?? payload; // be forgiving about shape
@@ -105,6 +117,26 @@ export default function MyDonation({ initialRows = seedDonations }) {
     }
   }
 
+  function applyFilters(overrideFilters = null) {
+    const f = overrideFilters ?? filters;
+    const cat = (f.category ?? "").trim();
+    const from = (f.expiryFrom ?? "").trim();
+    const to = (f.expiryTo ?? "").trim();
+    const pickup = (f.pickupArea ?? "").trim().toLowerCase();
+
+    const filtered = seedDonations.filter(r => {
+      if (cat && r.category !== cat) return false;
+      if (from && new Date(r.expiry) < new Date(from)) return false;
+      if (to && new Date(r.expiry) > new Date(to)) return false;
+      if (pickup && !r.pickup.toLowerCase().includes(pickup)) return false;
+      return true;
+    });
+
+    setRows(filtered);
+    setFilterOpen(false);
+  }
+
+
   return (
     <>
       <div className="toolbar">
@@ -112,9 +144,11 @@ export default function MyDonation({ initialRows = seedDonations }) {
           + Add Donation
         </button>
         <div className="spacer" />
-        <button className="btn btn-filter">
-          <span className="i-filter" />
-          Filter
+        <button className="btn btn-filter" onClick={() => setFilterOpen(true)}>
+          <span className="i-filter" />Filter
+          {appliedFilterCount > 0 && (
+            <span className="filter-badge">{appliedFilterCount}</span>
+          )}
         </button>
       </div>
 
@@ -132,35 +166,48 @@ export default function MyDonation({ initialRows = seedDonations }) {
             </tr>
           </thead>
           <tbody>
-            {rows.map((r) => (
-              <tr key={r.id}>
-                <td>{r.name}</td>
-                <td className="subtle">{r.category}</td>
-                <td>{r.qty}</td>
-                <td>{formatDate(r.expiry)}</td>
-                <td>{r.pickup}</td>
-                <td>
-                  <span className="bubble">{r.slotText || joinSlots(r.slots)}</span>
-                </td>
-                <td className="row-actions">
-                  <button
-                    className="icon-btn"
-                    title="Edit"
-                    onClick={() => setEditItem(r)}
-                  >
-                    ✏️
-                  </button>
-                  <button
-                    className="icon-btn"
-                    title="Delete"
-                    onClick={() => handleDeleteDonation(r.id)}
-                  >
-                    🗑️
-                  </button>
+            {rows.length === 0 ? (
+              <tr>
+                <td colSpan={7}>
+                  <div className="no-items">
+                    No items found. Please adjust your filters.
+                  </div>
                 </td>
               </tr>
-            ))}
+            ) : (
+              rows.map((r) => (
+                <tr key={r.id}>
+                  <td>{r.name}</td>
+                  <td className="subtle">{r.category}</td>
+                  <td>{r.qty}</td>
+                  <td>{formatDate(r.expiry)}</td>
+                  <td>{r.pickup}</td>
+                  <td>
+                    <span className="bubble">
+                      {r.slotText || joinSlots(r.slots)}
+                    </span>
+                  </td>
+                  <td className="row-actions">
+                    <button
+                      className="icon-btn"
+                      title="Edit"
+                      onClick={() => setEditItem(r)}
+                    >
+                      ✏️
+                    </button>
+                    <button
+                      className="icon-btn"
+                      title="Delete"
+                      onClick={() => handleDeleteDonation(r.id)}
+                    >
+                      🗑️
+                    </button>
+                  </td>
+                </tr>
+              ))
+            )}
           </tbody>
+
         </table>
       </div>
 
@@ -177,6 +224,15 @@ export default function MyDonation({ initialRows = seedDonations }) {
         item={editItem}
         onClose={() => setEditItem(null)}
         onUpdate={handleUpdate}
+      />
+
+      <FilterModal
+        open={filterOpen}
+        type="donation"   // <-- IMPORTANT
+        filters={filters}
+        setFilters={setFilters}
+        onApply={applyFilters}
+        onClose={() => setFilterOpen(false)}
       />
     </>
   );

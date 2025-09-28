@@ -57,6 +57,25 @@ export default function FilterModal({ open, type = "food", filters, setFilters, 
             </div>
           )}
 
+          {type !== "food" && (
+            <div className="form-row">
+              <label>Pickup Area</label>
+              <select
+                className="input"
+                value={filters.pickupArea}
+                onChange={(e) => setFilters({ ...filters, pickupArea: e.target.value })}
+              >
+                <option value="">Any</option>
+                <option value="Kuala Lumpur">Kuala Lumpur</option>
+                <option value="Petaling Jaya">Petaling Jaya</option>
+                <option value="Subang Jaya">Subang Jaya</option>
+                <option value="Shah Alam">Shah Alam</option>
+                <option value="Puchong">Puchong</option>
+                {/* You can extend with more pickup areas from your DB or config */}
+              </select>
+            </div>
+          )}
+
           <div className="form-row">
             <label>Expiry From</label>
             <input
@@ -76,18 +95,6 @@ export default function FilterModal({ open, type = "food", filters, setFilters, 
               onChange={(e) => setFilters({ ...filters, expiryTo: e.target.value })}
             />
           </div>
-
-          {type !== "food" && (
-            <div className="form-row">
-              <label>Pickup Area</label>
-              <input
-                className="input"
-                placeholder="Any"
-                value={filters.pickupArea}
-                onChange={(e) => setFilters({ ...filters, pickupArea: e.target.value })}
-              />
-            </div>
-          )}
         </div>
 
         <div className="modal-actions">
