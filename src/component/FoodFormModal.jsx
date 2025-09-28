@@ -1,6 +1,10 @@
-// C:\xampp\htdocs\IYO_Smart_Pantry\src\components\FoodFormModal.jsx
-import { useEffect, useRef, useState } from "react";
+// src/components/FoodFormModal.jsx
+import { useEffect, useState } from "react";
 import { apiGet, apiPost } from "../lib/api";
+
+// ---- Module-level cache (valid for the page lifecycle) ----
+let CATS_CACHE = null;   // [{id,name}]
+let UNITS_CACHE = null;  // [{id,name}]
 
 const toStatus = (yyyyMmDd) =>
   new Date(yyyyMmDd) < new Date() ? "Expired" : "Available";
@@ -23,65 +27,64 @@ export default function FoodFormModal({
     remark: "",
   });
 
-  const [catOpts, setCatOpts] = useState([]);
-  const [unitOpts, setUnitOpts] = useState([]);
-  const [loadingOpts, setLoadingOpts] = useState(false);
+  const [catOpts, setCatOpts] = useState([]);   // [{id,name}]
+  const [unitOpts, setUnitOpts] = useState([]); // [{id,name}]
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState("");
 
-  const fetchedRef = useRef(false);
-
+// 1) Prefetch on component mount (only once) and store in the cache
   useEffect(() => {
-    if (!open) { fetchedRef.current = false; return; }
-    if (fetchedRef.current) return;
-    fetchedRef.current = true;
-
     let cancelled = false;
-    setLoadingOpts(true);
-    setErr("");
-
     (async () => {
       try {
-        const [cats, units] = await Promise.all([
-          apiGet("/categories_list.php"),
-          apiGet("/units_list.php"),
-        ]);
-
+        if (!CATS_CACHE) {
+          const r = await apiGet("/categories_list.php");
+          CATS_CACHE = r.data || [];
+        }
+        if (!UNITS_CACHE) {
+          const r2 = await apiGet("/units_list.php");
+          UNITS_CACHE = r2.data || [];
+        }
         if (cancelled) return;
-        const c = cats.data || [];
-        const u = units.data || [];
-        setCatOpts(c);
-        setUnitOpts(u);
-
-        const pickCatID =
-          initial.categoryID ||
-          c.find((x) => x.name === initial.category)?.id ||
-          c[0]?.id || "";
-
-        const pickUnitID =
-          initial.unitID ||
-          u.find((x) => x.name === initial.unit)?.id ||
-          u[0]?.id || "";
-
-        setF({
-          name: initial.name ?? "",
-          qty: Number(initial.qty ?? 1),
-          categoryID: pickCatID,
-          unitID: pickUnitID,
-          expiry: (initial.expiry ?? "").slice(0, 10),
-          location: initial.location ?? "",
-          remark: initial.remark ?? "",
-        });
+        setCatOpts(CATS_CACHE);
+        setUnitOpts(UNITS_CACHE);
       } catch (e) {
         if (!cancelled) setErr("Failed to load options");
-      } finally {
-        if (!cancelled) setLoadingOpts(false);
       }
     })();
-
     return () => { cancelled = true; };
-  }, [open, initial]);
+  }, []);
 
+// 2) Each time the modal opens, combine `initial` and the fetched options
+//    to set form defaults (fallback to the first option if none matches)
+  useEffect(() => {
+    if (!open) return;
+
+    const pickCatID =
+      initial.categoryID ||
+      catOpts.find((c) => c.name === initial.category)?.id ||
+      f.categoryID ||                           // Keep existing user input
+      catOpts[0]?.id || "";                    // Fallback / default
+
+    const pickUnitID =
+      initial.unitID ||
+      unitOpts.find((u) => u.name === initial.unit)?.id ||
+      f.unitID ||
+      unitOpts[0]?.id || "";
+
+    setF({
+      name: initial.name ?? "",
+      qty: Number(initial.qty ?? 1),
+      categoryID: pickCatID,
+      unitID: pickUnitID,
+      expiry: (initial.expiry ?? "").slice(0, 10),
+      location: initial.location ?? "",
+      remark: initial.remark ?? "",
+    });
+    setErr("");
+  }, [open, initial, catOpts, unitOpts]);
+
+  // Close by ESC
   useEffect(() => {
     const onKey = (e) => e.key === "Escape" && onClose?.();
     if (open) document.addEventListener("keydown", onKey);
@@ -90,8 +93,15 @@ export default function FoodFormModal({
 
   if (!open) return null;
 
-  const canSave = f.name.trim() && f.expiry && f.categoryID && f.unitID && Number(f.qty) > 0;
-  const step = (d) => setF((s) => ({ ...s, qty: Math.max(1, Number(s.qty) + d) }));
+  const canSave =
+    f.name.trim() &&
+    f.expiry &&
+    (f.categoryID || catOpts.length === 0) &&
+    (f.unitID || unitOpts.length === 0) &&
+    Number(f.qty) > 0;
+
+  const step = (d) =>
+    setF((s) => ({ ...s, qty: Math.max(1, Number(s.qty) + d) }));
 
   const catName = catOpts.find((c) => c.id === f.categoryID)?.name || "";
   const unitName = unitOpts.find((u) => u.id === f.unitID)?.name || "";
@@ -190,13 +200,16 @@ export default function FoodFormModal({
             <label>Category</label>
             <select
               className="input"
-              disabled={loadingOpts}
               value={f.categoryID}
               onChange={(e) => setF({ ...f, categoryID: e.target.value })}
             >
-              {catOpts.map((c) => (
-                <option key={c.id} value={c.id}>{c.name}</option>
-              ))}
+              {catOpts.length === 0 ? (
+                <option value="">Loading…</option>
+              ) : (
+                catOpts.map((c) => (
+                  <option key={c.id} value={c.id}>{c.name}</option>
+                ))
+              )}
             </select>
           </div>
 
@@ -208,13 +221,16 @@ export default function FoodFormModal({
               <button className="step" onClick={() => step(1)}>+</button>
               <select
                 className="input unit"
-                disabled={loadingOpts}
                 value={f.unitID}
                 onChange={(e) => setF({ ...f, unitID: e.target.value })}
               >
-                {unitOpts.map((u) => (
-                  <option key={u.id} value={u.id}>{u.name}</option>
-                ))}
+                {unitOpts.length === 0 ? (
+                  <option value="">Loading…</option>
+                ) : (
+                  unitOpts.map((u) => (
+                    <option key={u.id} value={u.id}>{u.name}</option>
+                  ))
+                )}
               </select>
             </div>
           </div>
