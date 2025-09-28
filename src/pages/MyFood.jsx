@@ -58,6 +58,8 @@ export default function MyFood() {
     pickupArea: "",     // for donations
   });
 
+  // Count how many filters are applied
+  const appliedFilterCount = Object.values(filters).filter((val) => val && val.trim() !== "").length;
 
   const toggleSort = (key) =>
     setSort((s) => (s.key === key ? { key, dir: s.dir === "asc" ? "desc" : "asc" } : { key, dir: "asc" }));
@@ -111,20 +113,28 @@ export default function MyFood() {
     alert("Donation published (demo).");
   }
 
-  function applyFilters() {
-  const filtered = seedFoods.filter(r => {
-    if (filters.category && r.category !== filters.category) return false;
-    if (filters.status && r.status !== filters.status) return false;
-    if (filters.expiryFrom && new Date(r.expiry) < new Date(filters.expiryFrom)) return false;
-    if (filters.expiryTo && new Date(r.expiry) > new Date(filters.expiryTo)) return false;
-    return true;
-  });
+  // inside MyFood.jsx (keep it above return)
+  function applyFilters(overrideFilters = null) {
+    const f = overrideFilters ?? filters;
 
-  setRows(filtered);
-  setPage(1);
-  setFilterOpen(false);
-}
+    // normalize string values so empty strings are treated as empty
+    const cat = (f.category ?? "").toString().trim();
+    const status = (f.status ?? "").toString().trim();
+    const from = (f.expiryFrom ?? "").toString().trim();
+    const to = (f.expiryTo ?? "").toString().trim();
 
+    const filtered = seedFoods.filter(r => {
+      if (cat && r.category !== cat) return false;
+      if (status && r.status !== status) return false;
+      if (from && new Date(r.expiry) < new Date(from)) return false;
+      if (to && new Date(r.expiry) > new Date(to)) return false;
+      return true;
+    });
+
+    setRows(filtered);
+    setPage(1);
+    setFilterOpen(false);
+  }
 
   return (
     <>
@@ -132,8 +142,12 @@ export default function MyFood() {
         <button className="btn btn-green" onClick={() => setOpenAdd(true)}>+ Add Item</button>
         <div className="spacer" />
 
-        <button className="btn btn-filter" onClick={() => setFilterOpen(true)}><span className="i-filter" />Filter</button>
-
+        <button className="btn btn-filter" onClick={() => setFilterOpen(true)}>
+          <span className="i-filter" />Filter
+          {appliedFilterCount > 0 && (
+            <span className="filter-badge">{appliedFilterCount}</span>
+          )}
+        </button>
       </div>
 
       <div className="table-wrap">
@@ -152,8 +166,10 @@ export default function MyFood() {
           <tbody>
             {view.length === 0 ? (
               <tr>
-                <td colSpan={7} className="no-items">
-                  No items found. Please adjust your filters.
+                <td colSpan={7}>
+                  <div className="no-items">
+                    No items found. Please adjust your filters.
+                  </div>
                 </td>
               </tr>
             ) : (
