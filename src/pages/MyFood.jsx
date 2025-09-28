@@ -3,6 +3,9 @@ import { useMemo, useState } from "react";
 import DonationModal from "../component/DonationModal.jsx";
 import FoodFormModal from "../component/FoodFormModal.jsx"; // <-- new
 import FoodDetailModal from "../component/FoodDetailModal.jsx";
+import FilterModal from "../component/FilterModal.jsx";
+
+
 
 import "./FoodCentre.css";
 
@@ -45,6 +48,18 @@ export default function MyFood() {
 
   const pageCount = Math.max(1, Math.ceil(sorted.length / pageSize));
   const view = sorted.slice((page - 1) * pageSize, page * pageSize);
+
+  const [filterOpen, setFilterOpen] = useState(false);
+  const [filters, setFilters] = useState({
+    category: "",       // single select for simplicity
+    status: "",         // Available / Expired (for My Food)
+    expiryFrom: "",     // date range
+    expiryTo: "",
+    pickupArea: "",     // for donations
+  });
+
+  // Count how many filters are applied
+  const appliedFilterCount = Object.values(filters).filter((val) => val && val.trim() !== "").length;
 
   const toggleSort = (key) =>
     setSort((s) => (s.key === key ? { key, dir: s.dir === "asc" ? "desc" : "asc" } : { key, dir: "asc" }));
@@ -98,12 +113,41 @@ export default function MyFood() {
     alert("Donation published (demo).");
   }
 
+  // inside MyFood.jsx (keep it above return)
+  function applyFilters(overrideFilters = null) {
+    const f = overrideFilters ?? filters;
+
+    // normalize string values so empty strings are treated as empty
+    const cat = (f.category ?? "").toString().trim();
+    const status = (f.status ?? "").toString().trim();
+    const from = (f.expiryFrom ?? "").toString().trim();
+    const to = (f.expiryTo ?? "").toString().trim();
+
+    const filtered = seedFoods.filter(r => {
+      if (cat && r.category !== cat) return false;
+      if (status && r.status !== status) return false;
+      if (from && new Date(r.expiry) < new Date(from)) return false;
+      if (to && new Date(r.expiry) > new Date(to)) return false;
+      return true;
+    });
+
+    setRows(filtered);
+    setPage(1);
+    setFilterOpen(false);
+  }
+
   return (
     <>
       <div className="toolbar">
         <button className="btn btn-green" onClick={() => setOpenAdd(true)}>+ Add Item</button>
         <div className="spacer" />
-        <button className="btn btn-filter"><span className="i-filter" />Filter</button>
+
+        <button className="btn btn-filter" onClick={() => setFilterOpen(true)}>
+          <span className="i-filter" />Filter
+          {appliedFilterCount > 0 && (
+            <span className="filter-badge">{appliedFilterCount}</span>
+          )}
+        </button>
       </div>
 
       <div className="table-wrap">
@@ -120,22 +164,31 @@ export default function MyFood() {
             </tr>
           </thead>
           <tbody>
-            {view.map((r) => (
-              <tr key={r.id}>
-                <td className="link" onClick={() => setDetailItem(r)} title="Open details">{r.name}</td>
-                <td>{r.category}</td>
-                <td className="center">{r.qty}</td>
-                <td className="center">{r.unit}</td>
-                <td>{formatDate(r.expiry)}</td>
-                <td><span className={`pill ${r.status === "Expired" ? "danger" : "ok"}`}>{r.status}</span></td>
-                <td className="row-actions">
-                  <button className="icon-btn" title="View" onClick={() => setDetailItem(r)}>👁️</button>
-                  <button className="icon-btn" title="Edit" onClick={() => setEditItem(r)}>✏️</button>
-                  <button className="icon-btn" title="Delete" onClick={() => setRows(rows.filter(x=>x.id!==r.id))}>🗑️</button>
-                  {/*<button className="icon-btn" title="Delete" onClick={() => handleDelete(r.id)}>🗑️</button>*/}
+            {view.length === 0 ? (
+              <tr>
+                <td colSpan={7}>
+                  <div className="no-items">
+                    No items found. Please adjust your filters.
+                  </div>
                 </td>
               </tr>
-            ))}
+            ) : (
+              view.map((r) => (
+                <tr key={r.id}>
+                  <td className="link" onClick={() => setDetailItem(r)} title="Open details">{r.name}</td>
+                  <td>{r.category}</td>
+                  <td className="center">{r.qty}</td>
+                  <td className="center">{r.unit}</td>
+                  <td>{formatDate(r.expiry)}</td>
+                  <td><span className={`pill ${r.status === "Expired" ? "danger" : "ok"}`}>{r.status}</span></td>
+                  <td className="row-actions">
+                    <button className="icon-btn" title="View" onClick={() => setDetailItem(r)}>👁️</button>
+                    <button className="icon-btn" title="Edit" onClick={() => setEditItem(r)}>✏️</button>
+                    <button className="icon-btn" title="Delete" onClick={() => setRows(rows.filter(x=>x.id!==r.id))}>🗑️</button>
+                  </td>
+                </tr>
+              ))
+            )}
           </tbody>
         </table>
       </div>
@@ -170,6 +223,14 @@ export default function MyFood() {
         item={donateItem || {}}
         onPublish={handlePublishDonation}
       />
+
+      <FilterModal
+        open={filterOpen}
+        filters={filters}
+        setFilters={setFilters}
+        onApply={applyFilters}
+        onClose={() => setFilterOpen(false)}
+      />
     </>
   );
 }
@@ -197,4 +258,7 @@ function formatDate(iso) {
   const d = new Date(iso);
   return isNaN(d) ? iso : d.toLocaleDateString("en-GB");
 }
+
+
+
 

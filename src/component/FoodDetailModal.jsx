@@ -28,32 +28,26 @@ export default function FoodDetailModal({
             <h3 className="modal-title">Food Detail</h3>
 
             <div className="detail-head">
-              <div className="food-img" aria-hidden>
-                <img
-                  alt=""
-                  src="https://images.unsplash.com/photo-1517957791429-3a88f0397c3a?w=300&q=60"
-                />
-              </div>
-
-              <ul className="kv">
+              <ul className="kv spaced">
                 <li><b>Item name:</b> {item.name}</li>
                 <li><b>Category:</b> {item.category}</li>
-                <li><b>Quantity:</b> {item.qty}</li>
-                <li><b>Expiry date:</b> {formatDate(item.expiry)}</li>
-                <li><b>Storage Location:</b> {item.location || "-"}</li>
-                <li><b>Remark:</b> {item.remark || "-"}</li>
-              </ul>
+                <li><b>Quantity:</b> {item.qty} {item.unit}</li>
+                <li><b>Reserved:</b> 3</li>
 
-              <ul className="kv tight">
                 <li>
                   <b>Status:</b>{" "}
                   <span className={`pill ${item.status === "Expired" ? "danger" : ""}`}>
                     {item.status}
                   </span>
                 </li>
-                <li><b>Reserved:</b> 3</li>
+                <li><b>Expiry date:</b> {formatDate(item.expiry)}</li>
+
+                {/* Storage Location and Remark now come after */}
+                <li><b>Storage Location:</b> {item.location || "-"}</li>
+                <li><b>Remark:</b> {item.remark || "-"}</li>
               </ul>
             </div>
+
 
             <div className="detail-actions">
               <button className="chip">Used</button>
