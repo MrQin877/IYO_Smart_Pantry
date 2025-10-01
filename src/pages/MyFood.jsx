@@ -1,4 +1,5 @@
 // src/pages/MyFood.jsx
+
 import { useMemo, useState, useEffect } from "react";
 import { apiGet } from "../lib/api"; // make sure you have this helper
 import DonationModal from "../component/DonationModal.jsx";
@@ -29,7 +30,7 @@ export default function MyFood() {
   (async () => {
     setLoading(true);
     try {
-      const res = await apiGet("/foods_list.php", { userID: 123 }); // TODO: replace with actual logged-in userID
+      const res = await apiGet("/food_list.php", { userID: "U1" }); // TODO: replace with actual logged-in userID
       if (res.ok) setRows(res.foods || []);
       else console.error(res.error);
     } catch (e) {

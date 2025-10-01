@@ -13,7 +13,7 @@ export default function FoodFormModal({
   open,
   mode = "add",
   initial = {},
-  userId = "U2",
+  userId = "U1",
   onClose,
   onSave,
 }) {
