@@ -1,5 +1,6 @@
 // src/pages/MyFood.jsx
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
+import { apiGet } from "../lib/api"; // make sure you have this helper
 import DonationModal from "../component/DonationModal.jsx";
 import FoodFormModal from "../component/FoodFormModal.jsx"; // <-- new
 import FoodDetailModal from "../component/FoodDetailModal.jsx";
@@ -9,14 +10,8 @@ import FilterModal from "../component/FilterModal.jsx";
 
 import "./FoodCentre.css";
 
-const seedFoods = [
-  { id: 1, name: "Egg",    category: "Protein",    qty: 3, unit: "ps", expiry: "2025-10-20", status: "Available", location: "Locker 2", remark: "This egg was expensive" },
-  { id: 2, name: "Rice",   category: "Grains",     qty: 1, unit: "kg", expiry: "2025-10-03", status: "Expired",   location: "",        remark: "" },
-  { id: 3, name: "Tomato", category: "Vegetables", qty: 1, unit: "ps", expiry: "2025-11-06", status: "Available", location: "",        remark: "" },
-];
 
 export default function MyFood() {
-  const [rows, setRows] = useState(seedFoods);
   const [sort, setSort] = useState({ key: "name", dir: "asc" });
   const [page, setPage] = useState(1);
   const [openAdd, setOpenAdd] = useState(false);
@@ -27,6 +22,24 @@ export default function MyFood() {
   const [donateItem, setDonateItem] = useState(null);
 
   const pageSize = 5;
+
+  const [rows, setRows] = useState([]);
+  const [loading, setLoading] = useState(false);
+  useEffect(() => {
+  (async () => {
+    setLoading(true);
+    try {
+      const res = await apiGet("/foods_list.php", { userID: 123 }); // TODO: replace with actual logged-in userID
+      if (res.ok) setRows(res.foods || []);
+      else console.error(res.error);
+    } catch (e) {
+      console.error("Failed to load foods", e);
+    }
+    setLoading(false);
+  })();
+}, []);
+
+  
 
   const sorted = useMemo(() => {
     const copy = [...rows];

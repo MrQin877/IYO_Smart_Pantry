@@ -1,21 +1,43 @@
-// src/component/FoodDetailModal.jsx
+// src/components/FoodDetailModal.jsx
+import { useEffect, useState } from "react";
+import { apiGet } from "../lib/api";
 import React from "react";
 
-export default function FoodDetailModal({
-  open,
-  item,
-  onClose,
-  onDonate,
-  history = [],
-}) {
-  if (!open || !item) return null;
+export default function FoodDetailModal({ open, item, onClose, onDonate }) {
+  const [food, setFood] = useState(null);
+  const [history, setHistory] = useState([]);
 
-  const fallbackHistory = [
-    { date: "20/10/2025", qty: 2, action: "Used" },
-    { date: "22/10/2025", qty: 1, action: "Donated" },
-    { date: "28/10/2025", qty: "-", action: "Plan for Meal" },
-  ];
-  const activity = history.length ? history : fallbackHistory;
+  useEffect(() => {
+    if (!open || !item?.foodID) return;
+
+    (async () => {
+      try {
+        const res = await apiGet("/food_get.php", { foodID: item.foodID });
+        if (res.ok) {
+          setFood(res.food);
+          setHistory(res.history || []);
+        } else {
+          console.error(res.error);
+        }
+      } catch (e) {
+        console.error("Failed to fetch food detail", e);
+      }
+    })();
+  }, [open, item]);
+
+  if (!open) return null;
+
+  // fallback if backend hasn’t responded yet
+  if (!food) {
+    return (
+      <div className="modal" onClick={onClose}>
+        <div className="panel panel-lg" onClick={(e) => e.stopPropagation()}>
+          <button className="close" onClick={onClose}>✕</button>
+          <p>Loading food details...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="modal" onClick={onClose}>
@@ -29,52 +51,48 @@ export default function FoodDetailModal({
 
             <div className="detail-head">
               <ul className="kv spaced">
-                <li><b>Item name:</b> {item.name}</li>
-                <li><b>Category:</b> {item.category}</li>
-                <li><b>Quantity:</b> {item.qty} {item.unit}</li>
-                <li><b>Reserved:</b> 3</li>
-
+                <li><b>Item name:</b> {food.foodName}</li>
+                <li><b>Category:</b> {food.categoryID}</li>
+                <li><b>Quantity:</b> {food.quantity} {food.unitID}</li>
                 <li>
                   <b>Status:</b>{" "}
-                  <span className={`pill ${item.status === "Expired" ? "danger" : ""}`}>
-                    {item.status}
+                  <span className={`pill ${food.is_expiryStatus ? "danger" : ""}`}>
+                    {food.is_expiryStatus ? "Expired" : "Available"}
                   </span>
                 </li>
-                <li><b>Expiry date:</b> {formatDate(item.expiry)}</li>
-
-                {/* Storage Location and Remark now come after */}
-                <li><b>Storage Location:</b> {item.location || "-"}</li>
-                <li><b>Remark:</b> {item.remark || "-"}</li>
+                <li><b>Expiry date:</b> {formatDate(food.expiryDate)}</li>
+                <li><b>Storage Location:</b> {food.storageLocation || "-"}</li>
+                <li><b>Remark:</b> {food.remark || "-"}</li>
               </ul>
             </div>
-
 
             <div className="detail-actions">
               <button className="chip">Used</button>
               <button className="chip">Plan for Meal</button>
-              <button
-                className="chip primary"
-                onClick={() => onDonate?.(item)}
-              >
+              <button className="chip primary" onClick={() => onDonate?.(food)}>
                 Donate
               </button>
             </div>
           </div>
 
-          {/* right column */}
+          {/* right column (history) */}
           <div className="detail-right">
             <table className="log-table">
               <thead>
                 <tr><th>Date</th><th>Quantity</th><th>Action</th></tr>
               </thead>
               <tbody>
-                {activity.map((h, i) => (
-                  <tr key={i}>
-                    <td>{h.date}</td>
-                    <td>{h.qty}</td>
-                    <td>{h.action}</td>
-                  </tr>
-                ))}
+                {history.length === 0 ? (
+                  <tr><td colSpan={3}>No history found</td></tr>
+                ) : (
+                  history.map((h, i) => (
+                    <tr key={i}>
+                      <td>{h.date}</td>
+                      <td>{h.qty}</td>
+                      <td>{h.action}</td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>

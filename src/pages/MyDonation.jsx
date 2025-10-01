@@ -1,44 +1,13 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import AddDonationModal from "../component/AddDonationModal.jsx";
 import EditDonationModal from "../component/EditDonationModal.jsx";
 import FilterModal from "../component/FilterModal.jsx";
 
-const seedDonations = [
-  {
-    id: "d1",
-    name: "Egg",
-    category: "Protein",
-    qty: 2,
-    expiry: "2025-10-20",
-    pickup: "Jalan…..",
-    // keep both: human text and structured slots
-    slotText: "02/10/2025, 11:47 am - 12:47 pm",
-    slots: [],
-  },
-  {
-    id: "d2",
-    name: "Rice",
-    category: "Grains",
-    qty: 2,
-    expiry: "2025-10-03",
-    pickup: "Jalan…..",
-    slotText: "02/10/2025, 11:47 am - 12:47 pm",
-    slots: [],
-  },
-  {
-    id: "d3",
-    name: "Egg",
-    category: "Vegetables",
-    qty: 2,
-    expiry: "2025-11-06",
-    pickup: "Jalan…..",
-    slotText: "02/10/2025, 11:47 am - 12:47 pm",
-    slots: [],
-  },
-];
 
-export default function MyDonation({ initialRows = seedDonations }) {
-  const [rows, setRows] = useState(initialRows);
+export default function MyDonation() {
+  const [rows, setRows] = useState([]);
+  const [loading, setLoading] = useState(false);
+
   const [openAdd, setOpenAdd] = useState(false);
   const [editItem, setEditItem] = useState(null);
   const [filterOpen, setFilterOpen] = useState(false);
@@ -46,8 +15,29 @@ export default function MyDonation({ initialRows = seedDonations }) {
     category: "",
     expiryFrom: "",
     expiryTo: "",
-    pickupArea: "",  // donation specific
+    pickupArea: "",
   });
+
+  // Load donations on mount
+  useEffect(() => {
+    (async () => {
+      setLoading(true);
+      try {
+        const res = await fetch(
+          `${import.meta.env.VITE_API_BASE}/food_list.php?userID=123`
+        ).then((r) => r.json());
+
+        if (res.ok) {
+          setRows(res.foods || []);
+        } else {
+          console.error(res.error);
+        }
+      } catch (e) {
+        console.error("Failed to load donations", e);
+      }
+      setLoading(false);
+    })();
+  }, []);
 
   const appliedFilterCount = Object.values(filters)
   .filter((val) => val && val.trim() !== "").length;
@@ -117,24 +107,25 @@ export default function MyDonation({ initialRows = seedDonations }) {
     }
   }
 
-  function applyFilters(overrideFilters = null) {
-    const f = overrideFilters ?? filters;
-    const cat = (f.category ?? "").trim();
-    const from = (f.expiryFrom ?? "").trim();
-    const to = (f.expiryTo ?? "").trim();
-    const pickup = (f.pickupArea ?? "").trim().toLowerCase();
+function applyFilters(overrideFilters = null) {
+  const f = overrideFilters ?? filters;
+  const cat = (f.category ?? "").trim();
+  const from = (f.expiryFrom ?? "").trim();
+  const to = (f.expiryTo ?? "").trim();
+  const pickup = (f.pickupArea ?? "").trim().toLowerCase();
 
-    const filtered = seedDonations.filter(r => {
-      if (cat && r.category !== cat) return false;
-      if (from && new Date(r.expiry) < new Date(from)) return false;
-      if (to && new Date(r.expiry) > new Date(to)) return false;
-      if (pickup && !r.pickup.toLowerCase().includes(pickup)) return false;
-      return true;
-    });
+  const filtered = rows.filter(r => {
+    if (cat && r.category !== cat) return false;
+    if (from && new Date(r.expiry) < new Date(from)) return false;
+    if (to && new Date(r.expiry) > new Date(to)) return false;
+    if (pickup && !r.pickup.toLowerCase().includes(pickup)) return false;
+    return true;
+  });
 
-    setRows(filtered);
-    setFilterOpen(false);
-  }
+  setRows(filtered);
+  setFilterOpen(false);
+}
+
 
 
   return (

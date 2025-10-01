@@ -1,7 +1,8 @@
-// src/component/FilterModal.jsx
+// src/components/FilterModal.jsx
 import React, { useEffect } from "react";
+import { apiGet } from "../lib/api";
 
-export default function FilterModal({ open, type = "food", filters, setFilters, onApply, onClose }) {
+export default function FilterModal({ open, type = "food", filters, setFilters, onApply, onClose, userId }) {
   useEffect(() => {
     const onKey = (e) => e.key === "Escape" && onClose?.();
     if (open) document.addEventListener("keydown", onKey);
@@ -18,6 +19,28 @@ export default function FilterModal({ open, type = "food", filters, setFilters, 
     pickupArea: "",
   };
 
+  async function applyFilters() {
+    try {
+      const res = await apiGet("/foods_list.php", {
+        userID: userId,
+        categoryID: filters.category || undefined,
+        status: filters.status || undefined,
+        pickupArea: filters.pickupArea || undefined,
+        expiryFrom: filters.expiryFrom || undefined,
+        expiryTo: filters.expiryTo || undefined,
+      });
+
+      if (res.ok) {
+        onApply?.(res.foods); // parent gets updated food list
+      } else {
+        console.error(res.error);
+      }
+    } catch (e) {
+      console.error("Failed to fetch filtered foods", e);
+    }
+    onClose?.();
+  }
+
   return (
     <div className="modal" onClick={onClose}>
       <div className="panel" onClick={(e) => e.stopPropagation()}>
@@ -25,6 +48,7 @@ export default function FilterModal({ open, type = "food", filters, setFilters, 
         <h3 className="modal-title">Filter {type === "food" ? "Foods" : "Donations"}</h3>
 
         <div className="form-grid">
+          {/* Category */}
           <div className="form-row">
             <label>Category</label>
             <select
@@ -42,6 +66,7 @@ export default function FilterModal({ open, type = "food", filters, setFilters, 
             </select>
           </div>
 
+          {/* Status */}
           {type === "food" && (
             <div className="form-row">
               <label>Status</label>
@@ -57,25 +82,7 @@ export default function FilterModal({ open, type = "food", filters, setFilters, 
             </div>
           )}
 
-          {type !== "food" && (
-            <div className="form-row">
-              <label>Pickup Area</label>
-              <select
-                className="input"
-                value={filters.pickupArea}
-                onChange={(e) => setFilters({ ...filters, pickupArea: e.target.value })}
-              >
-                <option value="">Any</option>
-                <option value="Kuala Lumpur">Kuala Lumpur</option>
-                <option value="Petaling Jaya">Petaling Jaya</option>
-                <option value="Subang Jaya">Subang Jaya</option>
-                <option value="Shah Alam">Shah Alam</option>
-                <option value="Puchong">Puchong</option>
-                {/* You can extend with more pickup areas from your DB or config */}
-              </select>
-            </div>
-          )}
-
+          {/* Expiry */}
           <div className="form-row">
             <label>Expiry From</label>
             <input
@@ -95,6 +102,19 @@ export default function FilterModal({ open, type = "food", filters, setFilters, 
               onChange={(e) => setFilters({ ...filters, expiryTo: e.target.value })}
             />
           </div>
+
+          {/* Pickup Area */}
+          {type !== "food" && (
+            <div className="form-row">
+              <label>Pickup Area</label>
+              <input
+                className="input"
+                placeholder="Any"
+                value={filters.pickupArea}
+                onChange={(e) => setFilters({ ...filters, pickupArea: e.target.value })}
+              />
+            </div>
+          )}
         </div>
 
         <div className="modal-actions">
@@ -102,21 +122,14 @@ export default function FilterModal({ open, type = "food", filters, setFilters, 
             className="btn secondary"
             onClick={() => {
               setFilters(resetFilters);
-              // call parent applyFilters with the resetFilters so it reloads immediately
-              onApply?.(resetFilters);
+              onApply?.([]); // clear results
               onClose?.();
             }}
           >
             Clear
           </button>
 
-          <button
-            className="btn primary"
-            onClick={() => {
-              onApply?.(); // parent will use current filters state
-              onClose?.();
-            }}
-          >
+          <button className="btn primary" onClick={applyFilters}>
             Apply
           </button>
         </div>
