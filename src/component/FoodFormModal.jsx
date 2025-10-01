@@ -1,5 +1,5 @@
 // src/components/FoodFormModal.jsx
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { apiGet, apiPost } from "../lib/api";
 
 // ---- Module-level cache (valid for the page lifecycle) ----
@@ -27,12 +27,17 @@ export default function FoodFormModal({
     remark: "",
   });
 
-  const [catOpts, setCatOpts] = useState([]);   // [{id,name}]
-  const [unitOpts, setUnitOpts] = useState([]); // [{id,name}]
+  const [catOpts, setCatOpts] = useState([]);
+  const [unitOpts, setUnitOpts] = useState([]);
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState("");
 
-// 1) Prefetch on component mount (only once) and store in the cache
+  // ✅ guard so we prefill only once per "open" session
+  const didPrefillRef = useRef(false);
+  // snapshot the "initial" we received at the moment we open
+  const initialSnapRef = useRef(initial);
+
+  // 1) Prefetch options once and cache
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -55,36 +60,51 @@ export default function FoodFormModal({
     return () => { cancelled = true; };
   }, []);
 
-// 2) Each time the modal opens, combine `initial` and the fetched options
-//    to set form defaults (fallback to the first option if none matches)
+  // 2) When opening: snapshot `initial`, then prefill ONCE.
   useEffect(() => {
-    if (!open) return;
+    if (!open) { 
+      didPrefillRef.current = false; // reset for next time
+      return; 
+    }
+    // snapshot the initial passed by parent right now
+    initialSnapRef.current = initial;
 
+    // if options not ready yet, we'll prefill after they arrive (see next effect)
+    if (catOpts.length && unitOpts.length) {
+      prefillOnce();
+    }
+    setErr("");
+    // ⚠️ do NOT include `initial` in deps to avoid re-running on identity changes
+  }, [open, catOpts.length, unitOpts.length]); 
+
+  function prefillOnce() {
+    if (didPrefillRef.current) return; // already done for this open
+    didPrefillRef.current = true;
+
+    const init = initialSnapRef.current || {};
     const pickCatID =
-      initial.categoryID ||
-      catOpts.find((c) => c.name === initial.category)?.id ||
-      f.categoryID ||                           // Keep existing user input
-      catOpts[0]?.id || "";                    // Fallback / default
+      init.categoryID ||
+      catOpts.find((c) => c.name === init.category)?.id ||
+      catOpts[0]?.id || "";
 
     const pickUnitID =
-      initial.unitID ||
-      unitOpts.find((u) => u.name === initial.unit)?.id ||
-      f.unitID ||
+      init.unitID ||
+      unitOpts.find((u) => u.name === init.unit)?.id ||
       unitOpts[0]?.id || "";
 
-    setF({
-      name: initial.name ?? "",
-      qty: Number(initial.qty ?? 1),
-      categoryID: pickCatID,
-      unitID: pickUnitID,
-      expiry: (initial.expiry ?? "").slice(0, 10),
-      location: initial.location ?? "",
-      remark: initial.remark ?? "",
-    });
-    setErr("");
-  }, [open, initial, catOpts, unitOpts]);
+    setF((prev) => ({
+      // don’t wipe what user already typed between open and options arrival
+      name: prev.name || init.name || "",
+      qty: Number(prev.qty ?? init.qty ?? 1),
+      categoryID: prev.categoryID || pickCatID,
+      unitID: prev.unitID || pickUnitID,
+      expiry: (prev.expiry || init.expiry || "").slice(0, 10),
+      location: prev.location || init.location || "",
+      remark: prev.remark || init.remark || "",
+    }));
+  }
 
-  // Close by ESC
+  // ESC to close
   useEffect(() => {
     const onKey = (e) => e.key === "Escape" && onClose?.();
     if (open) document.addEventListener("keydown", onKey);
@@ -126,6 +146,7 @@ export default function FoodFormModal({
     try {
       if (mode === "add") {
         const res = await apiPost("/food_add.php", payload);
+        if (!res.ok && res.ok !== undefined) throw new Error(res.error || "Add failed");
         const foodID = res.foodID || null;
 
         onSave?.({
@@ -147,7 +168,8 @@ export default function FoodFormModal({
       } else {
         const foodID = initial.foodID || initial.id;
         if (!foodID) throw new Error("Missing foodID for edit");
-        await apiPost("/food_update.php", { foodID, ...payload });
+        const res = await apiPost("/food_update.php", { foodID, ...payload });
+        if (!res.ok && res.ok !== undefined) throw new Error(res.error || "Update failed");
 
         onSave?.({
           id: foodID,
