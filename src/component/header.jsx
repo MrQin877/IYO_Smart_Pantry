@@ -50,3 +50,29 @@ function IconButton({ children, title }) {
     </button>
   );
 }
+
+/*import { apiGet } from '../lib/api'
+import { useState } from 'react'
+
+export default function Header() {
+  const [pong, setPong] = useState('')
+
+  async function testPing() {
+    try {
+      const j = await apiGet('/ping.php')
+      console.log('PING JSON:', j)        // <-- look in DevTools console
+      // show fallback text if keys are missing, so you can see it's the right file
+      setPong(`${j.msg ?? '(no msg)'} @ ${j.time ?? '(no time)'} | raw=${JSON.stringify(j)}`)
+    } catch (e) {
+      console.error(e)
+      setPong('FAILED: ' + e.message)
+    }
+  }
+
+  return (
+    <header style={{padding:12}}>
+      <button onClick={testPing}>Test API</button>
+      {pong && <span style={{marginLeft:12}}>{pong}</span>}
+    </header>
+  )
+}*/
