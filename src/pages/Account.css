@@ -1,0 +1,46 @@
+.account-page {
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: #fdfdf5;
+  padding: 24px;
+}
+
+.account-card {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  width: 100%;
+  max-width: 900px;
+  background: white;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.1);
+}
+
+.account-form {
+  padding: 40px;
+}
+
+.tab-buttons {
+  margin-bottom: 24px;
+  display: flex;
+  gap: 12px;
+}
+
+.tab-buttons button {
+  padding: 8px 16px;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+  background: #f0f0f0;
+}
+
+.tab-buttons button.active {
+  background: #cde1c5;
+  font-weight: bold;
+}
+
+.account-image {
+  background: url("https://images.unsplash.com/photo-1625246333195-78f8b4aefcea?q=80&w=1400&auto=format&fit=crop") center/cover;
+}

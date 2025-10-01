@@ -22,8 +22,12 @@ export default function HeaderNav() {
         {/* right icons */}
         <div className="icons">
           <IconButton title="Notifications">🔔</IconButton>
-          <IconButton title="Account">🧑</IconButton>
-          <IconButton title="Settings">⚙️</IconButton>
+          <Link to="/account">
+            <IconButton title="Account">🧑</IconButton>
+          </Link>
+          <Link to="/settings">
+            <IconButton title="Settings">⚙️</IconButton>
+          </Link>
         </div>
       </div>
     </header>
