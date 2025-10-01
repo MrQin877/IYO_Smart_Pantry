@@ -1,54 +1,53 @@
 <?php
-// Session (if you need cookies)
+// C:\xampp\htdocs\IYO_Smart_Pantry\api\config.php
+
+// Session (如不需要可删)
 session_name('IYOSESSID');
-session_start();
-
-// CORS: enable when calling from Vite (http://localhost:5173)
-if (isset($_SERVER['HTTP_ORIGIN'])) {
-  if (preg_match('~^https?://localhost(:5173)?$~', $_SERVER['HTTP_ORIGIN'])) {
-    header('Access-Control-Allow-Origin: ' . $_SERVER['HTTP_ORIGIN']);
-    header('Access-Control-Allow-Credentials: true');
-    header('Vary: Origin');
-  }
-}
-if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
-  header('Access-Control-Allow-Methods: GET,POST,PUT,PATCH,DELETE,OPTIONS');
-  header('Access-Control-Allow-Headers: Content-Type, X-Requested-With');
-  exit;
+if (session_status() === PHP_SESSION_NONE) {
+  session_start();
 }
 
-// ---- DB (mysqli to match your other files) ----
-$DB_HOST = '127.0.0.1';
-$DB_USER = 'root';
-$DB_PASS = '';
-$DB_NAME = 'iyo_smart_pantry';
+// 建议：线上关闭屏幕报错，避免污染 JSON；调试时可改为 1
+ini_set('display_errors', 0);
+ini_set('log_errors', 1);
+error_reporting(E_ALL);
 
-$mysqli = @new mysqli($DB_HOST, $DB_USER, $DB_PASS, $DB_NAME);
-if ($mysqli->connect_errno) {
-  http_response_code(500);
+// 统一返回 JSON
+function respond($arr, $code = 200) {
+  http_response_code($code);
   header('Content-Type: application/json; charset=utf-8');
-  echo json_encode(['ok'=>false, 'error'=>'DB connect failed', 'detail'=>$mysqli->connect_error]);
+  echo json_encode($arr, JSON_UNESCAPED_UNICODE);
   exit;
 }
-$mysqli->set_charset('utf8mb4');
 
-// ---- Helpers (both names for compatibility) ----
-function read_json() {
+// 读取 JSON/POST/GET
+function json_input() {
   $raw = file_get_contents('php://input');
   $d = json_decode($raw, true);
   if (is_array($d)) return $d;
   if (!empty($_POST)) return $_POST;
-  if (!empty($_GET))  return $_GET;
+  if ($_SERVER['REQUEST_METHOD'] === 'GET' && !empty($_GET)) return $_GET;
   return [];
 }
 
-function send_json($arr, $code = 200) {
-  http_response_code($code);
-  header('Content-Type: application/json; charset=utf-8');
-  echo json_encode($arr);
-  exit;
-}
+// （可选）CORS：仅在 vite 开发时需要
+// header('Access-Control-Allow-Origin: http://localhost:5173');
+// header('Access-Control-Allow-Credentials: true');
+// if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') exit;
 
-// Aliases so older/newer files work the same
-function json_input() { return read_json(); }
-function respond($arr, $code = 200) { return send_json($arr, $code); }
+// --- PDO 连接（核心） ---
+$dsn  = 'mysql:host=localhost;dbname=iyo_smart_pantry;charset=utf8mb4';
+$user = 'root';
+$pass = '';
+
+$options = [
+  PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
+  PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+];
+
+try {
+  // 这里一定要叫 $pdo ！！其他文件都会用到这个变量名
+  $pdo = new PDO($dsn, $user, $pass, $options);
+} catch (Throwable $e) {
+  respond(['ok' => false, 'error' => 'DB connect failed'], 500);
+}

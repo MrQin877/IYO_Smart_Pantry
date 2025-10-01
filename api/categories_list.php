@@ -2,9 +2,10 @@
 // api/categories_list.php
 require __DIR__ . '/config.php';
 
-$sql = "SELECT categoryID AS id, categoryName AS name FROM categories ORDER BY name";
-$res = $mysqli->query($sql);
-$data = [];
-while ($row = $res->fetch_assoc()) $data[] = $row;
-
-send_json(['ok'=>true, 'data'=>$data]);
+try {
+  $stmt = $pdo->query("SELECT categoryID AS id, categoryName AS name FROM categories ORDER BY categoryName");
+  $rows = $stmt->fetchAll();
+  respond(['ok' => true, 'data' => $rows]); // [{id,name},...]
+} catch (Throwable $e) {
+  respond(['ok' => false, 'error' => 'DB error'], 500);
+}
