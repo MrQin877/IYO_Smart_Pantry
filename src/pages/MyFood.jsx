@@ -27,18 +27,38 @@ export default function MyFood() {
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(false);
   useEffect(() => {
-  (async () => {
-    setLoading(true);
-    try {
-      const res = await apiGet("/food_list.php", { userID: "U1" }); // TODO: replace with actual logged-in userID
-      if (res.ok) setRows(res.foods || []);
-      else console.error(res.error);
-    } catch (e) {
-      console.error("Failed to load foods", e);
-    }
-    setLoading(false);
-  })();
-}, []);
+    (async () => {
+      setLoading(true);
+      try {
+        const res = await apiGet("/food_list.php", { userID: "U1" });
+        if (res.ok) {
+          console.log("✅ Foods fetched:", res.foods);
+
+          // 🔥 map backend fields -> frontend expected fields
+          const mapped = res.foods.map(f => ({
+            id: f.foodID,
+            name: f.foodName,
+            qty: f.quantity,
+            category: f.categoryName || f.categoryID,  // show name if available
+            unit: f.unitName || f.unitID,              // show name if available
+            expiry: f.expiryDate,
+            status: f.is_expiryStatus === "1" ? "Expired" : "Available",
+            location: f.storageLocation,
+            remark: f.remark,
+            userID: f.userID,
+          }));
+
+
+          setRows(mapped);
+        } else {
+          console.error(res.error);
+        }
+      } catch (e) {
+        console.error("Failed to load foods", e);
+      }
+      setLoading(false);
+    })();
+  }, []);
 
   
 
@@ -230,6 +250,7 @@ export default function MyFood() {
         onClose={() => setDetailItem(null)}
         onDonate={handleDonateRequest}
       />
+
 
       <DonationModal
         open={donateOpen}
