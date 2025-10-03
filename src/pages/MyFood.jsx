@@ -209,14 +209,14 @@ export default function MyFood() {
             ) : (
               view.map((r) => (
                 <tr key={r.id}>
-                  <td className="link" onClick={() => setDetailItem(r)} title="Open details">{r.name}</td>
+                  <td className="link" onClick={() => setDetailItem(r.id)} title="Open details">{r.name}</td>
                   <td>{r.category}</td>
                   <td className="center">{r.qty}</td>
                   <td className="center">{r.unit}</td>
                   <td>{formatDate(r.expiry)}</td>
                   <td><span className={`pill ${r.status === "Expired" ? "danger" : "ok"}`}>{r.status}</span></td>
                   <td className="row-actions">
-                    <button className="icon-btn" title="View" onClick={() => setDetailItem(r)}>👁️</button>
+                    <button className="icon-btn" title="View" onClick={() => setDetailItem(r.id)}>👁️</button>
                     <button className="icon-btn" title="Edit" onClick={() => setEditItem(r)}>✏️</button>
                     <button className="icon-btn" title="Delete" onClick={() => setRows(rows.filter(x=>x.id!==r.id))}>🗑️</button>
                   </td>
@@ -244,12 +244,14 @@ export default function MyFood() {
         onSave={handleUpdate}
       />
 
-      <FoodDetailModal
-        open={!!detailItem}
-        item={detailItem}
-        onClose={() => setDetailItem(null)}
-        onDonate={handleDonateRequest}
-      />
+      {detailItem && (
+        <FoodDetailModal 
+          foodID={detailItem.foodID} 
+          item={detailItem}   // ✅ pass item
+          onClose={() => setDetailItem(null)} 
+        />
+      )}
+
 
 
       <DonationModal
