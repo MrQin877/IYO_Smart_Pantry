@@ -12,8 +12,8 @@ const toStatus = (yyyyMmDd) =>
 
 export default function FoodFormModal({
   open,
-  mode = "add",           // "add" | "edit"
-  initial = {},           // may contain { foodID/id, name, qty, categoryID/category, unitID/unit, expiry, storageID/storageName, remark }
+  mode = "add",
+  initial = {},
   userId = "U1",
   onClose,
   onSave,
