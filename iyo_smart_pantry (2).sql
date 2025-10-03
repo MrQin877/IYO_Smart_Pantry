@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Oct 03, 2025 at 08:42 PM
+-- Generation Time: Oct 03, 2025 at 08:59 PM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -36,23 +36,17 @@ CREATE TABLE `actions` (
   `unitID` varchar(10) NOT NULL,
   `actionTypeID` varchar(10) NOT NULL,
   `mealEntryID` varchar(10) DEFAULT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ;
 
 --
 -- Triggers `actions`
 --
 DELIMITER $$
 CREATE TRIGGER `bi_actions` BEFORE INSERT ON `actions` FOR EACH ROW BEGIN
-  DECLARE n INT;
-  DECLARE got_lock INT;
-  DECLARE rel_lock INT;
-
+  DECLARE n BIGINT;
   IF NEW.actionID IS NULL OR NEW.actionID = '' THEN
-    SELECT GET_LOCK('seq_A', 5) INTO got_lock;
-    SELECT COALESCE(MAX(CAST(SUBSTRING(actionID, 2) AS UNSIGNED)),0)+1
-      INTO n FROM actions WHERE actionID LIKE 'A%';
-    SET NEW.actionID = CONCAT('A', LPAD(n,4,'0'));
-    SELECT RELEASE_LOCK('seq_A') INTO rel_lock;
+    SELECT COALESCE(MAX(CAST(SUBSTRING(actionID,2) AS UNSIGNED)),0)+1 INTO n FROM ACTIONS;
+    SET NEW.actionID = CONCAT('A', n);
   END IF;
 END
 $$
@@ -67,32 +61,27 @@ DELIMITER ;
 CREATE TABLE `action_types` (
   `actionTypeID` varchar(10) NOT NULL,
   `actionTypeName` varchar(255) NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
 -- Dumping data for table `action_types`
 --
 
 INSERT INTO `action_types` (`actionTypeID`, `actionTypeName`) VALUES
-('AT0001', 'Used'),
-('AT0002', 'Donated'),
-('AT0003', 'Reserved');
+('AT1', 'Used'),
+('AT2', 'Planned'),
+('AT3', 'Donated');
 
 --
 -- Triggers `action_types`
 --
 DELIMITER $$
 CREATE TRIGGER `bi_action_types` BEFORE INSERT ON `action_types` FOR EACH ROW BEGIN
-  DECLARE n INT;
-  DECLARE got_lock INT;
-  DECLARE rel_lock INT;
-
+  DECLARE n BIGINT;
   IF NEW.actionTypeID IS NULL OR NEW.actionTypeID = '' THEN
-    SELECT GET_LOCK('seq_AT', 5) INTO got_lock;
-    SELECT COALESCE(MAX(CAST(SUBSTRING(actionTypeID, 3) AS UNSIGNED)),0)+1
-      INTO n FROM action_types WHERE actionTypeID LIKE 'AT%';
-    SET NEW.actionTypeID = CONCAT('AT', LPAD(n,4,'0'));
-    SELECT RELEASE_LOCK('seq_AT') INTO rel_lock;
+    SELECT COALESCE(MAX(CAST(SUBSTRING(actionTypeID,3) AS UNSIGNED)),0)+1 INTO n
+    FROM ACTION_TYPES WHERE LEFT(actionTypeID,2)='AT';
+    SET NEW.actionTypeID = CONCAT('AT', n);
   END IF;
 END
 $$
@@ -107,36 +96,30 @@ DELIMITER ;
 CREATE TABLE `categories` (
   `categoryID` varchar(10) NOT NULL,
   `categoryName` varchar(255) NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
 -- Dumping data for table `categories`
 --
 
 INSERT INTO `categories` (`categoryID`, `categoryName`) VALUES
-('C0001', 'Protein'),
-('C0002', 'Grains'),
-('C0003', 'Fruits'),
-('C0004', 'Vegetables'),
-('C0005', 'Dairy'),
-('C0006', 'Canned Food'),
-('C0007', 'Other');
+('C1', 'Protein'),
+('C2', 'Grains'),
+('C3', 'Fruits'),
+('C4', 'Vegetables'),
+('C5', 'Dairy'),
+('C6', 'Canned Food'),
+('C7', 'Other');
 
 --
 -- Triggers `categories`
 --
 DELIMITER $$
 CREATE TRIGGER `bi_categories` BEFORE INSERT ON `categories` FOR EACH ROW BEGIN
-  DECLARE n INT;
-  DECLARE got_lock INT;
-  DECLARE rel_lock INT;
-
+  DECLARE n BIGINT;
   IF NEW.categoryID IS NULL OR NEW.categoryID = '' THEN
-    SELECT GET_LOCK('seq_C', 5) INTO got_lock;
-    SELECT COALESCE(MAX(CAST(SUBSTRING(categoryID, 2) AS UNSIGNED)),0)+1
-      INTO n FROM categories WHERE categoryID LIKE 'C%';
-    SET NEW.categoryID = CONCAT('C', LPAD(n,4,'0'));
-    SELECT RELEASE_LOCK('seq_C') INTO rel_lock;
+    SELECT COALESCE(MAX(CAST(SUBSTRING(categoryID,2) AS UNSIGNED)),0)+1 INTO n FROM CATEGORIES;
+    SET NEW.categoryID = CONCAT('C', n);
   END IF;
 END
 $$
@@ -156,23 +139,17 @@ CREATE TABLE `donations` (
   `pickupLocation` varchar(255) DEFAULT NULL,
   `foodID` varchar(10) DEFAULT NULL,
   `userID` varchar(10) DEFAULT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ;
 
 --
 -- Triggers `donations`
 --
 DELIMITER $$
 CREATE TRIGGER `bi_donations` BEFORE INSERT ON `donations` FOR EACH ROW BEGIN
-  DECLARE n INT;
-  DECLARE got_lock INT;
-  DECLARE rel_lock INT;
-
+  DECLARE n BIGINT;
   IF NEW.donationID IS NULL OR NEW.donationID = '' THEN
-    SELECT GET_LOCK('seq_D', 5) INTO got_lock;
-    SELECT COALESCE(MAX(CAST(SUBSTRING(donationID, 2) AS UNSIGNED)),0)+1
-      INTO n FROM donations WHERE donationID LIKE 'D%';
-    SET NEW.donationID = CONCAT('D', LPAD(n,4,'0'));
-    SELECT RELEASE_LOCK('seq_D') INTO rel_lock;
+    SELECT COALESCE(MAX(CAST(SUBSTRING(donationID,2) AS UNSIGNED)),0)+1 INTO n FROM DONATIONS;
+    SET NEW.donationID = CONCAT('D', n);
   END IF;
 END
 $$
@@ -195,23 +172,17 @@ CREATE TABLE `foods` (
   `userID` varchar(10) DEFAULT NULL,
   `categoryID` varchar(10) DEFAULT NULL,
   `unitID` varchar(10) DEFAULT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ;
 
 --
 -- Triggers `foods`
 --
 DELIMITER $$
 CREATE TRIGGER `bi_foods` BEFORE INSERT ON `foods` FOR EACH ROW BEGIN
-  DECLARE n INT;
-  DECLARE got_lock INT;
-  DECLARE rel_lock INT;
-
+  DECLARE n BIGINT;
   IF NEW.foodID IS NULL OR NEW.foodID = '' THEN
-    SELECT GET_LOCK('seq_F', 5) INTO got_lock;
-    SELECT COALESCE(MAX(CAST(SUBSTRING(foodID, 2) AS UNSIGNED)),0)+1
-      INTO n FROM foods WHERE foodID LIKE 'F%';
-    SET NEW.foodID = CONCAT('F', LPAD(n,4,'0'));
-    SELECT RELEASE_LOCK('seq_F') INTO rel_lock;
+    SELECT COALESCE(MAX(CAST(SUBSTRING(foodID,2) AS UNSIGNED)),0)+1 INTO n FROM FOODS;
+    SET NEW.foodID = CONCAT('F', n);
   END IF;
 END
 $$
@@ -227,23 +198,17 @@ CREATE TABLE `ingredients` (
   `ingredientID` varchar(10) NOT NULL,
   `ingredientName` varchar(255) NOT NULL,
   `categoryID` varchar(10) DEFAULT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
 -- Triggers `ingredients`
 --
 DELIMITER $$
 CREATE TRIGGER `bi_ingredients` BEFORE INSERT ON `ingredients` FOR EACH ROW BEGIN
-  DECLARE n INT;
-  DECLARE got_lock INT;
-  DECLARE rel_lock INT;
-
+  DECLARE n BIGINT;
   IF NEW.ingredientID IS NULL OR NEW.ingredientID = '' THEN
-    SELECT GET_LOCK('seq_I', 5) INTO got_lock;
-    SELECT COALESCE(MAX(CAST(SUBSTRING(ingredientID, 2) AS UNSIGNED)),0)+1
-      INTO n FROM ingredients WHERE ingredientID LIKE 'I%';
-    SET NEW.ingredientID = CONCAT('I', LPAD(n,4,'0'));
-    SELECT RELEASE_LOCK('seq_I') INTO rel_lock;
+    SELECT COALESCE(MAX(CAST(SUBSTRING(ingredientID,2) AS UNSIGNED)),0)+1 INTO n FROM INGREDIENTS;
+    SET NEW.ingredientID = CONCAT('I', n);
   END IF;
 END
 $$
@@ -262,23 +227,18 @@ CREATE TABLE `meal_entries` (
   `mealPlanID` varchar(10) NOT NULL,
   `mealTypeID` varchar(10) DEFAULT NULL,
   `recipeID` varchar(10) DEFAULT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
 -- Triggers `meal_entries`
 --
 DELIMITER $$
 CREATE TRIGGER `bi_meal_entries` BEFORE INSERT ON `meal_entries` FOR EACH ROW BEGIN
-  DECLARE n INT;
-  DECLARE got_lock INT;
-  DECLARE rel_lock INT;
-
+  DECLARE n BIGINT;
   IF NEW.mealEntryID IS NULL OR NEW.mealEntryID = '' THEN
-    SELECT GET_LOCK('seq_ME', 5) INTO got_lock;
-    SELECT COALESCE(MAX(CAST(SUBSTRING(mealEntryID, 3) AS UNSIGNED)),0)+1
-      INTO n FROM meal_entries WHERE mealEntryID LIKE 'ME%';
-    SET NEW.mealEntryID = CONCAT('ME', LPAD(n,4,'0'));
-    SELECT RELEASE_LOCK('seq_ME') INTO rel_lock;
+    SELECT COALESCE(MAX(CAST(SUBSTRING(mealEntryID,3) AS UNSIGNED)),0)+1 INTO n
+    FROM MEAL_ENTRIES WHERE LEFT(mealEntryID,2)='ME';
+    SET NEW.mealEntryID = CONCAT('ME', n);
   END IF;
 END
 $$
@@ -294,23 +254,18 @@ CREATE TABLE `meal_plan_calendars` (
   `mealPlanID` varchar(10) NOT NULL,
   `weekStart` date NOT NULL,
   `userID` varchar(10) NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
 -- Triggers `meal_plan_calendars`
 --
 DELIMITER $$
 CREATE TRIGGER `bi_meal_plan_calendars` BEFORE INSERT ON `meal_plan_calendars` FOR EACH ROW BEGIN
-  DECLARE n INT;
-  DECLARE got_lock INT;
-  DECLARE rel_lock INT;
-
+  DECLARE n BIGINT;
   IF NEW.mealPlanID IS NULL OR NEW.mealPlanID = '' THEN
-    SELECT GET_LOCK('seq_MP', 5) INTO got_lock;
-    SELECT COALESCE(MAX(CAST(SUBSTRING(mealPlanID, 3) AS UNSIGNED)),0)+1
-      INTO n FROM meal_plan_calendars WHERE mealPlanID LIKE 'MP%';
-    SET NEW.mealPlanID = CONCAT('MP', LPAD(n,4,'0'));
-    SELECT RELEASE_LOCK('seq_MP') INTO rel_lock;
+    SELECT COALESCE(MAX(CAST(SUBSTRING(mealPlanID,3) AS UNSIGNED)),0)+1 INTO n
+    FROM MEAL_PLAN_CALENDARS WHERE LEFT(mealPlanID,2)='MP';
+    SET NEW.mealPlanID = CONCAT('MP', n);
   END IF;
 END
 $$
@@ -325,34 +280,29 @@ DELIMITER ;
 CREATE TABLE `meal_types` (
   `mealTypeID` varchar(10) NOT NULL,
   `mealTypeName` varchar(255) NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
 -- Dumping data for table `meal_types`
 --
 
 INSERT INTO `meal_types` (`mealTypeID`, `mealTypeName`) VALUES
-('MT0001', 'Breakfast'),
-('MT0002', 'Brunch'),
-('MT0003', 'Lunch'),
-('MT0004', 'Tea Time'),
-('MT0005', 'Dinner');
+('MT1', 'Breakfast'),
+('MT2', 'Brunch'),
+('MT3', 'Lunch'),
+('MT4', 'Tea Time'),
+('MT5', 'Dinner');
 
 --
 -- Triggers `meal_types`
 --
 DELIMITER $$
 CREATE TRIGGER `bi_meal_types` BEFORE INSERT ON `meal_types` FOR EACH ROW BEGIN
-  DECLARE n INT;
-  DECLARE got_lock INT;
-  DECLARE rel_lock INT;
-
+  DECLARE n BIGINT;
   IF NEW.mealTypeID IS NULL OR NEW.mealTypeID = '' THEN
-    SELECT GET_LOCK('seq_MT', 5) INTO got_lock;
-    SELECT COALESCE(MAX(CAST(SUBSTRING(mealTypeID, 3) AS UNSIGNED)),0)+1
-      INTO n FROM meal_types WHERE mealTypeID LIKE 'MT%';
-    SET NEW.mealTypeID = CONCAT('MT', LPAD(n,4,'0'));
-    SELECT RELEASE_LOCK('seq_MT') INTO rel_lock;
+    SELECT COALESCE(MAX(CAST(SUBSTRING(mealTypeID,3) AS UNSIGNED)),0)+1 INTO n
+    FROM MEAL_TYPES WHERE LEFT(mealTypeID,2)='MT';
+    SET NEW.mealTypeID = CONCAT('MT', n);
   END IF;
 END
 $$
@@ -370,27 +320,22 @@ CREATE TABLE `notifications` (
   `is_read` tinyint(1) NOT NULL DEFAULT 0,
   `message` varchar(255) DEFAULT NULL,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
-  `targetID` varchar(10) DEFAULT NULL,
-  `targetType` enum('FOOD','MEAL_ENTRY','DONATION','SYSTEM') NOT NULL,
+  `foodID` varchar(10) DEFAULT NULL,
+  `mealEntryID` varchar(10) DEFAULT NULL,
+  `donationID` varchar(10) DEFAULT NULL,
   `userID` varchar(10) NOT NULL,
   `noticeCateID` varchar(10) DEFAULT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
 -- Triggers `notifications`
 --
 DELIMITER $$
 CREATE TRIGGER `bi_notifications` BEFORE INSERT ON `notifications` FOR EACH ROW BEGIN
-  DECLARE n INT;
-  DECLARE got_lock INT;
-  DECLARE rel_lock INT;
-
+  DECLARE n BIGINT;
   IF NEW.noticeID IS NULL OR NEW.noticeID = '' THEN
-    SELECT GET_LOCK('seq_N', 5) INTO got_lock;
-    SELECT COALESCE(MAX(CAST(SUBSTRING(noticeID, 2) AS UNSIGNED)),0)+1
-      INTO n FROM notifications WHERE noticeID LIKE 'N%';
-    SET NEW.noticeID = CONCAT('N', LPAD(n,4,'0'));
-    SELECT RELEASE_LOCK('seq_N') INTO rel_lock;
+    SELECT COALESCE(MAX(CAST(SUBSTRING(noticeID,2) AS UNSIGNED)),0)+1 INTO n FROM NOTIFICATIONS;
+    SET NEW.noticeID = CONCAT('N', n);
   END IF;
 END
 $$
@@ -405,35 +350,30 @@ DELIMITER ;
 CREATE TABLE `notification_categories` (
   `noticeCateID` varchar(10) NOT NULL,
   `noticeCateName` varchar(255) NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
 -- Dumping data for table `notification_categories`
 --
 
 INSERT INTO `notification_categories` (`noticeCateID`, `noticeCateName`) VALUES
-('NC0001', 'Inventory'),
-('NC0002', 'Expiry'),
-('NC0003', 'MealPlan'),
-('NC0004', 'Donation'),
-('NC0005', 'System'),
-('NC0006', 'Account');
+('NC1', 'Inventory'),
+('NC2', 'Expiry'),
+('NC3', 'MealPlan'),
+('NC4', 'Donation'),
+('NC5', 'System'),
+('NC6', 'Account');
 
 --
 -- Triggers `notification_categories`
 --
 DELIMITER $$
 CREATE TRIGGER `bi_notification_categories` BEFORE INSERT ON `notification_categories` FOR EACH ROW BEGIN
-  DECLARE n INT;
-  DECLARE got_lock INT;
-  DECLARE rel_lock INT;
-
+  DECLARE n BIGINT;
   IF NEW.noticeCateID IS NULL OR NEW.noticeCateID = '' THEN
-    SELECT GET_LOCK('seq_NC', 5) INTO got_lock;
-    SELECT COALESCE(MAX(CAST(SUBSTRING(noticeCateID, 3) AS UNSIGNED)),0)+1
-      INTO n FROM notification_categories WHERE noticeCateID LIKE 'NC%';
-    SET NEW.noticeCateID = CONCAT('NC', LPAD(n,4,'0'));
-    SELECT RELEASE_LOCK('seq_NC') INTO rel_lock;
+    SELECT COALESCE(MAX(CAST(SUBSTRING(noticeCateID,3) AS UNSIGNED)),0)+1 INTO n
+    FROM NOTIFICATION_CATEGORIES WHERE LEFT(noticeCateID,2)='NC';
+    SET NEW.noticeCateID = CONCAT('NC', n);
   END IF;
 END
 $$
@@ -449,23 +389,18 @@ CREATE TABLE `pickup_times` (
   `pickupID` varchar(10) NOT NULL,
   `pickTime` varchar(100) NOT NULL,
   `donationID` varchar(10) NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
 -- Triggers `pickup_times`
 --
 DELIMITER $$
 CREATE TRIGGER `bi_pickup_times` BEFORE INSERT ON `pickup_times` FOR EACH ROW BEGIN
-  DECLARE n INT;
-  DECLARE got_lock INT;
-  DECLARE rel_lock INT;
-
+  DECLARE n BIGINT;
   IF NEW.pickupID IS NULL OR NEW.pickupID = '' THEN
-    SELECT GET_LOCK('seq_PK', 5) INTO got_lock;
-    SELECT COALESCE(MAX(CAST(SUBSTRING(pickupID, 3) AS UNSIGNED)),0)+1
-      INTO n FROM pickup_times WHERE pickupID LIKE 'PK%';
-    SET NEW.pickupID = CONCAT('PK', LPAD(n,4,'0'));
-    SELECT RELEASE_LOCK('seq_PK') INTO rel_lock;
+    SELECT COALESCE(MAX(CAST(SUBSTRING(pickupID,3) AS UNSIGNED)),0)+1 INTO n
+    FROM PICKUP_TIMES WHERE LEFT(pickupID,2)='PK';
+    SET NEW.pickupID = CONCAT('PK', n);
   END IF;
 END
 $$
@@ -483,23 +418,17 @@ CREATE TABLE `recipes` (
   `instruction` text DEFAULT NULL,
   `serving` int(11) DEFAULT NULL,
   `isGeneric` tinyint(1) DEFAULT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
 -- Triggers `recipes`
 --
 DELIMITER $$
 CREATE TRIGGER `bi_recipes` BEFORE INSERT ON `recipes` FOR EACH ROW BEGIN
-  DECLARE n INT;
-  DECLARE got_lock INT;
-  DECLARE rel_lock INT;
-
+  DECLARE n BIGINT;
   IF NEW.recipeID IS NULL OR NEW.recipeID = '' THEN
-    SELECT GET_LOCK('seq_R', 5) INTO got_lock;
-    SELECT COALESCE(MAX(CAST(SUBSTRING(recipeID, 2) AS UNSIGNED)),0)+1
-      INTO n FROM recipes WHERE recipeID LIKE 'R%';
-    SET NEW.recipeID = CONCAT('R', LPAD(n,4,'0'));
-    SELECT RELEASE_LOCK('seq_R') INTO rel_lock;
+    SELECT COALESCE(MAX(CAST(SUBSTRING(recipeID,2) AS UNSIGNED)),0)+1 INTO n FROM RECIPES;
+    SET NEW.recipeID = CONCAT('R', n);
   END IF;
 END
 $$
@@ -517,23 +446,18 @@ CREATE TABLE `recipe_ingredients` (
   `ingredientID` varchar(10) NOT NULL,
   `quantityNeeded` decimal(10,2) NOT NULL,
   `unitID` varchar(10) NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ;
 
 --
 -- Triggers `recipe_ingredients`
 --
 DELIMITER $$
 CREATE TRIGGER `bi_recipe_ingredients` BEFORE INSERT ON `recipe_ingredients` FOR EACH ROW BEGIN
-  DECLARE n INT;
-  DECLARE got_lock INT;
-  DECLARE rel_lock INT;
-
+  DECLARE n BIGINT;
   IF NEW.recipe_ingredientID IS NULL OR NEW.recipe_ingredientID = '' THEN
-    SELECT GET_LOCK('seq_RI', 5) INTO got_lock;
-    SELECT COALESCE(MAX(CAST(SUBSTRING(recipe_ingredientID, 3) AS UNSIGNED)),0)+1
-      INTO n FROM recipe_ingredients WHERE recipe_ingredientID LIKE 'RI%';
-    SET NEW.recipe_ingredientID = CONCAT('RI', LPAD(n,4,'0'));
-    SELECT RELEASE_LOCK('seq_RI') INTO rel_lock;
+    SELECT COALESCE(MAX(CAST(SUBSTRING(recipe_ingredientID,3) AS UNSIGNED)),0)+1 INTO n
+    FROM RECIPE_INGREDIENTS WHERE LEFT(recipe_ingredientID,2)='RI';
+    SET NEW.recipe_ingredientID = CONCAT('RI', n);
   END IF;
 END
 $$
@@ -548,23 +472,18 @@ DELIMITER ;
 CREATE TABLE `storages` (
   `storageID` varchar(10) NOT NULL,
   `storageName` varchar(255) NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
 -- Triggers `storages`
 --
 DELIMITER $$
 CREATE TRIGGER `bi_storages` BEFORE INSERT ON `storages` FOR EACH ROW BEGIN
-  DECLARE n INT;
-  DECLARE got_lock INT;
-  DECLARE rel_lock INT;
-
+  DECLARE n BIGINT;
   IF NEW.storageID IS NULL OR NEW.storageID = '' THEN
-    SELECT GET_LOCK('seq_ST', 5) INTO got_lock;
-    SELECT COALESCE(MAX(CAST(SUBSTRING(storageID, 3) AS UNSIGNED)),0)+1
-      INTO n FROM storages WHERE storageID LIKE 'ST%';
-    SET NEW.storageID = CONCAT('ST', LPAD(n,4,'0'));
-    SELECT RELEASE_LOCK('seq_ST') INTO rel_lock;
+    SELECT COALESCE(MAX(CAST(SUBSTRING(storageID,3) AS UNSIGNED)),0)+1 INTO n
+    FROM STORAGES WHERE LEFT(storageID,2)='ST';
+    SET NEW.storageID = CONCAT('ST', n);
   END IF;
 END
 $$
@@ -579,37 +498,32 @@ DELIMITER ;
 CREATE TABLE `units` (
   `unitID` varchar(10) NOT NULL,
   `unitName` varchar(255) NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
 -- Dumping data for table `units`
 --
 
 INSERT INTO `units` (`unitID`, `unitName`) VALUES
-('UN0001', 'kg'),
-('UN0002', 'g'),
-('UN0003', 'pcs'),
-('UN0004', 'pack'),
-('UN0005', 'ml'),
-('UN0006', 'l'),
-('UN0007', 'bottle'),
-('UN0008', 'Other');
+('UN1', 'kg'),
+('UN2', 'g'),
+('UN3', 'pcs'),
+('UN4', 'pack'),
+('UN5', 'ml'),
+('UN6', 'l'),
+('UN7', 'bottle'),
+('UN8', 'Other');
 
 --
 -- Triggers `units`
 --
 DELIMITER $$
 CREATE TRIGGER `bi_units` BEFORE INSERT ON `units` FOR EACH ROW BEGIN
-  DECLARE n INT;
-  DECLARE got_lock INT;
-  DECLARE rel_lock INT;
-
+  DECLARE n BIGINT;
   IF NEW.unitID IS NULL OR NEW.unitID = '' THEN
-    SELECT GET_LOCK('seq_UN', 5) INTO got_lock;
-    SELECT COALESCE(MAX(CAST(SUBSTRING(unitID, 3) AS UNSIGNED)),0)+1
-      INTO n FROM units WHERE unitID LIKE 'UN%';
-    SET NEW.unitID = CONCAT('UN', LPAD(n,4,'0'));
-    SELECT RELEASE_LOCK('seq_UN') INTO rel_lock;
+    SELECT COALESCE(MAX(CAST(SUBSTRING(unitID,3) AS UNSIGNED)),0)+1 INTO n
+    FROM UNITS WHERE LEFT(unitID,2)='UN';
+    SET NEW.unitID = CONCAT('UN', n);
   END IF;
 END
 $$
@@ -630,30 +544,24 @@ CREATE TABLE `users` (
   `status` varchar(255) NOT NULL DEFAULT 'Pending',
   `createdAt` timestamp NOT NULL DEFAULT current_timestamp(),
   `householdSize` int(11) DEFAULT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ;
 
 --
 -- Dumping data for table `users`
 --
 
 INSERT INTO `users` (`userID`, `fullName`, `email`, `password`, `twoFA`, `status`, `createdAt`, `householdSize`) VALUES
-('U0001', 'MrQin', 'kuanchinzhong@gmail.com', '$2y$10$VyV23qizU/z..UY0Xay8AOEfsn8weU9GQK2zQXaaIDXDnR4snzInq', 0, 'Pending', '2025-10-03 18:27:23', 1);
+('U1', 'MrQin', 'kuanchinzhong@gmail.com', '$2y$10$VyV23qizU/z..UY0Xay8AOEfsn8weU9GQK2zQXaaIDXDnR4snzInq', 0, 'Pending', '2025-10-03 18:59:28', 1);
 
 --
 -- Triggers `users`
 --
 DELIMITER $$
 CREATE TRIGGER `bi_users` BEFORE INSERT ON `users` FOR EACH ROW BEGIN
-  DECLARE n INT;
-  DECLARE got_lock INT;
-  DECLARE rel_lock INT;
-
+  DECLARE n BIGINT;
   IF NEW.userID IS NULL OR NEW.userID = '' THEN
-    SELECT GET_LOCK('seq_U', 5) INTO got_lock;
-    SELECT COALESCE(MAX(CAST(SUBSTRING(userID, 2) AS UNSIGNED)),0)+1
-      INTO n FROM users WHERE userID LIKE 'U%';
-    SET NEW.userID = CONCAT('U', LPAD(n,4,'0'));
-    SELECT RELEASE_LOCK('seq_U') INTO rel_lock;
+    SELECT COALESCE(MAX(CAST(SUBSTRING(userID,2) AS UNSIGNED)),0)+1 INTO n FROM USERS;
+    SET NEW.userID = CONCAT('U', n);
   END IF;
 END
 $$
@@ -670,9 +578,9 @@ ALTER TABLE `actions`
   ADD PRIMARY KEY (`actionID`),
   ADD KEY `fk_act_unit` (`unitID`),
   ADD KEY `fk_act_me` (`mealEntryID`),
-  ADD KEY `idx_actions_food` (`foodID`,`actionDate`),
   ADD KEY `idx_actions_user` (`userID`,`actionDate`),
-  ADD KEY `idx_actions_type` (`actionTypeID`,`actionDate`);
+  ADD KEY `idx_actions_type` (`actionTypeID`,`actionDate`),
+  ADD KEY `idx_actions_food` (`foodID`,`actionDate`);
 
 --
 -- Indexes for table `action_types`
@@ -710,7 +618,7 @@ ALTER TABLE `foods`
 --
 ALTER TABLE `ingredients`
   ADD PRIMARY KEY (`ingredientID`),
-  ADD KEY `fk_ing_category` (`categoryID`);
+  ADD KEY `idx_ing_category` (`categoryID`);
 
 --
 -- Indexes for table `meal_entries`
@@ -739,9 +647,11 @@ ALTER TABLE `meal_types`
 --
 ALTER TABLE `notifications`
   ADD PRIMARY KEY (`noticeID`),
-  ADD KEY `fk_notif_cate` (`noticeCateID`),
-  ADD KEY `idx_notif_user_read` (`userID`,`is_read`,`created_at`),
-  ADD KEY `idx_notif_target` (`targetType`,`targetID`,`created_at`);
+  ADD KEY `fk_n_food` (`foodID`),
+  ADD KEY `fk_n_me` (`mealEntryID`),
+  ADD KEY `fk_n_donation` (`donationID`),
+  ADD KEY `fk_n_category` (`noticeCateID`),
+  ADD KEY `idx_notif_user_read` (`userID`,`is_read`,`created_at`);
 
 --
 -- Indexes for table `notification_categories`
@@ -787,7 +697,9 @@ ALTER TABLE `units`
 -- Indexes for table `users`
 --
 ALTER TABLE `users`
-  ADD PRIMARY KEY (`userID`);
+  ADD PRIMARY KEY (`userID`),
+  ADD UNIQUE KEY `uq_users_email` (`email`),
+  ADD KEY `idx_users_email` (`email`);
 
 --
 -- Constraints for dumped tables
@@ -797,11 +709,11 @@ ALTER TABLE `users`
 -- Constraints for table `actions`
 --
 ALTER TABLE `actions`
-  ADD CONSTRAINT `fk_act_food` FOREIGN KEY (`foodID`) REFERENCES `foods` (`foodID`) ON UPDATE CASCADE,
+  ADD CONSTRAINT `fk_act_food` FOREIGN KEY (`foodID`) REFERENCES `foods` (`foodID`) ON DELETE CASCADE ON UPDATE CASCADE,
   ADD CONSTRAINT `fk_act_me` FOREIGN KEY (`mealEntryID`) REFERENCES `meal_entries` (`mealEntryID`) ON DELETE SET NULL ON UPDATE CASCADE,
   ADD CONSTRAINT `fk_act_type` FOREIGN KEY (`actionTypeID`) REFERENCES `action_types` (`actionTypeID`) ON UPDATE CASCADE,
   ADD CONSTRAINT `fk_act_unit` FOREIGN KEY (`unitID`) REFERENCES `units` (`unitID`) ON UPDATE CASCADE,
-  ADD CONSTRAINT `fk_act_user` FOREIGN KEY (`userID`) REFERENCES `users` (`userID`) ON UPDATE CASCADE;
+  ADD CONSTRAINT `fk_act_user` FOREIGN KEY (`userID`) REFERENCES `users` (`userID`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 --
 -- Constraints for table `donations`
@@ -843,8 +755,11 @@ ALTER TABLE `meal_plan_calendars`
 -- Constraints for table `notifications`
 --
 ALTER TABLE `notifications`
-  ADD CONSTRAINT `fk_notif_cate` FOREIGN KEY (`noticeCateID`) REFERENCES `notification_categories` (`noticeCateID`) ON DELETE SET NULL ON UPDATE CASCADE,
-  ADD CONSTRAINT `fk_notif_user` FOREIGN KEY (`userID`) REFERENCES `users` (`userID`) ON DELETE CASCADE ON UPDATE CASCADE;
+  ADD CONSTRAINT `fk_n_category` FOREIGN KEY (`noticeCateID`) REFERENCES `notification_categories` (`noticeCateID`) ON DELETE SET NULL ON UPDATE CASCADE,
+  ADD CONSTRAINT `fk_n_donation` FOREIGN KEY (`donationID`) REFERENCES `donations` (`donationID`) ON DELETE SET NULL ON UPDATE CASCADE,
+  ADD CONSTRAINT `fk_n_food` FOREIGN KEY (`foodID`) REFERENCES `foods` (`foodID`) ON DELETE SET NULL ON UPDATE CASCADE,
+  ADD CONSTRAINT `fk_n_me` FOREIGN KEY (`mealEntryID`) REFERENCES `meal_entries` (`mealEntryID`) ON DELETE SET NULL ON UPDATE CASCADE,
+  ADD CONSTRAINT `fk_n_user` FOREIGN KEY (`userID`) REFERENCES `users` (`userID`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 --
 -- Constraints for table `pickup_times`
