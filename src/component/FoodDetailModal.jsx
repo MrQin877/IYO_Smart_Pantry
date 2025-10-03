@@ -7,29 +7,22 @@ export default function FoodDetailModal({ open, foodID, onClose, onDonate }) {
   const [loading, setLoading] = useState(true);
   const [food, setFood] = useState(null);
 
+  // FoodDetailModal.jsx
   useEffect(() => {
-    if (!foodID) return; // ✅ use foodID, not item.id
-    console.log("🔍 Sending foodID:", foodID);
+    if (open && foodID) {
+      console.log("Sending foodID:", foodID);
 
-    (async () => {
-      try {
-        const res = await apiPost("/food_detail.php", { foodID }); // ✅ use foodID directly
-        console.log("✅ Response from API:", res);
+      apiPost("/api/food_detail.php", { foodID })   // <-- wrap foodID in an object
+        .then(res => {
+          if (!res.ok) throw new Error(res.error || "Query failed");
+          setDetail(res.food);
+        })
+        .catch(err => {
+          console.error("❌ Fetch error:", err);
+        });
+    }
+  }, [open, foodID]);
 
-        if (res.ok) {
-          setFood(res.food);
-        } else {
-          console.error("❌ API error:", res.error);
-          setFood(null);
-        }
-      } catch (e) {
-        console.error("❌ Fetch error:", e);
-        setFood(null);
-      } finally {
-        setLoading(false); // ✅ stop loading after fetch
-      }
-    })();
-  }, [foodID]);
 
   if (!open) return null;
 
