@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Oct 03, 2025 at 08:20 PM
+-- Generation Time: Oct 03, 2025 at 08:42 PM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -623,14 +623,21 @@ DELIMITER ;
 
 CREATE TABLE `users` (
   `userID` varchar(10) NOT NULL,
-  `fullName` varchar(255) DEFAULT NULL,
-  `email` varchar(255) DEFAULT NULL,
-  `password` varchar(255) DEFAULT NULL,
-  `twoFA` tinyint(1) DEFAULT NULL,
-  `status` varchar(255) DEFAULT NULL,
+  `fullName` varchar(255) NOT NULL,
+  `email` varchar(255) NOT NULL,
+  `password` varchar(255) NOT NULL,
+  `twoFA` tinyint(1) NOT NULL DEFAULT 0,
+  `status` varchar(255) NOT NULL DEFAULT 'Pending',
   `createdAt` timestamp NOT NULL DEFAULT current_timestamp(),
   `householdSize` int(11) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `users`
+--
+
+INSERT INTO `users` (`userID`, `fullName`, `email`, `password`, `twoFA`, `status`, `createdAt`, `householdSize`) VALUES
+('U0001', 'MrQin', 'kuanchinzhong@gmail.com', '$2y$10$VyV23qizU/z..UY0Xay8AOEfsn8weU9GQK2zQXaaIDXDnR4snzInq', 0, 'Pending', '2025-10-03 18:27:23', 1);
 
 --
 -- Triggers `users`
