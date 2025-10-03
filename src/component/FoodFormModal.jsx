@@ -2,18 +2,19 @@
 import { useEffect, useRef, useState } from "react";
 import { apiGet, apiPost } from "../lib/api";
 
-// ---- Module-level cache (valid for the page lifecycle) ----
-let CATS_CACHE = null;   // [{id,name}]
-let UNITS_CACHE = null;  // [{id,name}]
+// ---- Module-level caches (persist while page lives) ----
+let CATS_CACHE = null;      // [{ id, name }]
+let UNITS_CACHE = null;     // [{ id, name }]
+let STORAGES_CACHE = null;  // [{ id, name }]
 
 const toStatus = (yyyyMmDd) =>
-  new Date(yyyyMmDd) < new Date() ? "Expired" : "Available";
+  yyyyMmDd && new Date(yyyyMmDd) < new Date() ? "Expired" : "Available";
 
 export default function FoodFormModal({
   open,
-  mode = "add",
-  initial = {},
-  userId = "U2",
+  mode = "add",           // "add" | "edit"
+  initial = {},           // may contain { foodID/id, name, qty, categoryID/category, unitID/unit, expiry, storageID/storageName, remark }
+  userId = "U1",
   onClose,
   onSave,
 }) {
@@ -23,36 +24,42 @@ export default function FoodFormModal({
     categoryID: "",
     unitID: "",
     expiry: "",
-    location: "",
+    storageID: "",
     remark: "",
   });
 
   const [catOpts, setCatOpts] = useState([]);
   const [unitOpts, setUnitOpts] = useState([]);
+  const [storageOpts, setStorageOpts] = useState([]);
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState("");
 
-  // ✅ guard so we prefill only once per "open" session
+  // guard so we prefill only once per "open" session
   const didPrefillRef = useRef(false);
-  // snapshot the "initial" we received at the moment we open
+  // snapshot the "initial" at the moment the modal opens
   const initialSnapRef = useRef(initial);
 
-  // 1) Prefetch options once and cache
+  // 1) Prefetch options once (with caches)
   useEffect(() => {
     let cancelled = false;
     (async () => {
       try {
         if (!CATS_CACHE) {
           const r = await apiGet("/categories_list.php");
-          CATS_CACHE = r.data || [];
+          CATS_CACHE = r?.data || [];
         }
         if (!UNITS_CACHE) {
           const r2 = await apiGet("/units_list.php");
-          UNITS_CACHE = r2.data || [];
+          UNITS_CACHE = r2?.data || [];
+        }
+        if (!STORAGES_CACHE) {
+          const r3 = await apiGet("/storages_list.php");
+          STORAGES_CACHE = r3?.data || [];
         }
         if (cancelled) return;
         setCatOpts(CATS_CACHE);
         setUnitOpts(UNITS_CACHE);
+        setStorageOpts(STORAGES_CACHE);
       } catch (e) {
         if (!cancelled) setErr("Failed to load options");
       }
@@ -60,28 +67,27 @@ export default function FoodFormModal({
     return () => { cancelled = true; };
   }, []);
 
-  // 2) When opening: snapshot `initial`, then prefill ONCE.
+  // 2) When opening: snapshot `initial`, then prefill ONCE once options are ready
   useEffect(() => {
-    if (!open) { 
-      didPrefillRef.current = false; // reset for next time
-      return; 
+    if (!open) {
+      didPrefillRef.current = false; // reset for next show
+      return;
     }
-    // snapshot the initial passed by parent right now
     initialSnapRef.current = initial;
 
-    // if options not ready yet, we'll prefill after they arrive (see next effect)
-    if (catOpts.length && unitOpts.length) {
+    if (catOpts.length && unitOpts.length && storageOpts.length) {
       prefillOnce();
     }
     setErr("");
-    // ⚠️ do NOT include `initial` in deps to avoid re-running on identity changes
-  }, [open, catOpts.length, unitOpts.length]); 
+    // do NOT include `initial` directly to avoid re-runs when object identity changes
+  }, [open, catOpts.length, unitOpts.length, storageOpts.length]); 
 
   function prefillOnce() {
-    if (didPrefillRef.current) return; // already done for this open
+    if (didPrefillRef.current) return;
     didPrefillRef.current = true;
 
     const init = initialSnapRef.current || {};
+
     const pickCatID =
       init.categoryID ||
       catOpts.find((c) => c.name === init.category)?.id ||
@@ -92,14 +98,19 @@ export default function FoodFormModal({
       unitOpts.find((u) => u.name === init.unit)?.id ||
       unitOpts[0]?.id || "";
 
+    const pickStorageID =
+      init.storageID ||
+      storageOpts.find((s) => s.name === init.storageName)?.id ||
+      storageOpts[0]?.id || "";
+
     setF((prev) => ({
-      // don’t wipe what user already typed between open and options arrival
+      // keep user typing if options arrive later
       name: prev.name || init.name || "",
       qty: Number(prev.qty ?? init.qty ?? 1),
       categoryID: prev.categoryID || pickCatID,
       unitID: prev.unitID || pickUnitID,
       expiry: (prev.expiry || init.expiry || "").slice(0, 10),
-      location: prev.location || init.location || "",
+      storageID: prev.storageID || pickStorageID,
       remark: prev.remark || init.remark || "",
     }));
   }
@@ -118,6 +129,7 @@ export default function FoodFormModal({
     f.expiry &&
     (f.categoryID || catOpts.length === 0) &&
     (f.unitID || unitOpts.length === 0) &&
+    (f.storageID || storageOpts.length === 0) &&
     Number(f.qty) > 0;
 
   const step = (d) =>
@@ -125,18 +137,21 @@ export default function FoodFormModal({
 
   const catName = catOpts.find((c) => c.id === f.categoryID)?.name || "";
   const unitName = unitOpts.find((u) => u.id === f.unitID)?.name || "";
+  const storageName =
+    storageOpts.find((s) => s.id === f.storageID)?.name || "";
 
   async function submit() {
     if (!canSave || saving) return;
     setSaving(true);
     setErr("");
 
+    // ✅ Send storageID (not storageLocation)
     const payload = {
       foodName: f.name.trim(),
       quantity: Number(f.qty),
       expiryDate: f.expiry,
       is_plan: 0,
-      storageLocation: f.location || "",
+      storageID: f.storageID || null,
       remark: f.remark || "",
       userID: userId,
       categoryID: f.categoryID,
@@ -146,8 +161,8 @@ export default function FoodFormModal({
     try {
       if (mode === "add") {
         const res = await apiPost("/food_add.php", payload);
-        if (!res.ok && res.ok !== undefined) throw new Error(res.error || "Add failed");
-        const foodID = res.foodID || null;
+        if (!res || (res.ok === false)) throw new Error(res?.error || "Add failed");
+        const foodID = res.foodID || res.id || null;
 
         onSave?.({
           id: foodID,
@@ -158,7 +173,8 @@ export default function FoodFormModal({
           unit: unitName,
           expiry: f.expiry,
           status: toStatus(f.expiry),
-          location: f.location || "",
+          storageID: f.storageID,
+          storageName,
           remark: f.remark || "",
           userID: userId,
           categoryID: f.categoryID,
@@ -169,7 +185,7 @@ export default function FoodFormModal({
         const foodID = initial.foodID || initial.id;
         if (!foodID) throw new Error("Missing foodID for edit");
         const res = await apiPost("/food_update.php", { foodID, ...payload });
-        if (!res.ok && res.ok !== undefined) throw new Error(res.error || "Update failed");
+        if (!res || (res.ok === false)) throw new Error(res?.error || "Update failed");
 
         onSave?.({
           id: foodID,
@@ -180,7 +196,8 @@ export default function FoodFormModal({
           unit: unitName,
           expiry: f.expiry,
           status: toStatus(f.expiry),
-          location: f.location || "",
+          storageID: f.storageID,
+          storageName,
           remark: f.remark || "",
           userID: userId,
           categoryID: f.categoryID,
@@ -238,9 +255,21 @@ export default function FoodFormModal({
           <div className="form-row">
             <label>Quantity</label>
             <div className="qty-row">
-              <button className="step" onClick={() => step(-1)}>-</button>
+              <button
+                type="button"
+                className="step"
+                onClick={() => step(-1)}
+              >
+                -
+              </button>
               <span className="qty-num">{f.qty}</span>
-              <button className="step" onClick={() => step(1)}>+</button>
+              <button
+                type="button"
+                className="step"
+                onClick={() => step(1)}
+              >
+                +
+              </button>
               <select
                 className="input unit"
                 value={f.unitID}
@@ -269,12 +298,19 @@ export default function FoodFormModal({
 
           <div className="form-row">
             <label>Storage Location</label>
-            <input
+            <select
               className="input"
-              placeholder="Optional"
-              value={f.location}
-              onChange={(e) => setF({ ...f, location: e.target.value })}
-            />
+              value={f.storageID}
+              onChange={(e) => setF({ ...f, storageID: e.target.value })}
+            >
+              {storageOpts.length === 0 ? (
+                <option value="">Loading…</option>
+              ) : (
+                storageOpts.map((s) => (
+                  <option key={s.id} value={s.id}>{s.name}</option>
+                ))
+              )}
+            </select>
           </div>
 
           <div className="form-row">
@@ -289,7 +325,9 @@ export default function FoodFormModal({
         </div>
 
         <div className="modal-actions">
-          <button className="btn secondary" onClick={onClose} disabled={saving}>Cancel</button>
+          <button className="btn secondary" onClick={onClose} disabled={saving}>
+            Cancel
+          </button>
           <button className="btn primary" disabled={!canSave || saving} onClick={submit}>
             {saving ? "Saving..." : mode === "edit" ? "Save" : "Add"}
           </button>
