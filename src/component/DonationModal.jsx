@@ -1,13 +1,23 @@
 // src/components/DonationModal.jsx
 import { useEffect, useMemo, useState } from "react";
+import { apiGet, apiPost } from "../lib/api";
 
-export default function DonationModal({ open, onClose, onPublish, item = {} }) {
+export default function DonationModal({
+  open,
+  onClose,
+  onPublish,
+  userId = "U1",
+  // item should at least have: { id/foodID, name, qty, unit, unitID? }
+  item = {},
+}) {
+  const maxQty = Number(item.qty ?? 0); // available stock
+
   const [f, setF] = useState(() => ({
     name: item.name || "",
-    qty: item.qty || 1,
-    unit: item.unit || "ps",
+    qty: Math.min(1, maxQty) || 1,
+    unit: item.unit || "UNIT",
     contact: "",
-    useDefaultAddress: false,
+    useLastAddress: false,
     address: {
       label: "",
       line1: "",
@@ -24,25 +34,67 @@ export default function DonationModal({ open, onClose, onPublish, item = {} }) {
     slots: [],
   }));
 
+  const [err, setErr] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  // previous address from DB
+  const [lastAddress, setLastAddress] = useState(null);
+  const [loadingAddr, setLoadingAddr] = useState(false);
+
+  // reset when opens
   useEffect(() => {
     if (!open) return;
-    setF((prev) => ({
-      ...prev,
+    setErr("");
+    setSaving(false);
+    setF({
       name: item.name || "",
-      qty: item.qty || 1,
-      unit: item.unit || "ps",
-    }));
+      qty: Math.min(1, Number(item.qty ?? 0)) || 1,
+      unit: item.unit || "UNIT",
+      contact: "",
+      useLastAddress: false,
+      address: {
+        label: "",
+        line1: "",
+        line2: "",
+        postcode: "",
+        city: "",
+        state: "",
+        country: "",
+      },
+      slotDate: "",
+      slotStart: "",
+      slotEnd: "",
+      slotNote: "",
+      slots: [],
+    });
   }, [open, item]);
 
+  // load last address when opens
+  useEffect(() => {
+    if (!open) return;
+    (async () => {
+      try {
+        setLoadingAddr(true);
+        const res = await apiGet(`/get_last_address.php?userID=${userId}`);
+        setLastAddress(res?.ok && res.address ? res.address : null);
+      } catch {
+        setLastAddress(null);
+      } finally {
+        setLoadingAddr(false);
+      }
+    })();
+  }, [open, userId]);
+
+  // ESC to close
   useEffect(() => {
     const onKey = (e) => e.key === "Escape" && onClose?.();
     if (open) document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
   }, [open, onClose]);
 
-  // --- reliable time comparison ---
+  // time helpers
   const toMinutes = (t) => {
-    if (!t) return NaN;            // "HH:MM"
+    if (!t) return NaN;
     const [h, m] = t.split(":").map(Number);
     return h * 60 + m;
   };
@@ -82,29 +134,88 @@ export default function DonationModal({ open, onClose, onPublish, item = {} }) {
   const removeSlot = (id) =>
     setF((s) => ({ ...s, slots: s.slots.filter((x) => x.id !== id) }));
 
-  const step = (d) => setF((s) => ({ ...s, qty: Math.max(1, s.qty + d) }));
+  // clamp qty to [1, maxQty]
+  const setQty = (q) =>
+    setF((s) => ({ ...s, qty: Math.max(1, Math.min(maxQty, Number(q) || 1)) }));
 
-  const canPublish = useMemo(
-    () => f.name.trim() && f.qty > 0 && f.slots.length > 0,
-    [f.name, f.qty, f.slots.length]
-  );
+  const step = (d) => setQty((f.qty || 1) + d);
 
-  const publish = () => {
-    if (!canPublish) return;
-    onPublish?.({
-      itemId: item.id,
-      name: f.name.trim(),
-      qty: f.qty,
-      unit: f.unit,
-      contact: f.contact.trim(),
-      useDefaultAddress: f.useDefaultAddress,
-      address: f.useDefaultAddress ? null : f.address,
-      slots: f.slots,
-    });
+  // disallow exceeding available quantity
+  const qtyError =
+    maxQty <= 0
+      ? "No stock available to donate."
+      : f.qty > maxQty
+      ? `Max you can donate is ${maxQty} ${item.unit || ""}`.trim()
+      : "";
+
+  const canPublish = useMemo(() => {
+    return (
+      f.name.trim() &&
+      f.qty > 0 &&
+      f.qty <= maxQty && // key restriction
+      f.contact.trim() &&
+      f.slots.length > 0
+    );
+  }, [f.name, f.qty, maxQty, f.contact, f.slots.length]);
+
+  // publish -> call backend to convert this existing food into a donation
+  const publish = async () => {
+    if (!canPublish || saving) return;
+    setSaving(true);
+    setErr("");
+
+    const address = f.useLastAddress && lastAddress ? lastAddress : f.address;
+
+    try {
+      const res = await apiPost("/donation_convert.php", {
+        userID: userId,
+        foodID: item.foodID || item.id, // must be the real foodID
+        donateQty: Number(f.qty),
+        contact: f.contact.trim(),
+        // optional note for donation (separate from address 'line' note)
+        note: "",
+        address, // {label,line1,line2,postcode,city,state,country}
+        availability: f.slots.map(({ date, start, end, note }) => ({
+          date,
+          start,
+          end,
+          note: note || "",
+        })),
+      });
+
+      if (!res || res.ok === false) throw new Error(res?.error || "Convert failed");
+
+      // push to table
+      const slotText = (f.slots ?? [])
+        .map((s) => `${formatDMY(s.date)}, ${fmtTime(s.start)} - ${fmtTime(s.end)}${s.note ? ` (${s.note})` : ""}`)
+        .join(" | ");
+      const pickup = [address.line1, address.city].filter(Boolean).join(", ");
+
+      onPublish?.({
+        id: res.donationID,
+        donationID: res.donationID,
+        foodID: item.foodID || item.id,
+        name: f.name.trim(),
+        category: item.category || "-", // keep if you have it
+        qty: Number(f.qty),
+        unit: item.unit || f.unit,
+        expiry: item.expiry || "",     // if you want to keep showing
+        pickup,
+        slots: f.slots,
+        slotText,
+      });
+
+      onClose?.();
+    } catch (e) {
+      setErr(e.message || "Network error");
+    } finally {
+      setSaving(false);
+    }
   };
 
-  const addrDisabled = f.useDefaultAddress;
   if (!open) return null;
+
+  const addrDisabled = f.useLastAddress && !!lastAddress;
 
   return (
     <div className="modal" onClick={onClose}>
@@ -112,36 +223,51 @@ export default function DonationModal({ open, onClose, onPublish, item = {} }) {
         <button className="close" onClick={onClose}>✕</button>
         <h3 className="modal-title">Convert to Donation</h3>
 
+        {err && (
+          <div className="mb-3 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+            {err}
+          </div>
+        )}
+
         {/* Item / Qty / Contact */}
         <div className="form-grid grid-3">
           <div className="form-row">
             <label>Item name</label>
             <input
               className="input"
-              placeholder="Eg. (Egg)"
               value={f.name}
               onChange={(e) => setF({ ...f, name: e.target.value })}
             />
           </div>
 
           <div className="form-row">
-            <label>Quantity</label>
+            <label>
+              Quantity{" "}
+              <span className="subtle">
+                (available: {maxQty} {item.unit || ""})
+              </span>
+            </label>
             <div className="qty-row">
-              <button className="step" onClick={() => step(-1)}>-</button>
-              <span className="qty-num">{f.qty}</span>
-              <button className="step" onClick={() => step(1)}>+</button>
+              <button className="step" onClick={() => step(-1)} disabled={f.qty <= 1}>-</button>
+              <input
+                className="input qty-num"
+                type="number"
+                min={1}
+                max={maxQty}
+                value={f.qty}
+                onChange={(e) => setQty(e.target.value)}
+                style={{ width: 80, textAlign: "center" }}
+              />
+              <button className="step" onClick={() => step(1)} disabled={f.qty >= maxQty}>+</button>
               <select
                 className="input unit"
                 value={f.unit}
                 onChange={(e) => setF({ ...f, unit: e.target.value })}
               >
-                <option value="ps">UNIT</option>
-                <option value="kg">kg</option>
-                <option value="g">g</option>
-                <option value="L">L</option>
-                <option value="ml">ml</option>
+                <option value={item.unit || "UNIT"}>{item.unit || "UNIT"}</option>
               </select>
             </div>
+            {qtyError && <div className="text-xs text-red-600 mt-1">{qtyError}</div>}
           </div>
 
           <div className="form-row">
@@ -158,109 +284,48 @@ export default function DonationModal({ open, onClose, onPublish, item = {} }) {
         {/* Address */}
         <div className="section-head">
           <span className="section-title">Address</span>
-          <label className="inline">
+          <label className={`inline ${!lastAddress ? "opacity-60" : ""}`}>
             <input
               type="checkbox"
-              checked={f.useDefaultAddress}
-              onChange={(e) =>
-                setF({ ...f, useDefaultAddress: e.target.checked })
-              }
+              disabled={!lastAddress}
+              checked={f.useLastAddress}
+              onChange={(e) => {
+                const checked = e.target.checked;
+                setF((prev) => ({
+                  ...prev,
+                  useLastAddress: checked,
+                  address: checked && lastAddress
+                    ? lastAddress
+                    : {
+                        label: "",
+                        line1: "",
+                        line2: "",
+                        postcode: "",
+                        city: "",
+                        state: "",
+                        country: "",
+                      },
+                }));
+              }}
             />{" "}
-            Use default address
+            Use Previous Address {loadingAddr ? " (Loading…)" : !lastAddress ? " (none)" : ""}
           </label>
         </div>
 
         <div className="form-grid grid-3">
-          <div className="form-row">
-            <label>Label</label>
-            <input
-              className="input"
-              placeholder="Eg. (Home / Office)"
-              disabled={addrDisabled}
-              value={f.address.label}
-              onChange={(e) =>
-                setF({ ...f, address: { ...f.address, label: e.target.value } })
-              }
-            />
-          </div>
-          <div className="form-row">
-            <label>Line 1</label>
-            <input
-              className="input"
-              placeholder="Eg. (jalan 123..)"
-              disabled={addrDisabled}
-              value={f.address.line1}
-              onChange={(e) =>
-                setF({ ...f, address: { ...f.address, line1: e.target.value } })
-              }
-            />
-          </div>
-          <div className="form-row">
-            <label>Line 2</label>
-            <input
-              className="input"
-              placeholder="Eg. (Bukit …)"
-              disabled={addrDisabled}
-              value={f.address.line2}
-              onChange={(e) =>
-                setF({ ...f, address: { ...f.address, line2: e.target.value } })
-              }
-            />
-          </div>
-          <div className="form-row">
-            <label>Postcode</label>
-            <input
-              className="input"
-              placeholder="Eg. (40160)"
-              disabled={addrDisabled}
-              value={f.address.postcode}
-              onChange={(e) =>
-                setF({
-                  ...f,
-                  address: { ...f.address, postcode: e.target.value },
-                })
-              }
-            />
-          </div>
-          <div className="form-row">
-            <label>City</label>
-            <input
-              className="input"
-              placeholder="Eg. (Shah Alam)"
-              disabled={addrDisabled}
-              value={f.address.city}
-              onChange={(e) =>
-                setF({ ...f, address: { ...f.address, city: e.target.value } })
-              }
-            />
-          </div>
-          <div className="form-row">
-            <label>State</label>
-            <input
-              className="input"
-              placeholder="Eg. (Selangor)"
-              disabled={addrDisabled}
-              value={f.address.state}
-              onChange={(e) =>
-                setF({ ...f, address: { ...f.address, state: e.target.value } })
-              }
-            />
-          </div>
-          <div className="form-row">
-            <label>Country</label>
-            <input
-              className="input"
-              placeholder="Eg. (Malaysia)"
-              disabled={addrDisabled}
-              value={f.address.country}
-              onChange={(e) =>
-                setF({
-                  ...f,
-                  address: { ...f.address, country: e.target.value },
-                })
-              }
-            />
-          </div>
+          {["label","line1","line2","postcode","city","state","country"].map((key) => (
+            <div className="form-row" key={key}>
+              <label>{key.charAt(0).toUpperCase()+key.slice(1)}</label>
+              <input
+                className="input"
+                disabled={addrDisabled}
+                value={f.address[key]}
+                onChange={(e) =>
+                  setF({ ...f, address: { ...f.address, [key]: e.target.value } })
+                }
+              />
+            </div>
+          ))}
         </div>
 
         {/* Availability */}
@@ -293,42 +358,29 @@ export default function DonationModal({ open, onClose, onPublish, item = {} }) {
             value={f.slotNote}
             onChange={(e) => setF({ ...f, slotNote: e.target.value })}
           />
-          <button
-            type="button"
-            className="add-slot"
-            disabled={!canAddSlot}
-            onClick={addSlot}
-          >
+          <button className="add-slot" disabled={!canAddSlot} onClick={addSlot}>
             + Add
           </button>
         </div>
 
-        {/* Added slots */}
         {f.slots.length > 0 && (
-        <div className="chip-list">
+          <div className="chip-list">
             {f.slots.map((s) => (
-            <span key={s.id} className="slot-pill">
+              <span key={s.id} className="slot-pill">
                 <span className="slot-main">
-                {formatDMY(s.date)}, {fmtTime(s.start)}–{fmtTime(s.end)}
-                {s.note ? ` · ${s.note}` : ""}
+                  {formatDMY(s.date)}, {fmtTime(s.start)}–{fmtTime(s.end)}
+                  {s.note ? ` · ${s.note}` : ""}
                 </span>
                 <button className="slot-del" onClick={() => removeSlot(s.id)}>Delete</button>
-            </span>
+              </span>
             ))}
-        </div>
+          </div>
         )}
 
-
         <div className="modal-actions">
-          <button className="btn secondary" onClick={onClose}>
-            Cancel
-          </button>
-          <button
-            className="btn primary"
-            disabled={!canPublish}
-            onClick={publish}
-          >
-            Publish
+          <button className="btn secondary" onClick={onClose} disabled={saving}>Cancel</button>
+          <button className="btn primary" disabled={!canPublish || saving} onClick={publish}>
+            {saving ? "Publishing…" : "Publish"}
           </button>
         </div>
       </div>
@@ -336,16 +388,13 @@ export default function DonationModal({ open, onClose, onPublish, item = {} }) {
   );
 }
 
-function formatDMY(isoDate) {
-  const d = new Date(isoDate);
-  return isNaN(d) ? isoDate : d.toLocaleDateString("en-GB");
+function formatDMY(iso) {
+  const d = new Date(iso);
+  return isNaN(d) ? iso : d.toLocaleDateString("en-GB");
 }
-
 function fmtTime(hhmm) {
   if (!hhmm) return "";
   const [h, m] = hhmm.split(":").map(Number);
-  const d = new Date();
-  d.setHours(h, m, 0, 0);
-  // 想用 24 小时制就把 hour12 改成 false
+  const d = new Date(); d.setHours(h, m, 0, 0);
   return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: true });
 }
