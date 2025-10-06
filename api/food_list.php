@@ -1,60 +1,57 @@
 <?php
-// C:\xampp\htdocs\IYO_Smart_Pantry\api\foods_list.php
-require __DIR__.'/config.php';
+require __DIR__ . '/config.php';
 
 $d = json_input();
-$userID = $d['userID'] ?? null;
+$userID     = $d['userID']     ?? null;
 $categoryID = $d['categoryID'] ?? null;
-$status = $d['status'] ?? null;  // "Expired" / "Available"
-$pickupArea = $d['pickupArea'] ?? null; // from filter modal
+$storageType = $d['status']    ?? null; // use 'status' field as storage filter
+$pickupArea = $d['pickupArea'] ?? null;
 
-// --- UPDATED QUERY WITH JOIN ---
 $sql = "
   SELECT 
     f.foodID,
     f.foodName,
     f.quantity,
     f.expiryDate,
-    f.is_expiryStatus,
     f.is_plan,
-    f.storageLocation,
+    f.storageID,
+    s.storageName,
     f.remark,
     f.userID,
+    u.fullName AS ownerName,
+    u.email AS ownerEmail,
     f.categoryID,
-    c.categoryName,        -- joined category name
+    c.categoryName,
     f.unitID,
-    u.unitName             -- joined unit name
+    un.unitName
   FROM foods f
   LEFT JOIN categories c ON f.categoryID = c.categoryID
-  LEFT JOIN units u ON f.unitID = u.unitID
+  LEFT JOIN units un      ON f.unitID = un.unitID
+  LEFT JOIN storages s    ON f.storageID = s.storageID
+  LEFT JOIN users u       ON f.userID = u.userID
   WHERE 1=1
 ";
 
 $params = [];
+if ($userID)     { $sql .= " AND f.userID = ?";     $params[] = $userID; }
+if ($categoryID) { $sql .= " AND f.categoryID = ?"; $params[] = $categoryID; }
+if ($storageType) { $sql .= " AND s.storageName LIKE ?"; $params[] = "%$storageType%"; }
+if ($pickupArea)  { $sql .= " AND s.storageName LIKE ?"; $params[] = "%$pickupArea%"; }
 
-if ($userID) {
-  $sql .= " AND f.userID = ?";
-  $params[] = $userID;
+// Optional: ignore planned items
+
+$sql .= " ORDER BY f.expiryDate ASC";
+
+try {
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute($params);
+    $foods = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    respond(['ok' => true, 'foods' => $foods]);
+} catch (Throwable $e) {
+    respond([
+        'ok' => false, 
+        'error' => $e->getMessage(), 
+        'sql' => $sql, 
+        'params' => $params
+    ], 500);
 }
-
-if ($categoryID) {
-  $sql .= " AND f.categoryID = ?";
-  $params[] = $categoryID;
-}
-
-if ($status === "Expired") {
-  $sql .= " AND f.is_expiryStatus = 1";
-} elseif ($status === "Available") {
-  $sql .= " AND f.is_expiryStatus = 0";
-}
-
-if ($pickupArea) {
-  $sql .= " AND f.storageLocation LIKE ?";
-  $params[] = "%".$pickupArea."%";
-}
-
-$stmt = $pdo->prepare($sql);
-$stmt->execute($params);
-$foods = $stmt->fetchAll();
-
-respond(['ok' => true, 'foods' => $foods]);

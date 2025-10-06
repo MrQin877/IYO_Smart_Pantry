@@ -1,109 +1,101 @@
 // src/components/FilterModal.jsx
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { apiGet } from "../lib/api";
 
 export default function FilterModal({ open, type = "food", filters, setFilters, onApply, onClose, userId }) {
+  const [storages, setStorages] = useState([]);
+  const [categories, setCategories] = useState([]);
+
+  // Close on Escape
   useEffect(() => {
     const onKey = (e) => e.key === "Escape" && onClose?.();
     if (open) document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
   }, [open, onClose]);
 
+  // Fetch categories and storages when modal opens
+  useEffect(() => {
+    if (!open) return;
+
+    async function fetchData() {
+      try {
+        const storageRes = await apiGet("/storages_list.php");
+        if (storageRes.ok) setStorages(storageRes.data || []);
+
+        const categoryRes = await apiGet("/categories_list.php");
+        if (categoryRes.ok) setCategories(categoryRes.data || []);
+      } catch (e) {
+        console.error("Failed to fetch storages or categories", e);
+      }
+    }
+
+    fetchData();
+  }, [open]);
+
   if (!open) return null;
 
   const resetFilters = {
     category: "",
-    status: "",
+    storageID: "",
     expiryFrom: "",
     expiryTo: "",
     pickupArea: "",
   };
 
-  async function applyFilters() {
-    try {
-      const res = await apiGet("/foods_list.php", {
-        userID: userId,
-        categoryID: filters.category || undefined,
-        status: filters.status || undefined,
-        pickupArea: filters.pickupArea || undefined,
-        expiryFrom: filters.expiryFrom || undefined,
-        expiryTo: filters.expiryTo || undefined,
-      });
-
-      if (res.ok) {
-        onApply?.(res.foods); // parent gets updated food list
-      } else {
-        console.error(res.error);
-      }
-    } catch (e) {
-      console.error("Failed to fetch filtered foods", e);
-    }
-    onClose?.();
+  function handleApply() {
+    onApply?.(filters); // backend filtering handled in MyFood.jsx
   }
 
   return (
     <div className="modal" onClick={onClose}>
       <div className="panel" onClick={(e) => e.stopPropagation()}>
         <button className="close" onClick={onClose}>✕</button>
-        <h3 className="modal-title">Filter {type === "food" ? "Foods" : "Donations"}</h3>
+        <h3 className="modal-title">Filter Foods</h3>
 
         <div className="form-grid">
           {/* Category */}
-          <div className="form-row">
-            <label>Category</label>
-            <select
-              className="input"
-              value={filters.category}
-              onChange={(e) => setFilters({ ...filters, category: e.target.value })}
-            >
-              <option value="">All</option>
-              <option>Grains</option>
-              <option>Protein</option>
-              <option>Vegetables</option>
-              <option>Fruits</option>
-              <option>Dairy</option>
-              <option>Other</option>
-            </select>
-          </div>
+          <select
+            className="input"
+            value={filters.category}
+            onChange={(e) => setFilters({ ...filters, category: e.target.value })}
+          >
+            <option value="">All</option>
+            {categories.map(c => (
+              <option key={c.id} value={c.id}>{c.name}</option>
+            ))}
+          </select>
 
-          {/* Status */}
-          {type === "food" && (
-            <div className="form-row">
-              <label>Status</label>
-              <select
-                className="input"
-                value={filters.status}
-                onChange={(e) => setFilters({ ...filters, status: e.target.value })}
-              >
-                <option value="">All</option>
-                <option>Available</option>
-                <option>Expired</option>
-              </select>
-            </div>
-          )}
+          {/* Storage */}
+          <select
+            className="input"
+            value={filters.storageID}
+            onChange={(e) => setFilters({ ...filters, storageID: e.target.value })}
+          >
+            <option value="">All</option>
+            {storages.map(s => (
+              <option key={s.id} value={s.id}>{s.name}</option>
+            ))}
+          </select>
 
           {/* Expiry */}
           <div className="form-row">
-            <label>Expiry From</label>
-            <input
-              type="date"
+            <label>Expiry</label>
+            <select
               className="input"
-              value={filters.expiryFrom}
-              onChange={(e) => setFilters({ ...filters, expiryFrom: e.target.value })}
-            />
+              value={filters.expiryRange || ""}
+              onChange={(e) => setFilters({
+                ...filters,
+                expiryRange: e.target.value
+              })}
+            >
+              <option value="">Any</option>
+              <option value="3days">Next 3 Days</option>
+              <option value="week">This Week</option>
+              <option value="month">This Month</option>
+            </select>
           </div>
 
-          <div className="form-row">
-            <label>Expiry To</label>
-            <input
-              type="date"
-              className="input"
-              value={filters.expiryTo}
-              onChange={(e) => setFilters({ ...filters, expiryTo: e.target.value })}
-            />
-          </div>
-
-          {/* Pickup Area */}
+          {/* Pickup Area (optional) */}
           {type !== "food" && (
             <div className="form-row">
               <label>Pickup Area</label>
@@ -122,14 +114,13 @@ export default function FilterModal({ open, type = "food", filters, setFilters, 
             className="btn secondary"
             onClick={() => {
               setFilters(resetFilters);
-              onApply?.([]); // clear results
+              onApply?.(resetFilters); // clear results
               onClose?.();
             }}
           >
             Clear
           </button>
-
-          <button className="btn primary" onClick={applyFilters}>
+          <button className="btn primary" onClick={handleApply}>
             Apply
           </button>
         </div>

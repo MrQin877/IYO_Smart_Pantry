@@ -404,3 +404,46 @@ input:-webkit-autofill{
   background: #7ea36b;
   border-radius: 10px;
 }
+
+/* Highlight planned meal rows */
+.planned-row {
+  background-color: #fff3cd; /* yellow highlight */
+  transition: background-color 0.4s ease;
+}
+
+tr:hover.planned-row {
+  background-color: #ffec99; /* slightly brighter on hover */
+}
+
+.planned-badge {
+  background-color: #ffcd39;
+  color: #000;
+  font-size: 0.75rem;
+  padding: 2px 6px;
+  border-radius: 6px;
+  margin-left: 6px;
+  transition: opacity 0.3s ease;
+}
+
+
+
+
+/* Plan/Unplan buttons */
+.plan-btn {
+  border: none;
+  border-radius: 6px;
+  padding: 4px 8px;
+  cursor: pointer;
+  font-size: 0.85rem;
+}
+
+.plan-btn.plan {
+  background-color: #28a745;
+  color: white;
+}
+
+.plan-btn.unplan {
+  background-color: #dc3545;
+  color: white;
+}
+
