@@ -280,10 +280,7 @@ input:-webkit-autofill{
   cursor: not-allowed;
 }
 
-
 /* Remove old .chip style (no longer used for buttons) */
-
-
 
 /* DonationModal – header + address toggle row */
 .section-head{display:flex;align-items:center;justify-content:space-between;margin:14px 2px 8px;}
