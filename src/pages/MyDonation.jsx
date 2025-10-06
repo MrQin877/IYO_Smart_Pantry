@@ -3,7 +3,6 @@ import AddDonationModal from "../component/AddDonationModal.jsx";
 import EditDonationModal from "../component/EditDonationModal.jsx";
 import FilterModal from "../component/FilterModal.jsx";
 
-
 export default function MyDonation() {
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -18,20 +17,43 @@ export default function MyDonation() {
     pickupArea: "",
   });
 
-  // Load donations on mount
+  // Load all shared donations on mount
   useEffect(() => {
     (async () => {
       setLoading(true);
       try {
         const res = await fetch(
-          `${import.meta.env.VITE_API_BASE}/food_list.php?userID=123`
+          `${import.meta.env.VITE_API_BASE}/donation_list.php`
         ).then((r) => r.json());
 
-        if (res.ok) {
-          setRows(res.foods || []);
+        if (res.ok && Array.isArray(res.data)) {
+          const mapped = res.data.map((d) => ({
+            id: d.donationID,
+            name: d.foodName,
+            category: d.category || "-",
+            qty: d.donatedQuantity,
+            unit: d.unitName,
+            expiry: d.expiryDate || "",
+            pickup: d.pickupLocation,
+            contact: d.contact,
+            note: d.note,
+            slots: d.availableTime
+              ? [
+                  {
+                    date: d.availableTime.split(" ")[0],
+                    start: d.availableTime.split(" ")[1],
+                    end: d.availableTime.split(" ")[2],
+                  },
+                ]
+              : [],
+            slotText: d.availableTime || "",
+            donorName: d.donorName,
+          }));
+          setRows(mapped);
         } else {
-          console.error(res.error);
+          console.error(res.error || "No donations returned");
         }
+
       } catch (e) {
         console.error("Failed to load donations", e);
       }
@@ -39,12 +61,12 @@ export default function MyDonation() {
     })();
   }, []);
 
-  const appliedFilterCount = Object.values(filters)
-  .filter((val) => val && val.trim() !== "").length;
-
+  const appliedFilterCount = Object.values(filters).filter(
+    (val) => val && val.trim() !== ""
+  ).length;
 
   function handlePublish(payload) {
-    const item = payload.item ?? payload; // be forgiving about shape
+    const item = payload.item ?? payload;
     const slotText = (payload.slots ?? [])
       .map((s) => `${formatDMY(s.date)}, ${to12hr(s.start)} - ${to12hr(s.end)}`)
       .join(" | ");
@@ -69,7 +91,6 @@ export default function MyDonation() {
   }
 
   function handleUpdate(updated) {
-    // updated: { id, address, useDefaultAddress, slots }
     const slotText = (updated.slots ?? [])
       .map((s) => `${formatDMY(s.date)}, ${to12hr(s.start)} - ${to12hr(s.end)}`)
       .join(" | ");
@@ -94,39 +115,31 @@ export default function MyDonation() {
     setRows(prev.filter((r) => r.id !== id));
 
     try {
-      // Call your backend if needed
-      // const res = await fetch(`${import.meta.env.VITE_API_BASE}/donation_delete.php`, {
-      //   method: "POST",
-      //   headers: { "Content-Type": "application/json" },
-      //   body: JSON.stringify({ id }),
-      // }).then((r) => r.json());
-      // if (!res.ok) throw new Error(res.error || "Delete failed");
+      // Backend call if needed
     } catch (err) {
       alert(err.message || "Delete failed");
-      setRows(prev); // rollback
+      setRows(prev);
     }
   }
 
-function applyFilters(overrideFilters = null) {
-  const f = overrideFilters ?? filters;
-  const cat = (f.category ?? "").trim();
-  const from = (f.expiryFrom ?? "").trim();
-  const to = (f.expiryTo ?? "").trim();
-  const pickup = (f.pickupArea ?? "").trim().toLowerCase();
+  function applyFilters(overrideFilters = null) {
+    const f = overrideFilters ?? filters;
+    const cat = (f.category ?? "").trim();
+    const from = (f.expiryFrom ?? "").trim();
+    const to = (f.expiryTo ?? "").trim();
+    const pickup = (f.pickupArea ?? "").trim().toLowerCase();
 
-  const filtered = rows.filter(r => {
-    if (cat && r.category !== cat) return false;
-    if (from && new Date(r.expiry) < new Date(from)) return false;
-    if (to && new Date(r.expiry) > new Date(to)) return false;
-    if (pickup && !r.pickup.toLowerCase().includes(pickup)) return false;
-    return true;
-  });
+    const filtered = rows.filter((r) => {
+      if (cat && r.category !== cat) return false;
+      if (from && new Date(r.expiry) < new Date(from)) return false;
+      if (to && new Date(r.expiry) > new Date(to)) return false;
+      if (pickup && !r.pickup.toLowerCase().includes(pickup)) return false;
+      return true;
+    });
 
-  setRows(filtered);
-  setFilterOpen(false);
-}
-
-
+    setRows(filtered);
+    setFilterOpen(false);
+  }
 
   return (
     <>
@@ -153,13 +166,14 @@ function applyFilters(overrideFilters = null) {
               <th>Expiry date</th>
               <th>Pickup</th>
               <th>Availability</th>
+              <th>Donor</th>
               <th className="actions-col" />
             </tr>
           </thead>
           <tbody>
             {rows.length === 0 ? (
               <tr>
-                <td colSpan={7}>
+                <td colSpan={8}>
                   <div className="no-items">
                     No items found. Please adjust your filters.
                   </div>
@@ -170,7 +184,7 @@ function applyFilters(overrideFilters = null) {
                 <tr key={r.id}>
                   <td>{r.name}</td>
                   <td className="subtle">{r.category}</td>
-                  <td>{r.qty}</td>
+                  <td>{r.qty} {r.unit}</td>
                   <td>{formatDate(r.expiry)}</td>
                   <td>{r.pickup}</td>
                   <td>
@@ -178,6 +192,7 @@ function applyFilters(overrideFilters = null) {
                       {r.slotText || joinSlots(r.slots)}
                     </span>
                   </td>
+                  <td>{r.donorName || "-"}</td>
                   <td className="row-actions">
                     <button
                       className="icon-btn"
@@ -198,18 +213,15 @@ function applyFilters(overrideFilters = null) {
               ))
             )}
           </tbody>
-
         </table>
       </div>
 
-      {/* Add */}
       <AddDonationModal
         open={openAdd}
         onClose={() => setOpenAdd(false)}
         onPublish={handlePublish}
       />
 
-      {/* Edit (address + availability only) */}
       <EditDonationModal
         open={!!editItem}
         item={editItem}
@@ -219,7 +231,7 @@ function applyFilters(overrideFilters = null) {
 
       <FilterModal
         open={filterOpen}
-        type="donation"   // <-- IMPORTANT
+        type="donation"
         filters={filters}
         setFilters={setFilters}
         onApply={applyFilters}
