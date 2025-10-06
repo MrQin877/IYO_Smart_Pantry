@@ -162,28 +162,30 @@ export default function FoodDetailModal({
                   <input
                     type="number"
                     min="0"
-                    step="0.01"
+                    step="1"
                     value={usedQty}
                     onChange={(e) => setUsedQty(e.target.value)}
                     style={{ width: "80px" }}
                   />
                 </label>
               </div>
+              <div className="detail-actions">
+                <button className="btn primary" onClick={handleUsed}>
+                  Used
+                </button>
 
-              <button className="btn btn-primary" onClick={handleUsed}>
-                Used
-              </button>
+                <button
+                  className={`btn ${food.is_plan ? "unplan" : "plan"}`}
+                  onClick={handlePlanToggle}
+                >
+                  {food.is_plan ? "Unplan Meal" : "Plan for Meal"}
+                </button>
 
-              <button
-                className={`plan-btn ${food.is_plan ? "unplan" : "plan"}`}
-                onClick={handlePlanToggle}
-              >
-                {food.is_plan ? "Unplan Meal" : "Plan for Meal"}
-              </button>
+                <button className="btn success" onClick={() => onDonate(food)}>
+                  Donate
+                </button>
+              </div>
 
-              <button className="btn btn-success" onClick={() => onDonate(food)}>
-                Donate
-              </button>
             </div>
           </div>
         ) : (

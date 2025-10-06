@@ -166,7 +166,7 @@ input:-webkit-autofill{
 /* Clickable cell */
 .link{cursor:pointer;text-decoration:underline;text-underline-offset:3px;}
 
-/* Food detail modal */
+/* --- Food detail modal --- */
 .panel-lg {
   width: 900px;
   max-width: 100%;
@@ -175,7 +175,7 @@ input:-webkit-autofill{
 .detail-grid {
   display: grid;
   grid-template-columns: 1.2fr 1fr;
-  gap: 28px; /* extra space between left and right */
+  gap: 28px;
 }
 
 .detail-left {
@@ -195,9 +195,9 @@ input:-webkit-autofill{
   padding: 0;
   margin: 20px 0 28px;
   display: grid;
-  grid-template-columns: 1fr 1fr; /* two columns */
-  row-gap: 16px; /* vertical spacing between rows */
-  column-gap: 32px; /* horizontal spacing between columns */
+  grid-template-columns: 1fr 1fr;
+  row-gap: 16px;
+  column-gap: 32px;
 }
 
 .kv li {
@@ -212,56 +212,78 @@ input:-webkit-autofill{
   row-gap: 12px;
 }
 
-/* Log table formatting */
-.log-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 14px;
-}
-
-.log-table th,
-.log-table td {
-  padding: 10px 14px;
-  border-bottom: 1px solid #d4dec2;
-}
-
-.log-table td:nth-child(2) {
-  text-align: center; /* center quantity column */
-}
-
-/* Action buttons */
+/* --- Action buttons (Food Detail Modal) --- */
 .detail-actions {
-  margin-top: 28px;
+  margin-top: 24px;
   display: flex;
-  gap: 16px; /* bigger gap between buttons */
+  gap: 12px;
   flex-wrap: wrap;
+  justify-content: flex-start;
 }
 
-
-/* small rounded buttons in detail */
-.chip {
-  border: 1px solid #e3e3e3;
+/* Base button design – smaller & consistent */
+.detail-actions .btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 100px;
+  height: 36px; /* smaller height */
+  font-size: 14px; /* slightly smaller font */
+  font-weight: 600;
+  border-radius: 10px;
+  border: 1px solid #dcdcdc;
   background: #fff;
   color: var(--ink);
-  border-radius: 999px;
-  padding: 8px 14px;
-  font-weight: 700;
-  margin-right: 8px;
   cursor: pointer;
-  transition: all 0.2s ease; /* smooth effect */
+  transition: all 0.25s ease;
 }
 
-.chip:hover,
-.chip:active {
+/* Hover – all buttons except "unplan" turn green */
+.detail-actions .btn:hover:not(.unplan) {
   background: var(--green);
-  color: #fff;
   border-color: var(--green);
+  color: #fff;
+  transform: translateY(-1px);
 }
 
-/* history table */
-.log-table{width:100%;border-collapse:collapse;}
-.log-table th,.log-table td{padding:10px 12px;border-bottom:1px solid #cbd5bd;text-align:left;}
-.log-table thead th{font-weight:700;}
+/* Used, Plan, and Donate (use same green theme) */
+.btn.primary,
+.btn.plan,
+.btn.success {
+  border-color: var(--green);
+  color: var(--ink);
+}
+
+/* “Unplan” button – red with unique hover */
+.btn.unplan {
+  background: #dc3545;
+  border-color: #dc3545;
+  color: #fff;
+}
+
+.btn.unplan:hover {
+  background: #bb2d3b; /* darker red */
+  border-color: #bb2d3b;
+  color: #fff;
+  transform: translateY(-1px);
+}
+
+/* Active click effect */
+.detail-actions .btn:active {
+  transform: translateY(0);
+  filter: brightness(0.93);
+}
+
+/* Disabled state */
+.detail-actions .btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+
+/* Remove old .chip style (no longer used for buttons) */
+
+
 
 /* DonationModal – header + address toggle row */
 .section-head{display:flex;align-items:center;justify-content:space-between;margin:14px 2px 8px;}
@@ -407,43 +429,31 @@ input:-webkit-autofill{
 
 /* Highlight planned meal rows */
 .planned-row {
-  background-color: #fff3cd; /* yellow highlight */
-  transition: background-color 0.4s ease;
+  background-color: #fff7d6; /* softer yellow tone */
+  transition: background-color 0.35s ease, transform 0.25s ease;
 }
 
 tr:hover.planned-row {
-  background-color: #ffec99; /* slightly brighter on hover */
+  background-color: #ffefad; /* lighter yellow when hovered */
+  transform: scale(1.01); /* gentle pop effect */
 }
 
+/* Planned badge styling */
 .planned-badge {
-  background-color: #ffcd39;
-  color: #000;
-  font-size: 0.75rem;
-  padding: 2px 6px;
-  border-radius: 6px;
+  background-color: #ffda5b; /* smoother yellow tone */
+  color: #2c2c2c;
+  font-size: 0.78rem;
+  padding: 3px 8px;
+  border-radius: 8px;
   margin-left: 6px;
-  transition: opacity 0.3s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
 }
 
-
-
-
-/* Plan/Unplan buttons */
-.plan-btn {
-  border: none;
-  border-radius: 6px;
-  padding: 4px 8px;
-  cursor: pointer;
-  font-size: 0.85rem;
+.planned-badge:hover {
+  background-color: #ffd633;
+  transform: scale(1.05);
+  box-shadow: 0 2px 6px rgba(255, 204, 0, 0.4);
 }
 
-.plan-btn.plan {
-  background-color: #28a745;
-  color: white;
-}
-
-.plan-btn.unplan {
-  background-color: #dc3545;
-  color: white;
-}
 

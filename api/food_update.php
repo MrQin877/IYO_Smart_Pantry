@@ -16,7 +16,6 @@ $sql = "UPDATE foods SET
   foodName=:foodName,
   quantity=:quantity,
   expiryDate=:expiryDate,
-  is_plan=:is_plan,
   storageID=:storageID,
   remark=:remark,
   categoryID=:categoryID,
@@ -29,7 +28,6 @@ try {
     ':foodName'        => $d['foodName'],
     ':quantity'        => $d['quantity'],
     ':expiryDate'      => $d['expiryDate'],       // YYYY-MM-DD
-    ':is_plan'         => $is_plan,
     ':storageID'       => !empty($d['storageID']) ? $d['storageID'] : null, // ✅ NULL instead of ''
     ':remark'          => $d['remark'] ?? null,
     ':userID'          => $d['userID'],
