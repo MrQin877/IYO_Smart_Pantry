@@ -181,7 +181,20 @@ export default function FoodDetailModal({
                   {food.is_plan ? "Unplan Meal" : "Plan for Meal"}
                 </button>
 
-                <button className="btn success" onClick={() => onDonate(food)}>
+                <button 
+                  className="btn success" 
+                  onClick={() =>
+                    onDonate({
+                      foodID:  food.foodID,
+                      name:    food.foodName,
+                      qty:     Number(food.quantity),
+                      unit:    food.unitName,   // display name
+                      unitID:  food.unitID,     // if you track it
+                      expiry:  food.expiryDate,
+                      category: food.categoryName,
+                    })
+                  }
+                >
                   Donate
                 </button>
               </div>

@@ -7,69 +7,39 @@ export default function DonationModal({
   onClose,
   onPublish,
   userId = "U1",
-  // item should at least have: { id/foodID, name, qty, unit, unitID? }
+  // Pass: { foodID (or id), name, qty, unit, expiry, category? }
   item = {},
 }) {
-  const maxQty = Number(item.qty ?? 0); // available stock
+  const maxQty = Number(item.qty ?? 0);
+  const expiryISO = item.expiry || "";                      // "YYYY-MM-DD"
+  const expiryDate = safeISOToDate(expiryISO);              // Date | null
 
-  const [f, setF] = useState(() => ({
-    name: item.name || "",
-    qty: Math.min(1, maxQty) || 1,
-    unit: item.unit || "UNIT",
-    contact: "",
-    useLastAddress: false,
-    address: {
-      label: "",
-      line1: "",
-      line2: "",
-      postcode: "",
-      city: "",
-      state: "",
-      country: "",
-    },
-    slotDate: "",
-    slotStart: "",
-    slotEnd: "",
-    slotNote: "",
-    slots: [],
-  }));
-
+  const [f, setF] = useState(() => initForm(item, maxQty));
   const [err, setErr] = useState("");
   const [saving, setSaving] = useState(false);
 
-  // previous address from DB
+  // Last address
   const [lastAddress, setLastAddress] = useState(null);
   const [loadingAddr, setLoadingAddr] = useState(false);
 
-  // reset when opens
+  // Reset when opened or item changes
   useEffect(() => {
     if (!open) return;
     setErr("");
     setSaving(false);
-    setF({
-      name: item.name || "",
-      qty: Math.min(1, Number(item.qty ?? 0)) || 1,
-      unit: item.unit || "UNIT",
-      contact: "",
-      useLastAddress: false,
-      address: {
-        label: "",
-        line1: "",
-        line2: "",
-        postcode: "",
-        city: "",
-        state: "",
-        country: "",
-      },
-      slotDate: "",
-      slotStart: "",
-      slotEnd: "",
-      slotNote: "",
-      slots: [],
-    });
-  }, [open, item]);
+    setF(initForm(item, maxQty));
+  }, [open, item, maxQty]);
 
-  // load last address when opens
+  // Clamp qty if available stock changes mid-session
+  useEffect(() => {
+    if (!open) return;
+    setF((s) => ({
+      ...s,
+      qty: Math.max(1, Math.min(maxQty, Number(s.qty) || 1)),
+    }));
+  }, [open, maxQty]);
+
+  // Load last address when modal opens
   useEffect(() => {
     if (!open) return;
     (async () => {
@@ -85,6 +55,12 @@ export default function DonationModal({
     })();
   }, [open, userId]);
 
+  // If "Use Previous Address" on and lastAddress loaded, apply it
+  useEffect(() => {
+    if (!open || !lastAddress) return;
+    setF((s) => (s.useLastAddress ? { ...s, address: lastAddress } : s));
+  }, [open, lastAddress]);
+
   // ESC to close
   useEffect(() => {
     const onKey = (e) => e.key === "Escape" && onClose?.();
@@ -92,15 +68,21 @@ export default function DonationModal({
     return () => document.removeEventListener("keydown", onKey);
   }, [open, onClose]);
 
-  // time helpers
+  // Time helpers
   const toMinutes = (t) => {
     if (!t) return NaN;
     const [h, m] = t.split(":").map(Number);
     return h * 60 + m;
   };
 
+  // --- availability validations ---
+  const slotDateObj = safeISOToDate(f.slotDate);
+  const slotAfterExpiry =
+    Boolean(slotDateObj && expiryDate) && slotDateObj > endOfDay(expiryDate);
+
   const canAddSlot =
     Boolean(f.slotDate) &&
+    !slotAfterExpiry &&
     Number.isFinite(toMinutes(f.slotStart)) &&
     Number.isFinite(toMinutes(f.slotEnd)) &&
     toMinutes(f.slotEnd) > toMinutes(f.slotStart);
@@ -134,13 +116,14 @@ export default function DonationModal({
   const removeSlot = (id) =>
     setF((s) => ({ ...s, slots: s.slots.filter((x) => x.id !== id) }));
 
-  // clamp qty to [1, maxQty]
+  // quantity controls
   const setQty = (q) =>
-    setF((s) => ({ ...s, qty: Math.max(1, Math.min(maxQty, Number(q) || 1)) }));
-
+    setF((s) => ({
+      ...s,
+      qty: Math.max(1, Math.min(maxQty, Number(q) || 1)),
+    }));
   const step = (d) => setQty((f.qty || 1) + d);
 
-  // disallow exceeding available quantity
   const qtyError =
     maxQty <= 0
       ? "No stock available to donate."
@@ -148,33 +131,50 @@ export default function DonationModal({
       ? `Max you can donate is ${maxQty} ${item.unit || ""}`.trim()
       : "";
 
+  // any existing slot beyond expiry?
+  const invalidSlots = useMemo(() => {
+    if (!expiryDate) return [];
+    const expEnd = endOfDay(expiryDate);
+    return (f.slots || []).filter((s) => {
+      const d = safeISOToDate(s.date);
+      return d && d > expEnd;
+    });
+  }, [f.slots, expiryDate]);
+
   const canPublish = useMemo(() => {
-    return (
+    const base =
       f.name.trim() &&
       f.qty > 0 &&
-      f.qty <= maxQty && // key restriction
+      f.qty <= maxQty &&
       f.contact.trim() &&
-      f.slots.length > 0
-    );
-  }, [f.name, f.qty, maxQty, f.contact, f.slots.length]);
+      f.slots.length > 0;
 
-  // publish -> call backend to convert this existing food into a donation
+    // Must not contain slots after expiry
+    if (!base) return false;
+    if (expiryDate && invalidSlots.length > 0) return false;
+    // Also prevent adding when the "slot editor" currently has a future invalid date
+    if (slotAfterExpiry) return false;
+
+    return true;
+  }, [f.name, f.qty, maxQty, f.contact, f.slots.length, invalidSlots.length, slotAfterExpiry, expiryDate]);
+
   const publish = async () => {
-    if (!canPublish || saving) return;
+    if (!canPublish || saving || maxQty <= 0) return;
     setSaving(true);
     setErr("");
 
     const address = f.useLastAddress && lastAddress ? lastAddress : f.address;
 
     try {
+      // extra server-side safety: send expiry so PHP can re-check if needed
       const res = await apiPost("/donation_convert.php", {
         userID: userId,
-        foodID: item.foodID || item.id, // must be the real foodID
+        foodID: item.foodID || item.id,
         donateQty: Number(f.qty),
         contact: f.contact.trim(),
-        // optional note for donation (separate from address 'line' note)
         note: "",
-        address, // {label,line1,line2,postcode,city,state,country}
+        expiryDate: expiryISO, // for server validation if you add it
+        address,
         availability: f.slots.map(({ date, start, end, note }) => ({
           date,
           start,
@@ -185,9 +185,13 @@ export default function DonationModal({
 
       if (!res || res.ok === false) throw new Error(res?.error || "Convert failed");
 
-      // push to table
       const slotText = (f.slots ?? [])
-        .map((s) => `${formatDMY(s.date)}, ${fmtTime(s.start)} - ${fmtTime(s.end)}${s.note ? ` (${s.note})` : ""}`)
+        .map(
+          (s) =>
+            `${formatDMY(s.date)}, ${fmtTime(s.start)} - ${fmtTime(s.end)}${
+              s.note ? ` (${s.note})` : ""
+            }`
+        )
         .join(" | ");
       const pickup = [address.line1, address.city].filter(Boolean).join(", ");
 
@@ -196,10 +200,10 @@ export default function DonationModal({
         donationID: res.donationID,
         foodID: item.foodID || item.id,
         name: f.name.trim(),
-        category: item.category || "-", // keep if you have it
+        category: item.category || "-",
         qty: Number(f.qty),
         unit: item.unit || f.unit,
-        expiry: item.expiry || "",     // if you want to keep showing
+        expiry: item.expiry || "",
         pickup,
         slots: f.slots,
         slotText,
@@ -214,8 +218,8 @@ export default function DonationModal({
   };
 
   if (!open) return null;
-
   const addrDisabled = f.useLastAddress && !!lastAddress;
+  const noStock = maxQty <= 0;
 
   return (
     <div className="modal" onClick={onClose}>
@@ -236,6 +240,7 @@ export default function DonationModal({
             <input
               className="input"
               value={f.name}
+              readOnly
               onChange={(e) => setF({ ...f, name: e.target.value })}
             />
           </div>
@@ -281,6 +286,12 @@ export default function DonationModal({
           </div>
         </div>
 
+        {/* Expiry info & guard */}
+        <div className="mb-2 text-sm">
+          <b>Food expiry:</b>{" "}
+          {expiryISO ? formatDMY(expiryISO) : <span className="text-red-600">Unknown</span>}
+        </div>
+
         {/* Address */}
         <div className="section-head">
           <span className="section-title">Address</span>
@@ -294,17 +305,18 @@ export default function DonationModal({
                 setF((prev) => ({
                   ...prev,
                   useLastAddress: checked,
-                  address: checked && lastAddress
-                    ? lastAddress
-                    : {
-                        label: "",
-                        line1: "",
-                        line2: "",
-                        postcode: "",
-                        city: "",
-                        state: "",
-                        country: "",
-                      },
+                  address:
+                    checked && lastAddress
+                      ? lastAddress
+                      : {
+                          label: "",
+                          line1: "",
+                          line2: "",
+                          postcode: "",
+                          city: "",
+                          state: "",
+                          country: "",
+                        },
                 }));
               }}
             />{" "}
@@ -313,9 +325,9 @@ export default function DonationModal({
         </div>
 
         <div className="form-grid grid-3">
-          {["label","line1","line2","postcode","city","state","country"].map((key) => (
+          {["label", "line1", "line2", "postcode", "city", "state", "country"].map((key) => (
             <div className="form-row" key={key}>
-              <label>{key.charAt(0).toUpperCase()+key.slice(1)}</label>
+              <label>{key.charAt(0).toUpperCase() + key.slice(1)}</label>
               <input
                 className="input"
                 disabled={addrDisabled}
@@ -339,6 +351,7 @@ export default function DonationModal({
             className="input"
             value={f.slotDate}
             onChange={(e) => setF({ ...f, slotDate: e.target.value })}
+            max={expiryISO || undefined} // UI hint: prevent picking beyond expiry
           />
           <input
             type="time"
@@ -363,31 +376,99 @@ export default function DonationModal({
           </button>
         </div>
 
-        {f.slots.length > 0 && (
-          <div className="chip-list">
-            {f.slots.map((s) => (
-              <span key={s.id} className="slot-pill">
-                <span className="slot-main">
-                  {formatDMY(s.date)}, {fmtTime(s.start)}–{fmtTime(s.end)}
-                  {s.note ? ` · ${s.note}` : ""}
-                </span>
-                <button className="slot-del" onClick={() => removeSlot(s.id)}>Delete</button>
-              </span>
-            ))}
+        {slotAfterExpiry && (
+          <div className="text-xs text-red-600 mt-1">
+            Availability date cannot be later than the food expiry date.
           </div>
         )}
 
+        {f.slots.length > 0 && (
+          <>
+            {invalidSlots.length > 0 && (
+              <div className="mb-2 rounded border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
+                {invalidSlots.length} availability {invalidSlots.length > 1 ? "entries are" : "entry is"} past the expiry date. Please remove or change them.
+              </div>
+            )}
+            <div className="chip-list">
+              {f.slots.map((s) => {
+                const isLate =
+                  expiryDate &&
+                  safeISOToDate(s.date) &&
+                  safeISOToDate(s.date) > endOfDay(expiryDate);
+                return (
+                  <span key={s.id} className={`slot-pill ${isLate ? "bg-red-50" : ""}`}>
+                    <span className="slot-main">
+                      {formatDMY(s.date)}, {fmtTime(s.start)}–{fmtTime(s.end)}
+                      {s.note ? ` · ${s.note}` : ""}
+                      {isLate ? " ⚠️" : ""}
+                    </span>
+                    <button className="slot-del" onClick={() => removeSlot(s.id)}>
+                      Delete
+                    </button>
+                  </span>
+                );
+              })}
+            </div>
+          </>
+        )}
+
         <div className="modal-actions">
-          <button className="btn secondary" onClick={onClose} disabled={saving}>Cancel</button>
-          <button className="btn primary" disabled={!canPublish || saving} onClick={publish}>
+          <button className="btn secondary" onClick={onClose} disabled={saving}>
+            Cancel
+          </button>
+          <button
+            className="btn primary"
+            disabled={!canPublish || saving || noStock}
+            onClick={publish}
+          >
             {saving ? "Publishing…" : "Publish"}
           </button>
+          {noStock && (
+            <div className="text-xs text-amber-700 mt-2">
+              No stock available to donate for this item.
+            </div>
+          )}
         </div>
       </div>
     </div>
   );
 }
 
+// ---------- helpers ----------
+function initForm(item, maxQty) {
+  return {
+    name: item.name || "",
+    qty: Math.min(1, maxQty) || 1,
+    unit: item.unit || "UNIT",
+    contact: "",
+    useLastAddress: false,
+    address: {
+      label: "",
+      line1: "",
+      line2: "",
+      postcode: "",
+      city: "",
+      state: "",
+      country: "",
+    },
+    slotDate: "",
+    slotStart: "",
+    slotEnd: "",
+    slotNote: "",
+    slots: [],
+  };
+}
+
+function safeISOToDate(iso) {
+  if (!iso) return null;
+  const d = new Date(iso);
+  return isNaN(d) ? null : d;
+}
+function endOfDay(d) {
+  const x = new Date(d);
+  x.setHours(23, 59, 59, 999);
+  return x;
+}
 function formatDMY(iso) {
   const d = new Date(iso);
   return isNaN(d) ? iso : d.toLocaleDateString("en-GB");
@@ -395,6 +476,7 @@ function formatDMY(iso) {
 function fmtTime(hhmm) {
   if (!hhmm) return "";
   const [h, m] = hhmm.split(":").map(Number);
-  const d = new Date(); d.setHours(h, m, 0, 0);
+  const d = new Date();
+  d.setHours(h, m, 0, 0);
   return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: true });
 }

@@ -8,6 +8,7 @@ import { apiPost } from "../lib/api";
 export default function MyDonation() {
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [deletingId, setDeletingId] = useState(null);
 
   const [openAdd, setOpenAdd] = useState(false);
   const [editItem, setEditItem] = useState(null);
@@ -111,30 +112,32 @@ export default function MyDonation() {
     setEditItem(null);
   }
 
-  async function handleDeleteDonation(id) {
-    if (!window.confirm("Delete this donation?")) return;
-
-    // find the row so we can send the real donationID (and keep for rollback)
-    const row = rows.find(r => r.id === id);
-    if (!row) return;
+  async function handleDeleteDonation(donationID) {
+    if (!window.confirm("Cancel this donation?")) return;
 
     const prev = rows;
-    // optimistic UI
-    setRows(prev.filter(r => r.id !== id));
+    const next = rows.filter(r => (r.donationID || r.id) !== donationID);
+
+    setRows(next);            // optimistic remove
+    setDeletingId(donationID);
 
     try {
-      // backend will restore the food quantity and delete the donation
       const res = await apiPost("/donation_cancel.php", {
-        donationID: row.donationID || row.id, // support both shapes
+        userID: "U1",           // <-- your logged-in user
+        donationID,             // <-- the donation to cancel
       });
-      if (!res || res.ok === false) {
+
+      if (!res?.ok) {
         throw new Error(res?.error || "Delete failed");
       }
-      // success: nothing else needed (stock already restored on server)
-      // Backend call if needed
+
+      // Optional: if you want to refresh other views (e.g. food list), call a prop or trigger a reload here
+      // onRefreshFoods?.();
     } catch (err) {
-      alert(err.message || "Delete failed");
-      setRows(prev);
+      alert(err.message || "Delete failed. Reverting.");
+      setRows(prev);          // rollback
+    } finally {
+      setDeletingId(null);
     }
   }
 
@@ -220,9 +223,10 @@ export default function MyDonation() {
                     <button
                       className="icon-btn"
                       title="Delete"
-                      onClick={() => handleDeleteDonation(r.id)}
+                      disabled={deletingId === (r.donationID || r.id)}
+                      onClick={() => handleDeleteDonation(r.donationID || r.id)}
                     >
-                      🗑️
+                      {deletingId === (r.donationID || r.id) ? "⏳" : "🗑️"}
                     </button>
                   </td>
                 </tr>

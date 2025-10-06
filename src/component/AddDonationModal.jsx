@@ -2,15 +2,19 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { apiGet, apiPost } from "../lib/api";
 
-// ---- cache so we don’t re-fetch on every open ----
-let CATS_CACHE = null;
-let UNITS_CACHE = null;
+// ---- caches (persist for page life) ----
+let CATS_CACHE = null;   // [{id,name}]
+let UNITS_CACHE = null;  // [{id,name}]
+
+// Change this to 1 if you want to limit availability to one day BEFORE expiry.
+// 0 = can use the expiry date itself, 1 = must be <= expiry - 1 day
+const MAX_SLOT_OFFSET_DAYS = 0;
 
 export default function AddDonationModal({
   open,
   onClose,
-  onPublish,
-  userId = "U1", // pass actual logged-in user ID
+  onPublish,       // optional UI update callback
+  userId = "U1",   // provide your actual logged-in user ID
 }) {
   const [f, setF] = useState(initForm());
   const [saving, setSaving] = useState(false);
@@ -18,21 +22,26 @@ export default function AddDonationModal({
 
   const [catOpts, setCatOpts] = useState([]);
   const [unitOpts, setUnitOpts] = useState([]);
+
+  // only prefill default IDs once per open
   const didPrefillRef = useRef(false);
 
-  // 🔹 For previous address
+  // previous address
   const [lastAddress, setLastAddress] = useState(null);
   const [loadingAddr, setLoadingAddr] = useState(false);
 
-  // ✅ Load last address from DB when modal opens
+  // when modal opens, load last address from DB
   useEffect(() => {
     if (!open) return;
     (async () => {
       try {
         setLoadingAddr(true);
         const res = await apiGet(`/get_last_address.php?userID=${userId}`);
-        if (res.ok && res.address) setLastAddress(res.address);
-        else setLastAddress(null);
+        if (res?.ok && res.address) {
+          setLastAddress(res.address);
+        } else {
+          setLastAddress(null);
+        }
       } catch {
         setLastAddress(null);
       } finally {
@@ -41,7 +50,7 @@ export default function AddDonationModal({
     })();
   }, [open, userId]);
 
-  // ✅ Reset form each time modal opens
+  // Reset when opened
   useEffect(() => {
     if (!open) return;
     setF(initForm());
@@ -50,7 +59,7 @@ export default function AddDonationModal({
     didPrefillRef.current = false;
   }, [open]);
 
-  // ✅ Load categories & units (with cache)
+  // Load categories + units from API (with cache)
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -63,41 +72,67 @@ export default function AddDonationModal({
           const r2 = await apiGet("/units_list.php");
           UNITS_CACHE = r2?.data || [];
         }
-        if (!cancelled) {
-          setCatOpts(CATS_CACHE);
-          setUnitOpts(UNITS_CACHE);
-        }
+        if (cancelled) return;
+        setCatOpts(CATS_CACHE);
+        setUnitOpts(UNITS_CACHE);
       } catch {
-        if (!cancelled) setErr("Failed to load categories or units");
+        if (!cancelled) setErr("Failed to load categories/units");
       }
     })();
-    return () => (cancelled = true);
+    return () => { cancelled = true; };
   }, []);
 
-  // ✅ Prefill first options after load
+  // Prefill first option IDs once options are ready
   useEffect(() => {
-    if (!open || didPrefillRef.current) return;
+    if (!open) return;
+    if (didPrefillRef.current) return;
     if (!catOpts.length || !unitOpts.length) return;
+
     didPrefillRef.current = true;
     setF((s) => ({
       ...s,
       categoryID: s.categoryID || catOpts[0]?.id || "",
-      unitID: s.unitID || unitOpts[0]?.id || "",
+      unitID:     s.unitID     || unitOpts[0]?.id || "",
     }));
   }, [open, catOpts.length, unitOpts.length]);
 
-  // ✅ ESC to close modal
+  // ESC to close
   useEffect(() => {
     const onKey = (e) => e.key === "Escape" && onClose?.();
     if (open) document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
   }, [open, onClose]);
 
-  // ---- Helpers ----
   const step = (d) => setF((s) => ({ ...s, qty: Math.max(1, s.qty + d) }));
 
-  const canAddSlot =
-    f.slotDate && f.slotStart && f.slotEnd && f.slotEnd > f.slotStart;
+  // ---------- Expiry-based validation for availability ----------
+  const expiryDate = safeISOToDate(f.expiry); // the food's expiry selected in the form
+  const latestAllowed = useMemo(() => {
+    if (!expiryDate) return null;
+    const d = new Date(expiryDate);
+    d.setDate(d.getDate() - MAX_SLOT_OFFSET_DAYS);
+    // end-of-day to be inclusive for that date
+    d.setHours(23, 59, 59, 999);
+    return d;
+  }, [expiryDate]);
+
+  const canAddSlot = useMemo(() => {
+    if (!f.slotDate || !f.slotStart || !f.slotEnd) return false;
+    const startM = toMinutes(f.slotStart);
+    const endM = toMinutes(f.slotEnd);
+    if (!Number.isFinite(startM) || !Number.isFinite(endM) || endM <= startM) return false;
+
+    // validate against expiry rule
+    const sd = safeISOToDate(f.slotDate);
+    if (!sd || !latestAllowed) return false;
+    return sd <= latestAllowed;
+  }, [f.slotDate, f.slotStart, f.slotEnd, latestAllowed]);
+
+  const slotAfterLimit = (() => {
+    if (!f.slotDate || !latestAllowed) return false;
+    const sd = safeISOToDate(f.slotDate);
+    return Boolean(sd && sd > latestAllowed);
+  })();
 
   const addSlot = () => {
     if (!canAddSlot) return;
@@ -106,7 +141,10 @@ export default function AddDonationModal({
       slots: [
         ...s.slots,
         {
-          id: crypto.randomUUID(),
+          id:
+            typeof crypto !== "undefined" && crypto.randomUUID
+              ? crypto.randomUUID()
+              : String(Date.now() + Math.random()),
           date: s.slotDate,
           start: s.slotStart,
           end: s.slotEnd,
@@ -123,57 +161,80 @@ export default function AddDonationModal({
   const removeSlot = (id) =>
     setF((s) => ({ ...s, slots: s.slots.filter((x) => x.id !== id) }));
 
-  const canPublish = useMemo(() => {
-    return (
-      f.name.trim() &&
-      f.categoryID &&
-      f.unitID &&
-      f.qty > 0 &&
-      f.expiry &&
-      f.slots.length > 0 &&
-      f.contact.trim()
-    );
-  }, [f]);
+  // Any saved slots beyond the allowed date?
+  const invalidSlots = useMemo(() => {
+    if (!latestAllowed) return [];
+    return (f.slots || []).filter((s) => {
+      const d = safeISOToDate(s.date);
+      return d && d > latestAllowed;
+    });
+  }, [f.slots, latestAllowed]);
 
-  // ✅ Publish donation
+  const canPublish = useMemo(() => {
+    // base checks
+    if (
+      !f.name.trim() ||
+      !f.categoryID ||
+      !f.unitID ||
+      f.qty <= 0 ||
+      !f.expiry ||
+      !f.contact.trim() ||
+      f.slots.length === 0
+    ) return false;
+
+    // must have valid expiry to compare
+    if (!expiryDate || !latestAllowed) return false;
+
+    // reject if any invalid slots or current editor is invalid
+    if (invalidSlots.length > 0 || slotAfterLimit) return false;
+
+    return true;
+  }, [
+    f.name, f.categoryID, f.unitID, f.qty, f.expiry, f.slots.length, f.contact,
+    expiryDate, latestAllowed, invalidSlots.length, slotAfterLimit
+  ]);
+
   async function publish() {
     if (!canPublish || saving) return;
     setSaving(true);
     setErr("");
 
-    const address = f.useLastAddress
+    const address = f.useLastAddress && lastAddress
       ? lastAddress
       : f.address;
 
+    // Build payload for donation_add.php (direct donation)
     const payload = {
       userID: userId,
       contact: f.contact.trim(),
+      donationNote: "", // optional
       food: {
         name: f.name.trim(),
         quantity: Number(f.qty),
-        expiryDate: f.expiry,
+        expiryDate: f.expiry,         // YYYY-MM-DD
         categoryID: f.categoryID,
         unitID: f.unitID,
         remark: f.remark.trim() || null,
       },
-      address,
+      address,                        // {label,line1,line2,postcode,city,state,country}
       availability: f.slots.map(({ date, start, end, note }) => ({
-        date,
-        start,
-        end,
-        note: note || "",
+        date, start, end, note: note || "",
       })),
     };
 
     try {
       const res = await apiPost("/donation_add.php", payload);
-      if (!res || res.ok === false) throw new Error(res?.error || "Add failed");
+      if (!res || res.ok === false) {
+        throw new Error(res?.error || "Add failed");
+      }
 
-      const catName = catOpts.find((c) => c.id === f.categoryID)?.name || "";
-      const unitName = unitOpts.find((u) => u.id === f.unitID)?.name || "";
+      // Friendly names for UI
+      const catName  = catOpts.find(c => c.id === f.categoryID)?.name || "";
+      const unitName = unitOpts.find(u => u.id === f.unitID)?.name || "";
 
       onPublish?.({
         id: res.donationID,
+        donationID: res.donationID,
         item: {
           name: f.name.trim(),
           qty: Number(f.qty),
@@ -183,9 +244,11 @@ export default function AddDonationModal({
           remark: f.remark.trim(),
         },
         address,
+        useLastAddress: f.useLastAddress,
         slots: f.slots,
         contact: f.contact.trim(),
       });
+
       onClose?.();
     } catch (e) {
       setErr(e.message || "Network error");
@@ -194,10 +257,12 @@ export default function AddDonationModal({
     }
   }
 
+  const addrDisabled = f.useLastAddress && !!lastAddress;
   if (!open) return null;
-  const addrDisabled = f.useLastAddress;
 
-  // ---- JSX ----
+  // For the date picker, provide a max=YYYY-MM-DD hint
+  const maxISOForPicker = latestAllowed ? toISODate(latestAllowed) : undefined;
+
   return (
     <div className="modal" onClick={onClose}>
       <div className="panel panel-wide" onClick={(e) => e.stopPropagation()}>
@@ -205,102 +270,208 @@ export default function AddDonationModal({
         <h3 className="modal-title">Add Donation</h3>
 
         {err && (
-          <div className="alert-error">{err}</div>
+          <div className="mb-3 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+            {err}
+          </div>
         )}
 
-        {/* 🧾 Item info */}
+        {/* Row 1: item name / qty / contact */}
         <div className="form-grid grid-3">
-          <TextInput label="Item name" value={f.name}
-            onChange={(v) => setF({ ...f, name: v })} />
-          <QuantityRow
-            qty={f.qty}
-            unitID={f.unitID}
-            step={step}
-            unitOpts={unitOpts}
-            onUnitChange={(val) => setF({ ...f, unitID: val })}
-          />
-          <TextInput label="Contact Number" value={f.contact}
-            onChange={(v) => setF({ ...f, contact: v })} />
+          <div className="form-row">
+            <label>Item name</label>
+            <input
+              className="input"
+              placeholder="Eg. (Egg)"
+              value={f.name}
+              onChange={(e) => setF({ ...f, name: e.target.value })}
+            />
+          </div>
+
+          <div className="form-row">
+            <label>Quantity</label>
+            <div className="qty-row">
+              <button className="step" onClick={() => step(-1)}>-</button>
+              <span className="qty-num">{f.qty}</span>
+              <button className="step" onClick={() => step(1)}>+</button>
+
+              {/* Unit from DB */}
+              <select
+                className="input unit"
+                value={f.unitID}
+                onChange={(e) => setF({ ...f, unitID: e.target.value })}
+              >
+                {unitOpts.length === 0 ? (
+                  <option value="">Loading…</option>
+                ) : (
+                  unitOpts.map((u) => (
+                    <option key={u.id} value={u.id}>{u.name}</option>
+                  ))
+                )}
+              </select>
+            </div>
+          </div>
+
+          <div className="form-row">
+            <label>Contact Number</label>
+            <input
+              className="input"
+              placeholder="012-3456789"
+              value={f.contact}
+              onChange={(e) => setF({ ...f, contact: e.target.value })}
+            />
+          </div>
         </div>
 
-        {/* 📦 Category + Expiry + Remark */}
+        {/* Row 2: category / expiry / remark */}
         <div className="form-grid grid-3">
-          <SelectInput label="Category" value={f.categoryID}
-            options={catOpts} onChange={(v) => setF({ ...f, categoryID: v })} />
-          <DateInput label="Expiry date" value={f.expiry}
-            onChange={(v) => setF({ ...f, expiry: v })} />
-          <TextInput label="Remark" value={f.remark}
-            onChange={(v) => setF({ ...f, remark: v })} placeholder="Optional" />
+          <div className="form-row">
+            <label>Category</label>
+            <select
+              className="input"
+              value={f.categoryID}
+              onChange={(e) => setF({ ...f, categoryID: e.target.value })}
+            >
+              {catOpts.length === 0 ? (
+                <option value="">Loading…</option>
+              ) : (
+                catOpts.map((c) => (
+                  <option key={c.id} value={c.id}>{c.name}</option>
+                ))
+              )}
+            </select>
+          </div>
+
+          <div className="form-row">
+            <label>Expiry date</label>
+            <input
+              type="date"
+              className="input"
+              value={f.expiry}
+              onChange={(e) => setF({ ...f, expiry: e.target.value })}
+            />
+            {f.expiry && (
+              <div className="text-xs mt-1">
+                {/*Latest availability allowed:{" "}
+                <b>{latestAllowed ? formatDMY(latestAllowed) : "-"}</b>*/}
+                {MAX_SLOT_OFFSET_DAYS === 1 && " (one day before expiry)"}
+              </div>
+            )}
+          </div>
+
+          <div className="form-row">
+            <label>Remark</label>
+            <input
+              className="input"
+              placeholder="Optional"
+              value={f.remark}
+              onChange={(e) => setF({ ...f, remark: e.target.value })}
+            />
+          </div>
         </div>
 
-        {/* 🏠 Address */}
+        {/* Address */}
         <div className="section-head">
           <span className="section-title">Address</span>
-          {lastAddress && (
-            <label className="inline">
-              <input
-                type="checkbox"
-                checked={f.useLastAddress}
-                onChange={(e) => {
-                  const checked = e.target.checked;
-                  setF((prev) => ({
-                    ...prev,
-                    useLastAddress: checked,
-                    address: checked
-                      ? lastAddress
-                      : initForm().address,
-                  }));
-                }}
-              />{" "}
-              Use Previous Address
-            </label>
-          )}
-          {loadingAddr && (
-            <span className="text-sm text-gray-500 ml-2">(Loading…)</span>
-          )}
+          <label className={`inline ${!lastAddress ? "opacity-60" : ""}`}>
+            <input
+              type="checkbox"
+              disabled={!lastAddress}
+              checked={f.useLastAddress}
+              onChange={(e) => {
+                const checked = e.target.checked;
+                setF((prev) => ({
+                  ...prev,
+                  useLastAddress: checked,
+                  address: checked && lastAddress
+                    ? lastAddress
+                    : { label: "", line1: "", line2: "", postcode: "", city: "", state: "", country: "" },
+                }));
+              }}
+            />{" "}
+            Use Previous Address {loadingAddr ? " (Loading…)" : !lastAddress ? " (none)" : ""}
+          </label>
         </div>
 
         <div className="form-grid grid-3">
           {["label","line1","line2","postcode","city","state","country"].map((key) => (
-            <TextInput
-              key={key}
-              label={key.charAt(0).toUpperCase() + key.slice(1)}
-              disabled={addrDisabled}
-              value={f.address[key]}
-              onChange={(v) =>
-                setF({ ...f, address: { ...f.address, [key]: v } })
-              }
-            />
+            <div className="form-row" key={key}>
+              <label>{cap(key)}</label>
+              <input
+                className="input"
+                disabled={addrDisabled}
+                value={f.address[key]}
+                onChange={(e) => setF({ ...f, address: { ...f.address, [key]: e.target.value } })}
+              />
+            </div>
           ))}
         </div>
 
-        {/* ⏰ Availability */}
+        {/* Availability */}
         <div className="section-head">
           <span className="section-title">Availability time(s)</span>
         </div>
 
         <div className="slots-row">
-          <input type="date" className="input"
-            value={f.slotDate} onChange={(e) => setF({ ...f, slotDate: e.target.value })}/>
-          <input type="time" className="input"
-            value={f.slotStart} onChange={(e) => setF({ ...f, slotStart: e.target.value })}/>
-          <input type="time" className="input"
-            value={f.slotEnd} onChange={(e) => setF({ ...f, slotEnd: e.target.value })}/>
-          <input className="input note" placeholder="Note (optional)"
-            value={f.slotNote} onChange={(e) => setF({ ...f, slotNote: e.target.value })}/>
-          <button className="add-slot" disabled={!canAddSlot} onClick={addSlot}>+ Add</button>
+          <input
+            type="date"
+            className="input"
+            value={f.slotDate}
+            max={maxISOForPicker}
+            onChange={(e) => setF({ ...f, slotDate: e.target.value })}
+          />
+          <input
+            type="time"
+            className="input"
+            value={f.slotStart}
+            onChange={(e) => setF({ ...f, slotStart: e.target.value })}
+          />
+          <input
+            type="time"
+            className="input"
+            value={f.slotEnd}
+            onChange={(e) => setF({ ...f, slotEnd: e.target.value })}
+          />
+          <input
+            className="input note"
+            placeholder="Note (optional)"
+            value={f.slotNote}
+            onChange={(e) => setF({ ...f, slotNote: e.target.value })}
+          />
+          <button className="add-slot" disabled={!canAddSlot} onClick={addSlot}>
+            + Add
+          </button>
         </div>
 
-        {f.slots.length > 0 && (
-          <div className="chip-list">
-            {f.slots.map((s) => (
-              <span key={s.id} className="chip">
-                {formatDMY(s.date)}, {s.start}–{s.end}
-                {s.note && ` · ${s.note}`}
-                <button className="chip-x" onClick={() => removeSlot(s.id)}>×</button>
-              </span>
-            ))}
+        {slotAfterLimit && (
+          <div className="text-xs text-red-600 mt-1">
+            Availability date must be on or before {formatDMY(latestAllowed)}.
           </div>
+        )}
+
+        {f.slots.length > 0 && (
+          <>
+            {invalidSlots.length > 0 && (
+              <div className="mb-2 rounded border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
+                {invalidSlots.length} availability {invalidSlots.length > 1 ? "entries are" : "entry is"} past the allowed date. Please remove or change them.
+              </div>
+            )}
+            <div className="chip-list">
+              {f.slots.map((s) => {
+                const d = safeISOToDate(s.date);
+                const late = latestAllowed && d && d > latestAllowed;
+                return (
+                  <span key={s.id} className={`slot-pill ${late ? "bg-red-50" : ""}`}>
+                    <span className="slot-main">
+                      {formatDMY(s.date)}, {fmtTime(s.start)}–{fmtTime(s.end)}
+                      {s.note ? ` · ${s.note}` : ""}
+                      {late ? " ⚠️" : ""}
+                    </span>
+                    <button className="slot-del" onClick={() => removeSlot(s.id)}>Delete</button>
+                  </span>
+                );
+              })}
+            </div>
+          </>
         )}
 
         <div className="modal-actions">
@@ -316,77 +487,31 @@ export default function AddDonationModal({
   );
 }
 
-/* Small subcomponents */
-function TextInput({ label, value, onChange, disabled, placeholder }) {
-  return (
-    <div className="form-row">
-      <label>{label}</label>
-      <input
-        className="input"
-        disabled={disabled}
-        value={value}
-        placeholder={placeholder}
-        onChange={(e) => onChange(e.target.value)}
-      />
-    </div>
-  );
-}
-
-function QuantityRow({ qty, unitID, step, unitOpts, onUnitChange }) {
-  return (
-    <div className="form-row">
-      <label>Quantity</label>
-      <div className="qty-row">
-        <button className="step" onClick={() => step(-1)}>-</button>
-        <span className="qty-num">{qty}</span>
-        <button className="step" onClick={() => step(1)}>+</button>
-        <select className="input unit" value={unitID} onChange={(e) => onUnitChange(e.target.value)}>
-          {unitOpts.length === 0 ? (
-            <option value="">Loading…</option>
-          ) : (
-            unitOpts.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)
-          )}
-        </select>
-      </div>
-    </div>
-  );
-}
-
-function SelectInput({ label, value, options, onChange }) {
-  return (
-    <div className="form-row">
-      <label>{label}</label>
-      <select className="input" value={value} onChange={(e) => onChange(e.target.value)}>
-        {options.length === 0 ? (
-          <option value="">Loading…</option>
-        ) : (
-          options.map((opt) => <option key={opt.id} value={opt.id}>{opt.name}</option>)
-        )}
-      </select>
-    </div>
-  );
-}
-
-function DateInput({ label, value, onChange }) {
-  return (
-    <div className="form-row">
-      <label>{label}</label>
-      <input type="date" className="input" value={value} onChange={(e) => onChange(e.target.value)} />
-    </div>
-  );
-}
-
+// -------- helpers --------
 function initForm() {
   return {
+    // item
     name: "",
     qty: 1,
-    unitID: "",
+    unitID: "",       // from DB list
     contact: "",
-    categoryID: "",
-    expiry: "",
+    categoryID: "",   // from DB list
+    expiry: "",       // YYYY-MM-DD
     remark: "",
+
+    // address
     useLastAddress: false,
-    address: { label: "", line1: "", line2: "", postcode: "", city: "", state: "", country: "" },
+    address: {
+      label: "",
+      line1: "",
+      line2: "",
+      postcode: "",
+      city: "",
+      state: "",
+      country: "",
+    },
+
+    // slot editor + list
     slotDate: "",
     slotStart: "",
     slotEnd: "",
@@ -395,7 +520,31 @@ function initForm() {
   };
 }
 
-function formatDMY(isoDate) {
-  const d = new Date(isoDate);
-  return isNaN(d) ? isoDate : d.toLocaleDateString("en-GB");
+function cap(s) { return s.charAt(0).toUpperCase() + s.slice(1); }
+
+function toMinutes(t) {
+  if (!t) return NaN;
+  const [h, m] = t.split(":").map(Number);
+  return h * 60 + m;
+}
+function safeISOToDate(iso) {
+  if (!iso) return null;
+  const d = new Date(iso);
+  return isNaN(d) ? null : new Date(d.getFullYear(), d.getMonth(), d.getDate());
+}
+function toISODate(d) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+function formatDMY(dOrIso) {
+  const d = dOrIso instanceof Date ? dOrIso : new Date(dOrIso);
+  return isNaN(d) ? String(dOrIso) : d.toLocaleDateString("en-GB");
+}
+function fmtTime(hhmm) {
+  if (!hhmm) return "";
+  const [h, m] = hhmm.split(":").map(Number);
+  const d = new Date(); d.setHours(h, m, 0, 0);
+  return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: true });
 }

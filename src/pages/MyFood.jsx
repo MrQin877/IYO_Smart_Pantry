@@ -18,6 +18,7 @@ export default function MyFood() {
   const [openAdd, setOpenAdd] = useState(false);
   const [detailItem, setDetailItem] = useState(null);
   const [editItem, setEditItem] = useState(null);
+  const [deletingId, setDeletingId] = useState(null);
 
   const [donateOpen, setDonateOpen] = useState(false);
   const [donateItem, setDonateItem] = useState(null);
@@ -136,11 +137,33 @@ export default function MyFood() {
     setEditItem(null);
   }
 
-  async function handleDelete(id) {
+  async function handleDelete(foodID) {
     if (!window.confirm("Delete this item?")) return;
+
+    // optimistic UI
     const prev = rows;
-    setRows(prev.filter((r) => r.id !== id));
-    // backend call optional...
+    const next = rows.filter(r => r.foodID !== foodID);
+    setRows(next);
+    setDeletingId(foodID);
+
+    try {
+      const res = await apiPost("/food_delete.php", {
+        userID: "U1",     // <-- your logged-in user id
+        foodID,           // <-- the one to delete
+      });
+
+      if (!res?.ok) {
+        throw new Error(res?.error || "Delete failed");
+      }
+
+      // Optional: refresh from server to be perfectly in sync
+      setRefreshKey(k => k + 1);
+    } catch (err) {
+      alert(err.message || "Delete failed. Reverting UI.");
+      setRows(prev);        // rollback
+    } finally {
+      setDeletingId(null);
+    }
   }
 
   function handleDonateRequest(item) {
@@ -289,12 +312,13 @@ export default function MyFood() {
                     <button
                       className="icon-btn"
                       title="Delete"
+                      disabled={deletingId === r.foodID}
                       onClick={(e) => {
-                        e.stopPropagation();
-                        setRows(rows.filter((x) => x.id !== r.id));
+                        e.stopPropagation(); // don't open detail modal
+                        handleDelete(r.foodID);
                       }}
                     >
-                      🗑️
+                      {deletingId === r.foodID ? "⏳" : "🗑️"}
                     </button>
                   </td>
                 </tr>
