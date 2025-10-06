@@ -1,5 +1,7 @@
 // src/pages/MyFood.jsx
-import { useMemo, useState } from "react";
+
+import { useMemo, useState, useEffect } from "react";
+import { apiGet, apiPost } from "../lib/api"; // make sure you have this helper
 import DonationModal from "../component/DonationModal.jsx";
 import FoodFormModal from "../component/FoodFormModal.jsx"; // <-- new
 import FoodDetailModal from "../component/FoodDetailModal.jsx";
@@ -9,14 +11,8 @@ import FilterModal from "../component/FilterModal.jsx";
 
 import "./FoodCentre.css";
 
-const seedFoods = [
-  { id: 1, name: "Egg",    category: "Protein",    qty: 3, unit: "ps", expiry: "2025-10-20", status: "Available", location: "Locker 2", remark: "This egg was expensive" },
-  { id: 2, name: "Rice",   category: "Grains",     qty: 1, unit: "kg", expiry: "2025-10-03", status: "Expired",   location: "",        remark: "" },
-  { id: 3, name: "Tomato", category: "Vegetables", qty: 1, unit: "ps", expiry: "2025-11-06", status: "Available", location: "",        remark: "" },
-];
 
 export default function MyFood() {
-  const [rows, setRows] = useState(seedFoods);
   const [sort, setSort] = useState({ key: "name", dir: "asc" });
   const [page, setPage] = useState(1);
   const [openAdd, setOpenAdd] = useState(false);
@@ -27,6 +23,57 @@ export default function MyFood() {
   const [donateItem, setDonateItem] = useState(null);
 
   const pageSize = 5;
+
+  const [rows, setRows] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [allFoods, setAllFoods] = useState([]);
+  const [refreshKey, setRefreshKey] = useState(0);
+
+
+  // ...inside your useEffect for fetching foods
+  useEffect(() => {
+    (async () => {
+      setLoading(true);
+      try {
+        const res = await apiPost("/food_list.php", { userID: "U1" });
+
+        if (res.ok) {
+          console.log("✅ Foods fetched:", res.foods);
+
+          const mapped = res.foods.map(f => ({
+            id: f.foodID,
+            foodID: f.foodID,
+            name: f.foodName,
+            qty: f.quantity,
+            categoryID: f.categoryID,    // <-- store IDs for filtering
+            category: f.categoryName,
+            storageID: f.storageID,      // <-- store IDs
+            storage: f.storageName,
+            unit: f.unitName,
+            expiry: f.expiryDate,
+            remark: f.remark,
+            userID: f.userID,
+            remark: f.remark,
+            status: f.is_expiryStatus, // or f.status if you rename it
+            reserved: f.reserved,      // optional, if available
+            is_plan: f.is_plan,   // ✅ add this line
+          }));
+
+
+          setRows(mapped);
+          setAllFoods(mapped); // <-- store the full list
+        } else {
+          console.error(res.error);
+        }
+      } catch (e) {
+        console.error("Failed to load foods", e);
+      }
+      setLoading(false);
+    })();
+  }, [refreshKey]); // <--- depend on refreshKey
+
+
+  
 
   const sorted = useMemo(() => {
     const copy = [...rows];
@@ -51,11 +98,11 @@ export default function MyFood() {
 
   const [filterOpen, setFilterOpen] = useState(false);
   const [filters, setFilters] = useState({
-    category: "",       // single select for simplicity
-    status: "",         // Available / Expired (for My Food)
-    expiryFrom: "",     // date range
+    category: "",
+    storageID: "", // match storageID in FilterModal.jsx
+    expiryFrom: "",
     expiryTo: "",
-    pickupArea: "",     // for donations
+    pickupArea: "",
   });
 
   // Count how many filters are applied
@@ -113,19 +160,49 @@ export default function MyFood() {
     alert("Donation published (demo).");
   }
 
+  function handleRefresh() {
+    // Re-fetch or reload food list
+    //loadFoods(); // assuming you have a function like this that fetches data
+    setRefreshKey(prev => prev + 1);
+  }
+
+
   // inside MyFood.jsx (keep it above return)
   function applyFilters(overrideFilters = null) {
     const f = overrideFilters ?? filters;
 
-    // normalize string values so empty strings are treated as empty
-    const cat = (f.category ?? "").toString().trim();
-    const status = (f.status ?? "").toString().trim();
-    const from = (f.expiryFrom ?? "").toString().trim();
-    const to = (f.expiryTo ?? "").toString().trim();
+    const cat = (f.category ?? "").trim();      // categoryID
+    const storage = (f.storageID ?? "").trim(); // storageID
 
-    const filtered = seedFoods.filter(r => {
-      if (cat && r.category !== cat) return false;
-      if (status && r.status !== status) return false;
+    // Determine expiry range
+    let from = "";
+    let to = "";
+    const today = new Date();
+
+    if (f.expiryRange === "3days") {
+      from = today.toISOString().split("T")[0];
+      const d = new Date();
+      d.setDate(today.getDate() + 3);
+      to = d.toISOString().split("T")[0];
+    } else if (f.expiryRange === "week") {
+      from = today.toISOString().split("T")[0];
+      const d = new Date();
+      const day = d.getDay(); // 0 (Sun) - 6 (Sat)
+      d.setDate(today.getDate() + (7 - day)); // end of week
+      to = d.toISOString().split("T")[0];
+    } else if (f.expiryRange === "month") {
+      from = today.toISOString().split("T")[0];
+      const d = new Date(today.getFullYear(), today.getMonth() + 1, 0); // last day of month
+      to = d.toISOString().split("T")[0];
+    } else {
+      // fallback to any manually set expiryFrom / expiryTo
+      from = (f.expiryFrom ?? "").trim();
+      to = (f.expiryTo ?? "").trim();
+    }
+
+    const filtered = allFoods.filter(r => {
+      if (cat && r.categoryID !== cat) return false;
+      if (storage && r.storageID !== storage) return false;
       if (from && new Date(r.expiry) < new Date(from)) return false;
       if (to && new Date(r.expiry) > new Date(to)) return false;
       return true;
@@ -158,33 +235,67 @@ export default function MyFood() {
               <Th label="Category" k="category" sort={sort} onSort={toggleSort} />
               <Th label="Quantity" k="qty" sort={sort} onSort={toggleSort} center />
               <Th label="Unit" k="unit" sort={sort} onSort={toggleSort} center />
+              <Th label="Storage" k="storage" sort={sort} onSort={toggleSort} />
               <Th label="Expiry date" k="expiry" sort={sort} onSort={toggleSort} />
-              <Th label="Status" k="status" sort={sort} onSort={toggleSort} />
               <th className="actions-col" />
             </tr>
           </thead>
+
           <tbody>
             {view.length === 0 ? (
               <tr>
                 <td colSpan={7}>
-                  <div className="no-items">
-                    No items found. Please adjust your filters.
-                  </div>
+                  <div className="no-items">No items found. Please adjust your filters.</div>
                 </td>
               </tr>
             ) : (
               view.map((r) => (
-                <tr key={r.id}>
-                  <td className="link" onClick={() => setDetailItem(r)} title="Open details">{r.name}</td>
+                <tr
+                  key={r.id}
+                  className={r.is_plan == 1 ? "planned-row" : ""}
+                  title="Open details"
+                  onClick={() => setDetailItem(r)}
+                >
+                  <td className="link">
+                    <span>{r.name}</span>
+                    {r.is_plan == 1 && <span className="planned-badge">🍽 Planned</span>}
+                  </td>
                   <td>{r.category}</td>
                   <td className="center">{r.qty}</td>
                   <td className="center">{r.unit}</td>
+                  <td>{r.storage}</td>
                   <td>{formatDate(r.expiry)}</td>
-                  <td><span className={`pill ${r.status === "Expired" ? "danger" : "ok"}`}>{r.status}</span></td>
                   <td className="row-actions">
-                    <button className="icon-btn" title="View" onClick={() => setDetailItem(r)}>👁️</button>
-                    <button className="icon-btn" title="Edit" onClick={() => setEditItem(r)}>✏️</button>
-                    <button className="icon-btn" title="Delete" onClick={() => setRows(rows.filter(x=>x.id!==r.id))}>🗑️</button>
+                    <button
+                      className="icon-btn"
+                      title="View"
+                      onClick={(e) => {
+                        e.stopPropagation(); // prevent opening detail modal from row click
+                        setDetailItem(r);
+                      }}
+                    >
+                      👁️
+                    </button>
+                    <button
+                      className="icon-btn"
+                      title="Edit"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setEditItem(r);
+                      }}
+                    >
+                      ✏️
+                    </button>
+                    <button
+                      className="icon-btn"
+                      title="Delete"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setRows(rows.filter((x) => x.id !== r.id));
+                      }}
+                    >
+                      🗑️
+                    </button>
                   </td>
                 </tr>
               ))
@@ -210,12 +321,27 @@ export default function MyFood() {
         onSave={handleUpdate}
       />
 
+      {/* 🔍 Food detail modal */}
       <FoodDetailModal
         open={!!detailItem}
-        item={detailItem}
-        onClose={() => setDetailItem(null)}
+        foodID={detailItem?.foodID}
+        onClose={() => {
+          setDetailItem(null);
+          handleRefresh(); // ✅ refresh list when modal closes
+        }}
         onDonate={handleDonateRequest}
+        onUpdate={handleRefresh}
+        onPlanUpdate={(foodID, newPlan) => {
+          setView(prev =>
+            prev.map(f =>
+              f.foodID === foodID ? { ...f, is_plan: newPlan } : f
+            )
+          );
+        }}
       />
+
+
+
 
       <DonationModal
         open={donateOpen}
