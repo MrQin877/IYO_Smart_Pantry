@@ -1,75 +1,103 @@
-import { useEffect, useMemo, useState } from "react";
+// src/component/AddDonationModal.jsx
+import { useEffect, useMemo, useRef, useState } from "react";
+import { apiGet, apiPost } from "../lib/api";
 
-/**
- * Add Donation (MyDonation tab)
- * Props:
- *  - open: boolean
- *  - onClose: () => void
- *  - onPublish: (payload) => void
- */
-export default function AddDonationModal({ open, onClose, onPublish }) {
-  const [f, setF] = useState(() => ({
-    // item detail
-    name: "",
-    qty: 1,
-    unit: "ps",
-    contact: "",
-    category: "Grains",
-    expiry: "",
-    remark: "",
+// ---- cache so we don’t re-fetch on every open ----
+let CATS_CACHE = null;
+let UNITS_CACHE = null;
 
-    // address
-    useDefaultAddress: false,
-    address: {
-      label: "",
-      line1: "",
-      line2: "",
-      postcode: "",
-      city: "",
-      state: "",
-      country: "",
-    },
+export default function AddDonationModal({
+  open,
+  onClose,
+  onPublish,
+  userId = "U1", // pass actual logged-in user ID
+}) {
+  const [f, setF] = useState(initForm());
+  const [saving, setSaving] = useState(false);
+  const [err, setErr] = useState("");
 
-    // availability (editor + list)
-    slotDate: "",
-    slotStart: "",
-    slotEnd: "",
-    slotNote: "",
-    slots: [],
-  }));
+  const [catOpts, setCatOpts] = useState([]);
+  const [unitOpts, setUnitOpts] = useState([]);
+  const didPrefillRef = useRef(false);
 
-  // reset when opened
+  // 🔹 For previous address
+  const [lastAddress, setLastAddress] = useState(null);
+  const [loadingAddr, setLoadingAddr] = useState(false);
+
+  // ✅ Load last address from DB when modal opens
   useEffect(() => {
     if (!open) return;
-    setF((s) => ({
-      ...s,
-      name: "",
-      qty: 1,
-      unit: "ps",
-      contact: "",
-      category: "Grains",
-      expiry: "",
-      remark: "",
-      useDefaultAddress: false,
-      address: { label: "", line1: "", line2: "", postcode: "", city: "", state: "", country: "" },
-      slotDate: "",
-      slotStart: "",
-      slotEnd: "",
-      slotNote: "",
-      slots: [],
-    }));
+    (async () => {
+      try {
+        setLoadingAddr(true);
+        const res = await apiGet(`/get_last_address.php?userID=${userId}`);
+        if (res.ok && res.address) setLastAddress(res.address);
+        else setLastAddress(null);
+      } catch {
+        setLastAddress(null);
+      } finally {
+        setLoadingAddr(false);
+      }
+    })();
+  }, [open, userId]);
+
+  // ✅ Reset form each time modal opens
+  useEffect(() => {
+    if (!open) return;
+    setF(initForm());
+    setErr("");
+    setSaving(false);
+    didPrefillRef.current = false;
   }, [open]);
 
-  // close on ESC
+  // ✅ Load categories & units (with cache)
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        if (!CATS_CACHE) {
+          const r = await apiGet("/categories_list.php");
+          CATS_CACHE = r?.data || [];
+        }
+        if (!UNITS_CACHE) {
+          const r2 = await apiGet("/units_list.php");
+          UNITS_CACHE = r2?.data || [];
+        }
+        if (!cancelled) {
+          setCatOpts(CATS_CACHE);
+          setUnitOpts(UNITS_CACHE);
+        }
+      } catch {
+        if (!cancelled) setErr("Failed to load categories or units");
+      }
+    })();
+    return () => (cancelled = true);
+  }, []);
+
+  // ✅ Prefill first options after load
+  useEffect(() => {
+    if (!open || didPrefillRef.current) return;
+    if (!catOpts.length || !unitOpts.length) return;
+    didPrefillRef.current = true;
+    setF((s) => ({
+      ...s,
+      categoryID: s.categoryID || catOpts[0]?.id || "",
+      unitID: s.unitID || unitOpts[0]?.id || "",
+    }));
+  }, [open, catOpts.length, unitOpts.length]);
+
+  // ✅ ESC to close modal
   useEffect(() => {
     const onKey = (e) => e.key === "Escape" && onClose?.();
     if (open) document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
   }, [open, onClose]);
 
+  // ---- Helpers ----
   const step = (d) => setF((s) => ({ ...s, qty: Math.max(1, s.qty + d) }));
 
-  const canAddSlot = f.slotDate && f.slotStart && f.slotEnd && f.slotEnd > f.slotStart;
+  const canAddSlot =
+    f.slotDate && f.slotStart && f.slotEnd && f.slotEnd > f.slotStart;
 
   const addSlot = () => {
     if (!canAddSlot) return;
@@ -96,236 +124,170 @@ export default function AddDonationModal({ open, onClose, onPublish }) {
     setF((s) => ({ ...s, slots: s.slots.filter((x) => x.id !== id) }));
 
   const canPublish = useMemo(() => {
-    return f.name.trim() && f.category && f.qty > 0 && f.expiry && f.slots.length > 0;
-  }, [f.name, f.category, f.qty, f.expiry, f.slots.length]);
+    return (
+      f.name.trim() &&
+      f.categoryID &&
+      f.unitID &&
+      f.qty > 0 &&
+      f.expiry &&
+      f.slots.length > 0 &&
+      f.contact.trim()
+    );
+  }, [f]);
 
-  const publish = () => {
-    if (!canPublish) return;
-    onPublish?.({
-      item: {
+  // ✅ Publish donation
+  async function publish() {
+    if (!canPublish || saving) return;
+    setSaving(true);
+    setErr("");
+
+    const address = f.useLastAddress
+      ? lastAddress
+      : f.address;
+
+    const payload = {
+      userID: userId,
+      contact: f.contact.trim(),
+      food: {
         name: f.name.trim(),
-        qty: f.qty,
-        unit: f.unit,
-        category: f.category,
-        expiry: f.expiry,
-        contact: f.contact.trim(),
-        remark: f.remark.trim(),
+        quantity: Number(f.qty),
+        expiryDate: f.expiry,
+        categoryID: f.categoryID,
+        unitID: f.unitID,
+        remark: f.remark.trim() || null,
       },
-      address: f.useDefaultAddress ? null : f.address,
-      useDefaultAddress: f.useDefaultAddress,
-      slots: f.slots, // [{id,date,start,end,note}]
-    });
-  };
+      address,
+      availability: f.slots.map(({ date, start, end, note }) => ({
+        date,
+        start,
+        end,
+        note: note || "",
+      })),
+    };
 
-  const addrDisabled = f.useDefaultAddress;
+    try {
+      const res = await apiPost("/donation_add.php", payload);
+      if (!res || res.ok === false) throw new Error(res?.error || "Add failed");
+
+      const catName = catOpts.find((c) => c.id === f.categoryID)?.name || "";
+      const unitName = unitOpts.find((u) => u.id === f.unitID)?.name || "";
+
+      onPublish?.({
+        id: res.donationID,
+        item: {
+          name: f.name.trim(),
+          qty: Number(f.qty),
+          unit: unitName,
+          category: catName,
+          expiry: f.expiry,
+          remark: f.remark.trim(),
+        },
+        address,
+        slots: f.slots,
+        contact: f.contact.trim(),
+      });
+      onClose?.();
+    } catch (e) {
+      setErr(e.message || "Network error");
+    } finally {
+      setSaving(false);
+    }
+  }
+
   if (!open) return null;
+  const addrDisabled = f.useLastAddress;
 
+  // ---- JSX ----
   return (
     <div className="modal" onClick={onClose}>
       <div className="panel panel-wide" onClick={(e) => e.stopPropagation()}>
         <button className="close" onClick={onClose}>✕</button>
         <h3 className="modal-title">Add Donation</h3>
 
-        {/* Row 1: item name / qty / contact */}
+        {err && (
+          <div className="alert-error">{err}</div>
+        )}
+
+        {/* 🧾 Item info */}
         <div className="form-grid grid-3">
-          <div className="form-row">
-            <label>Item name</label>
-            <input
-              className="input"
-              placeholder="Eg. (Egg)"
-              value={f.name}
-              onChange={(e) => setF({ ...f, name: e.target.value })}
-            />
-          </div>
-
-          <div className="form-row">
-            <label>Quantity</label>
-            <div className="qty-row">
-              <button className="step" onClick={() => step(-1)}>-</button>
-              <span className="qty-num">{f.qty}</span>
-              <button className="step" onClick={() => step(1)}>+</button>
-              <select
-                className="input unit"
-                value={f.unit}
-                onChange={(e) => setF({ ...f, unit: e.target.value })}
-              >
-                <option value="ps">UNIT</option>
-                <option value="kg">kg</option>
-                <option value="g">g</option>
-                <option value="L">L</option>
-                <option value="ml">ml</option>
-              </select>
-            </div>
-          </div>
-
-          <div className="form-row">
-            <label>Contact Number</label>
-            <input
-              className="input"
-              placeholder="012-3456789"
-              value={f.contact}
-              onChange={(e) => setF({ ...f, contact: e.target.value })}
-            />
-          </div>
+          <TextInput label="Item name" value={f.name}
+            onChange={(v) => setF({ ...f, name: v })} />
+          <QuantityRow
+            qty={f.qty}
+            unitID={f.unitID}
+            step={step}
+            unitOpts={unitOpts}
+            onUnitChange={(val) => setF({ ...f, unitID: val })}
+          />
+          <TextInput label="Contact Number" value={f.contact}
+            onChange={(v) => setF({ ...f, contact: v })} />
         </div>
 
-        {/* Row 2: category / expiry / remark */}
+        {/* 📦 Category + Expiry + Remark */}
         <div className="form-grid grid-3">
-          <div className="form-row">
-            <label>Category</label>
-            <select
-              className="input"
-              value={f.category}
-              onChange={(e) => setF({ ...f, category: e.target.value })}
-            >
-              <option>Grains</option>
-              <option>Protein</option>
-              <option>Vegetables</option>
-              <option>Fruits</option>
-              <option>Dairy</option>
-              <option>Other</option>
-            </select>
-          </div>
-
-          <div className="form-row">
-            <label>Expiry date</label>
-            <input
-              type="date"
-              className="input"
-              value={f.expiry}
-              onChange={(e) => setF({ ...f, expiry: e.target.value })}
-            />
-          </div>
-
-          <div className="form-row">
-            <label>Remark</label>
-            <input
-              className="input"
-              placeholder="Optional"
-              value={f.remark}
-              onChange={(e) => setF({ ...f, remark: e.target.value })}
-            />
-          </div>
+          <SelectInput label="Category" value={f.categoryID}
+            options={catOpts} onChange={(v) => setF({ ...f, categoryID: v })} />
+          <DateInput label="Expiry date" value={f.expiry}
+            onChange={(v) => setF({ ...f, expiry: v })} />
+          <TextInput label="Remark" value={f.remark}
+            onChange={(v) => setF({ ...f, remark: v })} placeholder="Optional" />
         </div>
 
-        {/* Address */}
+        {/* 🏠 Address */}
         <div className="section-head">
           <span className="section-title">Address</span>
-          <label className="inline">
-            <input
-              type="checkbox"
-              checked={f.useDefaultAddress}
-              onChange={(e) => setF({ ...f, useDefaultAddress: e.target.checked })}
-            />{" "}
-            Use default address
-          </label>
+          {lastAddress && (
+            <label className="inline">
+              <input
+                type="checkbox"
+                checked={f.useLastAddress}
+                onChange={(e) => {
+                  const checked = e.target.checked;
+                  setF((prev) => ({
+                    ...prev,
+                    useLastAddress: checked,
+                    address: checked
+                      ? lastAddress
+                      : initForm().address,
+                  }));
+                }}
+              />{" "}
+              Use Previous Address
+            </label>
+          )}
+          {loadingAddr && (
+            <span className="text-sm text-gray-500 ml-2">(Loading…)</span>
+          )}
         </div>
 
         <div className="form-grid grid-3">
-          <div className="form-row">
-            <label>Label</label>
-            <input
-              className="input"
-              placeholder="Eg. (Home / Office)"
+          {["label","line1","line2","postcode","city","state","country"].map((key) => (
+            <TextInput
+              key={key}
+              label={key.charAt(0).toUpperCase() + key.slice(1)}
               disabled={addrDisabled}
-              value={f.address.label}
-              onChange={(e) => setF({ ...f, address: { ...f.address, label: e.target.value } })}
+              value={f.address[key]}
+              onChange={(v) =>
+                setF({ ...f, address: { ...f.address, [key]: v } })
+              }
             />
-          </div>
-          <div className="form-row">
-            <label>Line 1</label>
-            <input
-              className="input"
-              placeholder="Eg. (jalan 123..)"
-              disabled={addrDisabled}
-              value={f.address.line1}
-              onChange={(e) => setF({ ...f, address: { ...f.address, line1: e.target.value } })}
-            />
-          </div>
-          <div className="form-row">
-            <label>Line 2</label>
-            <input
-              className="input"
-              placeholder="Eg. (Bukit …)"
-              disabled={addrDisabled}
-              value={f.address.line2}
-              onChange={(e) => setF({ ...f, address: { ...f.address, line2: e.target.value } })}
-            />
-          </div>
-
-          <div className="form-row">
-            <label>Postcode</label>
-            <input
-              className="input"
-              placeholder="Eg. (40160)"
-              disabled={addrDisabled}
-              value={f.address.postcode}
-              onChange={(e) => setF({ ...f, address: { ...f.address, postcode: e.target.value } })}
-            />
-          </div>
-          <div className="form-row">
-            <label>City</label>
-            <input
-              className="input"
-              placeholder="Eg. (Shah Alam)"
-              disabled={addrDisabled}
-              value={f.address.city}
-              onChange={(e) => setF({ ...f, address: { ...f.address, city: e.target.value } })}
-            />
-          </div>
-          <div className="form-row">
-            <label>State</label>
-            <input
-              className="input"
-              placeholder="Eg. (Selangor)"
-              disabled={addrDisabled}
-              value={f.address.state}
-              onChange={(e) => setF({ ...f, address: { ...f.address, state: e.target.value } })}
-            />
-          </div>
-
-          <div className="form-row">
-            <label>Country</label>
-            <input
-              className="input"
-              placeholder="Eg. (Malaysia)"
-              disabled={addrDisabled}
-              value={f.address.country}
-              onChange={(e) => setF({ ...f, address: { ...f.address, country: e.target.value } })}
-            />
-          </div>
+          ))}
         </div>
 
-        {/* Availability */}
+        {/* ⏰ Availability */}
         <div className="section-head">
           <span className="section-title">Availability time(s)</span>
         </div>
 
         <div className="slots-row">
-          <input
-            type="date"
-            className="input"
-            value={f.slotDate}
-            onChange={(e) => setF({ ...f, slotDate: e.target.value })}
-          />
-          <input
-            type="time"
-            className="input"
-            value={f.slotStart}
-            onChange={(e) => setF({ ...f, slotStart: e.target.value })}
-          />
-          <input
-            type="time"
-            className="input"
-            value={f.slotEnd}
-            onChange={(e) => setF({ ...f, slotEnd: e.target.value })}
-          />
-          <input
-            className="input note"
-            placeholder="Note (optional)"
-            value={f.slotNote}
-            onChange={(e) => setF({ ...f, slotNote: e.target.value })}
-          />
+          <input type="date" className="input"
+            value={f.slotDate} onChange={(e) => setF({ ...f, slotDate: e.target.value })}/>
+          <input type="time" className="input"
+            value={f.slotStart} onChange={(e) => setF({ ...f, slotStart: e.target.value })}/>
+          <input type="time" className="input"
+            value={f.slotEnd} onChange={(e) => setF({ ...f, slotEnd: e.target.value })}/>
+          <input className="input note" placeholder="Note (optional)"
+            value={f.slotNote} onChange={(e) => setF({ ...f, slotNote: e.target.value })}/>
           <button className="add-slot" disabled={!canAddSlot} onClick={addSlot}>+ Add</button>
         </div>
 
@@ -333,7 +295,8 @@ export default function AddDonationModal({ open, onClose, onPublish }) {
           <div className="chip-list">
             {f.slots.map((s) => (
               <span key={s.id} className="chip">
-                {formatDMY(s.date)}, {s.start}–{s.end}{s.note ? ` · ${s.note}` : ""}
+                {formatDMY(s.date)}, {s.start}–{s.end}
+                {s.note && ` · ${s.note}`}
                 <button className="chip-x" onClick={() => removeSlot(s.id)}>×</button>
               </span>
             ))}
@@ -341,12 +304,95 @@ export default function AddDonationModal({ open, onClose, onPublish }) {
         )}
 
         <div className="modal-actions">
-          <button className="btn secondary" onClick={onClose}>Cancel</button>
-          <button className="btn primary" disabled={!canPublish} onClick={publish}>Publish</button>
+          <button className="btn secondary" onClick={onClose} disabled={saving}>
+            Cancel
+          </button>
+          <button className="btn primary" disabled={!canPublish || saving} onClick={publish}>
+            {saving ? "Publishing…" : "Publish"}
+          </button>
         </div>
       </div>
     </div>
   );
+}
+
+/* Small subcomponents */
+function TextInput({ label, value, onChange, disabled, placeholder }) {
+  return (
+    <div className="form-row">
+      <label>{label}</label>
+      <input
+        className="input"
+        disabled={disabled}
+        value={value}
+        placeholder={placeholder}
+        onChange={(e) => onChange(e.target.value)}
+      />
+    </div>
+  );
+}
+
+function QuantityRow({ qty, unitID, step, unitOpts, onUnitChange }) {
+  return (
+    <div className="form-row">
+      <label>Quantity</label>
+      <div className="qty-row">
+        <button className="step" onClick={() => step(-1)}>-</button>
+        <span className="qty-num">{qty}</span>
+        <button className="step" onClick={() => step(1)}>+</button>
+        <select className="input unit" value={unitID} onChange={(e) => onUnitChange(e.target.value)}>
+          {unitOpts.length === 0 ? (
+            <option value="">Loading…</option>
+          ) : (
+            unitOpts.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)
+          )}
+        </select>
+      </div>
+    </div>
+  );
+}
+
+function SelectInput({ label, value, options, onChange }) {
+  return (
+    <div className="form-row">
+      <label>{label}</label>
+      <select className="input" value={value} onChange={(e) => onChange(e.target.value)}>
+        {options.length === 0 ? (
+          <option value="">Loading…</option>
+        ) : (
+          options.map((opt) => <option key={opt.id} value={opt.id}>{opt.name}</option>)
+        )}
+      </select>
+    </div>
+  );
+}
+
+function DateInput({ label, value, onChange }) {
+  return (
+    <div className="form-row">
+      <label>{label}</label>
+      <input type="date" className="input" value={value} onChange={(e) => onChange(e.target.value)} />
+    </div>
+  );
+}
+
+function initForm() {
+  return {
+    name: "",
+    qty: 1,
+    unitID: "",
+    contact: "",
+    categoryID: "",
+    expiry: "",
+    remark: "",
+    useLastAddress: false,
+    address: { label: "", line1: "", line2: "", postcode: "", city: "", state: "", country: "" },
+    slotDate: "",
+    slotStart: "",
+    slotEnd: "",
+    slotNote: "",
+    slots: [],
+  };
 }
 
 function formatDMY(isoDate) {
