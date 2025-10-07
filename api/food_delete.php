@@ -1,28 +1,60 @@
 <?php
-// C:\xampp\htdocs\IYO_Smart_Pantry\api\food_delete.php
+// api/food_delete.php
 require_once __DIR__ . '/config.php';
 
-$d = json_input();
-$foodID = $d['foodID'] ?? null;
-$userID = $d['userID'] ?? null; // to restrict deletion to the current user's own data
+/*
+JSON in:
+{
+  "userID": "U1",
+  "foodID": "F1234"
+}
 
-if (!$foodID) respond(['ok'=>false,'error'=>'Missing foodID'], 400);
-if (!$userID) respond(['ok'=>false,'error'=>'Missing userID'], 400);
+Response:
+{ ok: true, mode: "zeroed" | "deleted" }
+*/
+
+$d = json_input();
+$userID = $d['userID'] ?? '';
+$foodID = $d['foodID'] ?? '';
+
+if (!$userID || !$foodID) {
+  respond(['ok'=>false,'error'=>'Missing userID or foodID'], 400);
+}
 
 try {
-  // Only allow deleting foods that belong to the current user
-  $stmt = $pdo->prepare("DELETE FROM foods WHERE foodID = :id AND userID = :uid");
-  $stmt->execute([':id' => $foodID, ':uid' => $userID]);
+  $pdo->beginTransaction();
 
-  if ($stmt->rowCount() === 0) {
-    respond(['ok'=>false,'error'=>'Not found or no permission'], 404);
+  // 1) Ownership / existence check
+  $own = $pdo->prepare("SELECT quantity FROM foods WHERE foodID = :fid AND userID = :uid FOR UPDATE");
+  $own->execute([':fid'=>$foodID, ':uid'=>$userID]);
+  $row = $own->fetch();
+  if (!$row) {
+    $pdo->rollBack();
+    respond(['ok'=>false,'error'=>'Food not found or not yours'], 404);
   }
 
-  respond(['ok'=>true, 'deleted'=>1]);
-} catch (PDOException $e) {
-  // 23000 = foreign key constraint failure (e.g., donations already reference this food)
-  if ($e->getCode() === '23000') {
-    respond(['ok'=>false,'error'=>'Cannot delete: linked records (e.g. donations) exist.'], 409);
+  // 2) Check donation reference
+  $ref = $pdo->prepare("SELECT 1 FROM donations WHERE foodID = :fid LIMIT 1");
+  $ref->execute([':fid'=>$foodID]);
+  $isReferenced = (bool)$ref->fetch();
+
+  if ($isReferenced) {
+    // Only zero the quantity
+    $upd = $pdo->prepare("UPDATE foods SET quantity = 0 WHERE foodID = :fid");
+    $upd->execute([':fid'=>$foodID]);
+
+    $pdo->commit();
+    respond(['ok'=>true, 'mode'=>'zeroed']);
+  } else {
+    // Safe to delete
+    $del = $pdo->prepare("DELETE FROM foods WHERE foodID = :fid");
+    $del->execute([':fid'=>$foodID]);
+
+    $pdo->commit();
+    respond(['ok'=>true, 'mode'=>'deleted']);
   }
+} catch (Throwable $e) {
+  if ($pdo->inTransaction()) $pdo->rollBack();
+  error_log($e->getMessage());
   respond(['ok'=>false,'error'=>'DB error'], 500);
 }

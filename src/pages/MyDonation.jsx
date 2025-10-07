@@ -3,9 +3,12 @@ import AddDonationModal from "../component/AddDonationModal.jsx";
 import EditDonationModal from "../component/EditDonationModal.jsx";
 import FilterModal from "../component/FilterModal.jsx";
 
+import { apiPost } from "../lib/api";
+
 export default function MyDonation() {
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [deletingId, setDeletingId] = useState(null);
 
   const [openAdd, setOpenAdd] = useState(false);
   const [editItem, setEditItem] = useState(null);
@@ -109,16 +112,32 @@ export default function MyDonation() {
     setEditItem(null);
   }
 
-  async function handleDeleteDonation(id) {
-    if (!window.confirm("Delete this donation?")) return;
+  async function handleDeleteDonation(donationID) {
+    if (!window.confirm("Cancel this donation?")) return;
+
     const prev = rows;
-    setRows(prev.filter((r) => r.id !== id));
+    const next = rows.filter(r => (r.donationID || r.id) !== donationID);
+
+    setRows(next);            // optimistic remove
+    setDeletingId(donationID);
 
     try {
-      // Backend call if needed
+      const res = await apiPost("/donation_cancel.php", {
+        userID: "U1",           // <-- your logged-in user
+        donationID,             // <-- the donation to cancel
+      });
+
+      if (!res?.ok) {
+        throw new Error(res?.error || "Delete failed");
+      }
+
+      // Optional: if you want to refresh other views (e.g. food list), call a prop or trigger a reload here
+      // onRefreshFoods?.();
     } catch (err) {
-      alert(err.message || "Delete failed");
-      setRows(prev);
+      alert(err.message || "Delete failed. Reverting.");
+      setRows(prev);          // rollback
+    } finally {
+      setDeletingId(null);
     }
   }
 
@@ -204,9 +223,10 @@ export default function MyDonation() {
                     <button
                       className="icon-btn"
                       title="Delete"
-                      onClick={() => handleDeleteDonation(r.id)}
+                      disabled={deletingId === (r.donationID || r.id)}
+                      onClick={() => handleDeleteDonation(r.donationID || r.id)}
                     >
-                      🗑️
+                      {deletingId === (r.donationID || r.id) ? "⏳" : "🗑️"}
                     </button>
                   </td>
                 </tr>
