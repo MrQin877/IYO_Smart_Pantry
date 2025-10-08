@@ -10,16 +10,13 @@ foreach ($need as $k) {
   }
 }
 
-$is_expiryStatus = (strtotime($d['expiryDate']) < strtotime('today')) ? 1 : 0;
 $is_plan = !empty($d['is_plan']) ? 1 : 0;
 
 $sql = "UPDATE foods SET
   foodName=:foodName,
   quantity=:quantity,
   expiryDate=:expiryDate,
-  is_expiryStatus=:is_expiryStatus,
-  is_plan=:is_plan,
-  storageLocation=:storageLocation,
+  storageID=:storageID,
   remark=:remark,
   categoryID=:categoryID,
   unitID=:unitID
@@ -30,16 +27,15 @@ try {
   $stmt->execute([
     ':foodName'        => $d['foodName'],
     ':quantity'        => $d['quantity'],
-    ':expiryDate'      => $d['expiryDate'],
-    ':is_expiryStatus' => $is_expiryStatus,
-    ':is_plan'         => $is_plan,
-    ':storageLocation' => $d['storageLocation'] ?? '',
-    ':remark'          => $d['remark'] ?? '',
+    ':expiryDate'      => $d['expiryDate'],       // YYYY-MM-DD
+    ':storageID'       => !empty($d['storageID']) ? $d['storageID'] : null, // ✅ NULL instead of ''
+    ':remark'          => $d['remark'] ?? null,
+    ':userID'          => $d['userID'],
     ':categoryID'      => $d['categoryID'],
     ':unitID'          => $d['unitID'],
     ':foodID'          => $d['foodID'],
-    ':userID'          => $d['userID'],
   ]);
+
   respond(['ok'=>true, 'rows'=>$stmt->rowCount()]);
 } catch (Throwable $e) {
   respond(['ok'=>false,'error'=>'DB error'], 500);

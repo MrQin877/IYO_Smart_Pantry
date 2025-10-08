@@ -1,44 +1,15 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import AddDonationModal from "../component/AddDonationModal.jsx";
 import EditDonationModal from "../component/EditDonationModal.jsx";
 import FilterModal from "../component/FilterModal.jsx";
 
-const seedDonations = [
-  {
-    id: "d1",
-    name: "Egg",
-    category: "Protein",
-    qty: 2,
-    expiry: "2025-10-20",
-    pickup: "Jalan…..",
-    // keep both: human text and structured slots
-    slotText: "02/10/2025, 11:47 am - 12:47 pm",
-    slots: [],
-  },
-  {
-    id: "d2",
-    name: "Rice",
-    category: "Grains",
-    qty: 2,
-    expiry: "2025-10-03",
-    pickup: "Jalan…..",
-    slotText: "02/10/2025, 11:47 am - 12:47 pm",
-    slots: [],
-  },
-  {
-    id: "d3",
-    name: "Egg",
-    category: "Vegetables",
-    qty: 2,
-    expiry: "2025-11-06",
-    pickup: "Jalan…..",
-    slotText: "02/10/2025, 11:47 am - 12:47 pm",
-    slots: [],
-  },
-];
+import { apiPost } from "../lib/api";
 
-export default function MyDonation({ initialRows = seedDonations }) {
-  const [rows, setRows] = useState(initialRows);
+export default function MyDonation() {
+  const [rows, setRows] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [deletingId, setDeletingId] = useState(null);
+
   const [openAdd, setOpenAdd] = useState(false);
   const [editItem, setEditItem] = useState(null);
   const [filterOpen, setFilterOpen] = useState(false);
@@ -46,15 +17,59 @@ export default function MyDonation({ initialRows = seedDonations }) {
     category: "",
     expiryFrom: "",
     expiryTo: "",
-    pickupArea: "",  // donation specific
+    pickupArea: "",
   });
 
-  const appliedFilterCount = Object.values(filters)
-  .filter((val) => val && val.trim() !== "").length;
+  // Load all shared donations on mount
+  useEffect(() => {
+    (async () => {
+      setLoading(true);
+      try {
+        const res = await fetch(
+          `${import.meta.env.VITE_API_BASE}/donation_list.php`
+        ).then((r) => r.json());
 
+        if (res.ok && Array.isArray(res.data)) {
+          const mapped = res.data.map((d) => ({
+            id: d.donationID,
+            name: d.foodName,
+            category: d.category || "-",
+            qty: d.donatedQuantity,
+            unit: d.unitName,
+            expiry: d.expiryDate || "",
+            pickup: d.pickupLocation,
+            contact: d.contact,
+            note: d.note,
+            slots: d.availableTime
+              ? [
+                  {
+                    date: d.availableTime.split(" ")[0],
+                    start: d.availableTime.split(" ")[1],
+                    end: d.availableTime.split(" ")[2],
+                  },
+                ]
+              : [],
+            slotText: d.availableTime || "",
+            donorName: d.donorName,
+          }));
+          setRows(mapped);
+        } else {
+          console.error(res.error || "No donations returned");
+        }
+
+      } catch (e) {
+        console.error("Failed to load donations", e);
+      }
+      setLoading(false);
+    })();
+  }, []);
+
+  const appliedFilterCount = Object.values(filters).filter(
+    (val) => val && val.trim() !== ""
+  ).length;
 
   function handlePublish(payload) {
-    const item = payload.item ?? payload; // be forgiving about shape
+    const item = payload.item ?? payload;
     const slotText = (payload.slots ?? [])
       .map((s) => `${formatDMY(s.date)}, ${to12hr(s.start)} - ${to12hr(s.end)}`)
       .join(" | ");
@@ -79,7 +94,6 @@ export default function MyDonation({ initialRows = seedDonations }) {
   }
 
   function handleUpdate(updated) {
-    // updated: { id, address, useDefaultAddress, slots }
     const slotText = (updated.slots ?? [])
       .map((s) => `${formatDMY(s.date)}, ${to12hr(s.start)} - ${to12hr(s.end)}`)
       .join(" | ");
@@ -98,22 +112,32 @@ export default function MyDonation({ initialRows = seedDonations }) {
     setEditItem(null);
   }
 
-  async function handleDeleteDonation(id) {
-    if (!window.confirm("Delete this donation?")) return;
+  async function handleDeleteDonation(donationID) {
+    if (!window.confirm("Cancel this donation?")) return;
+
     const prev = rows;
-    setRows(prev.filter((r) => r.id !== id));
+    const next = rows.filter(r => (r.donationID || r.id) !== donationID);
+
+    setRows(next);            // optimistic remove
+    setDeletingId(donationID);
 
     try {
-      // Call your backend if needed
-      // const res = await fetch(`${import.meta.env.VITE_API_BASE}/donation_delete.php`, {
-      //   method: "POST",
-      //   headers: { "Content-Type": "application/json" },
-      //   body: JSON.stringify({ id }),
-      // }).then((r) => r.json());
-      // if (!res.ok) throw new Error(res.error || "Delete failed");
+      const res = await apiPost("/donation_cancel.php", {
+        userID: "U1",           // <-- your logged-in user
+        donationID,             // <-- the donation to cancel
+      });
+
+      if (!res?.ok) {
+        throw new Error(res?.error || "Delete failed");
+      }
+
+      // Optional: if you want to refresh other views (e.g. food list), call a prop or trigger a reload here
+      // onRefreshFoods?.();
     } catch (err) {
-      alert(err.message || "Delete failed");
-      setRows(prev); // rollback
+      alert(err.message || "Delete failed. Reverting.");
+      setRows(prev);          // rollback
+    } finally {
+      setDeletingId(null);
     }
   }
 
@@ -124,7 +148,7 @@ export default function MyDonation({ initialRows = seedDonations }) {
     const to = (f.expiryTo ?? "").trim();
     const pickup = (f.pickupArea ?? "").trim().toLowerCase();
 
-    const filtered = seedDonations.filter(r => {
+    const filtered = rows.filter((r) => {
       if (cat && r.category !== cat) return false;
       if (from && new Date(r.expiry) < new Date(from)) return false;
       if (to && new Date(r.expiry) > new Date(to)) return false;
@@ -135,7 +159,6 @@ export default function MyDonation({ initialRows = seedDonations }) {
     setRows(filtered);
     setFilterOpen(false);
   }
-
 
   return (
     <>
@@ -162,13 +185,14 @@ export default function MyDonation({ initialRows = seedDonations }) {
               <th>Expiry date</th>
               <th>Pickup</th>
               <th>Availability</th>
+              <th>Donor</th>
               <th className="actions-col" />
             </tr>
           </thead>
           <tbody>
             {rows.length === 0 ? (
               <tr>
-                <td colSpan={7}>
+                <td colSpan={8}>
                   <div className="no-items">
                     No items found. Please adjust your filters.
                   </div>
@@ -179,7 +203,7 @@ export default function MyDonation({ initialRows = seedDonations }) {
                 <tr key={r.id}>
                   <td>{r.name}</td>
                   <td className="subtle">{r.category}</td>
-                  <td>{r.qty}</td>
+                  <td>{r.qty} {r.unit}</td>
                   <td>{formatDate(r.expiry)}</td>
                   <td>{r.pickup}</td>
                   <td>
@@ -187,6 +211,7 @@ export default function MyDonation({ initialRows = seedDonations }) {
                       {r.slotText || joinSlots(r.slots)}
                     </span>
                   </td>
+                  <td>{r.donorName || "-"}</td>
                   <td className="row-actions">
                     <button
                       className="icon-btn"
@@ -198,27 +223,25 @@ export default function MyDonation({ initialRows = seedDonations }) {
                     <button
                       className="icon-btn"
                       title="Delete"
-                      onClick={() => handleDeleteDonation(r.id)}
+                      disabled={deletingId === (r.donationID || r.id)}
+                      onClick={() => handleDeleteDonation(r.donationID || r.id)}
                     >
-                      🗑️
+                      {deletingId === (r.donationID || r.id) ? "⏳" : "🗑️"}
                     </button>
                   </td>
                 </tr>
               ))
             )}
           </tbody>
-
         </table>
       </div>
 
-      {/* Add */}
       <AddDonationModal
         open={openAdd}
         onClose={() => setOpenAdd(false)}
         onPublish={handlePublish}
       />
 
-      {/* Edit (address + availability only) */}
       <EditDonationModal
         open={!!editItem}
         item={editItem}
@@ -228,7 +251,7 @@ export default function MyDonation({ initialRows = seedDonations }) {
 
       <FilterModal
         open={filterOpen}
-        type="donation"   // <-- IMPORTANT
+        type="donation"
         filters={filters}
         setFilters={setFilters}
         onApply={applyFilters}
