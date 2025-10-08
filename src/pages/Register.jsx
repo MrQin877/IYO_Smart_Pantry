@@ -1,4 +1,3 @@
-
 // src/pages/Register.jsx
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -10,10 +9,12 @@ export default function Register() {
   const [email, setEmail] = useState("");
   const [pwd, setPwd] = useState("");
   const [household, setHousehold] = useState(1);
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
   async function handleSubmit(e) {
     e.preventDefault();
+    setLoading(true);
     try {
       const resp = await apiPost("/register.php", {
         fullName: name,
@@ -22,13 +23,18 @@ export default function Register() {
         householdSize: household,
       });
       if (resp.ok) {
-        alert("Registered successfully! Please check your email.");
-        navigate("/login");
+        alert("✅ Registered successfully! Please check your email for the verification code.");
+        // 保存 email 到 localStorage 以便 verify 页面自动读取
+        localStorage.setItem("verifyEmail", email);
+        // 跳转 verify 页面
+        navigate("/Verify");
       } else {
         alert(resp.error || "Register failed");
       }
     } catch (err) {
-      alert(err.message);
+      alert("Server error: " + err.message);
+    } finally {
+      setLoading(false);
     }
   }
 
@@ -37,11 +43,7 @@ export default function Register() {
       <img className="register-logo" src="/logo.svg" alt="IYO Logo" />
 
       <p className="register-linktologin">
-        {" "}
-        <button
-          className="link-btn"
-          onClick={() => navigate("/login")}
-        >
+        <button className="link-btn" onClick={() => navigate("/login")}>
           Login
         </button>
       </p>
@@ -54,18 +56,21 @@ export default function Register() {
           placeholder="Full Name"
           value={name}
           onChange={(e) => setName(e.target.value)}
+          required
         />
         <input
           type="email"
           placeholder="Email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
+          required
         />
         <input
           type="password"
-          placeholder="Password"
+          placeholder="Password (min 8 chars)"
           value={pwd}
           onChange={(e) => setPwd(e.target.value)}
+          required
         />
 
         <div className="household-section">
@@ -84,8 +89,8 @@ export default function Register() {
           </div>
         </div>
 
-        <button type="submit" className="btn btn-primary mt-4">
-          Register
+        <button type="submit" className="btn btn-primary mt-4" disabled={loading}>
+          {loading ? "Registering..." : "Register"}
         </button>
       </form>
     </div>

@@ -1,38 +1,60 @@
 <?php
-// C:\xampp\htdocs\IYO_Smart_Pantry\api\register.php
-require_once "config.php";
+require __DIR__ . '/config.php';
+require __DIR__ . '/vendor/autoload.php';
 
-$data = json_input();
+use PHPMailer\PHPMailer\PHPMailer;
+use PHPMailer\PHPMailer\Exception;
 
-$fullName = trim($data["fullName"] ?? "");
-$email = trim($data["email"] ?? "");
-$password = trim($data["password"] ?? "");
-$householdSize = intval($data["householdSize"] ?? 1);
+$body = json_input();
+$name = trim($body['fullName'] ?? '');
+$email = strtolower(trim($body['email'] ?? ''));
+$password = $body['password'] ?? '';
+$household = intval($body['householdSize'] ?? 1);
 
-// === 1️⃣ Validate input ===
-if ($fullName === "" || $email === "" || $password === "") {
-  respond(["ok" => false, "error" => "All fields are required"], 400);
+if (!$name || !filter_var($email, FILTER_VALIDATE_EMAIL) || strlen($password) < 8) {
+  respond(['ok' => false, 'error' => 'Invalid input']);
 }
 
-// === 2️⃣ Check duplicate email ===
-$stmt = $pdo->prepare("SELECT userID FROM users WHERE email = ?");
+// 检查邮箱是否已注册
+$stmt = $pdo->prepare("SELECT userID FROM users WHERE email=? LIMIT 1");
 $stmt->execute([$email]);
 if ($stmt->fetch()) {
-  respond(["ok" => false, "error" => "Email already registered"], 409);
+  respond(['ok' => false, 'error' => 'Email already registered']);
 }
 
-// === 3️⃣ Hash password securely ===
-$hashedPwd = password_hash($password, PASSWORD_DEFAULT);
-
-// === 4️⃣ Insert new user ===
+// 插入用户（status = Pending）
 $stmt = $pdo->prepare("
-  INSERT INTO users (fullName, email, password, twoFA, status, createdAt, householdSize)
-  VALUES (?, ?, ?, 1, 'Active', NOW(), ?)
+  INSERT INTO users (fullName, email, password, householdSize, twoFA, status, createdAt)
+  VALUES (?, ?, ?, ?, 1, 'Pending', NOW())
 ");
+$hash = password_hash($password, PASSWORD_DEFAULT);
+$stmt->execute([$name, $email, $hash, $household]);
 
+// 产生验证码（6位）
+$code = str_pad(rand(0, 999999), 6, '0', STR_PAD_LEFT);
+$_SESSION['verify_email'] = $email;
+$_SESSION['verify_code'] = $code;
+$_SESSION['verify_expire'] = time() + 6; // 0.1分钟有效
+
+// 寄信
+$mail = new PHPMailer(true);
 try {
-  $stmt->execute([$fullName, $email, $hashedPwd, $householdSize]);
-  respond(["ok" => true, "message" => "User registered successfully"]);
-} catch (Throwable $e) {
-  respond(["ok" => false, "error" => "Database insert failed: " . $e->getMessage()], 500);
+  $mail->isSMTP();
+  $mail->Host = 'smtp.gmail.com';
+  $mail->SMTPAuth = true;
+  $mail->Username = 'elainliow@gmail.com'; 
+  $mail->Password = 'akse gbpy etdl iiax'; 
+  $mail->SMTPSecure = 'tls';
+  $mail->Port = 587;
+
+  $mail->setFrom('elainliow@gmail.com', 'IYO Smart Pantry');
+  $mail->addAddress($email, $name);
+  $mail->isHTML(true);
+  $mail->Subject = 'Your Verification Code';
+  $mail->Body = "<p>Hello $name,</p><p>Your verification code is <b>$code</b>.</p><p>It expires in 6 seconds.</p>";
+
+  $mail->send();
+  respond(['ok' => true, 'message' => 'Verification code sent.']);
+} catch (Exception $e) {
+  respond(['ok' => false, 'error' => 'Mailer Error: ' . $mail->ErrorInfo]);
 }

@@ -12,6 +12,7 @@ import AuthLayout from "./AuthLayout.jsx";
 import Login from "./pages/Login.jsx";
 import Register from "./pages/Register.jsx";
 import Settings from "./pages/Settings.jsx";
+import Verify from "./pages/Verify.jsx";
 import "./main.css";
 
 const router = createBrowserRouter([
@@ -49,6 +50,11 @@ const router = createBrowserRouter([
   { path: "/account", element: <Navigate to="/login" replace /> },
 
   { path: "*", element: <div>404 Not Found</div> },
+
+  {
+  path: "/verify",
+  element: <Verify />
+  },
 ]);
 
 ReactDOM.createRoot(document.getElementById("root")).render(
