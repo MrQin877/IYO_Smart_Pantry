@@ -158,7 +158,7 @@ export default function FoodDetailModal({
                 <b>Expiry date:</b> {formatDate(food.expiryDate)}
               </li>
               <li>
-                <b>Storage Location:</b> {food.storageLocation || "-"}
+                <b>Storage Location:</b> {food.storageName || "-"}
               </li>
               <li>
                 <b>Remark:</b> {food.remark || "-"}
