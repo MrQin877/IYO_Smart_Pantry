@@ -1,0 +1,101 @@
+/* src/pages/Verify.css */
+
+.verify-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  background: linear-gradient(to bottom right, #f7fafc, #edf2f7);
+  font-family: "Poppins", sans-serif;
+}
+
+.verify-logo {
+  width: 120px;
+  margin-bottom: 20px;
+}
+
+.verify-card {
+  background: #fff;
+  border-radius: 16px;
+  padding: 40px 48px;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.1);
+  width: 400px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  text-align: center;
+}
+
+.verify-card h2 {
+  color: #2d3748;
+  font-size: 24px;
+  margin-bottom: 8px;
+}
+
+.verify-info {
+  color: #4a5568;
+  font-size: 14px;
+  margin-bottom: 16px;
+}
+
+.verify-card input {
+  padding: 12px;
+  border: 1px solid #cbd5e0;
+  border-radius: 8px;
+  font-size: 16px;
+  outline: none;
+}
+
+.verify-card input:focus {
+  border-color: #3182ce;
+  box-shadow: 0 0 0 3px rgba(49, 130, 206, 0.2);
+}
+
+.btn.btn-primary {
+  background-color: #3182ce;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 12px;
+  font-size: 16px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.btn.btn-primary:hover {
+  background-color: #2b6cb0;
+}
+
+.btn.btn-secondary {
+  background-color: #e2e8f0;
+  color: #2d3748;
+  border: none;
+  border-radius: 8px;
+  padding: 12px;
+  font-size: 16px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.btn.btn-secondary:hover {
+  background-color: #cbd5e0;
+}
+
+.link-btn {
+  background: none;
+  border: none;
+  color: #3182ce;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.link-btn:hover {
+  text-decoration: underline;
+}
+
+.verify-login-link {
+  margin-top: 10px;
+  font-size: 14px;
+  color: #4a5568;
+}

@@ -1,4 +1,4 @@
-// src/main.jsx
+import { Navigate } from "react-router-dom";
 import React from "react";
 import ReactDOM from "react-dom/client";
 import { RouterProvider, createBrowserRouter } from "react-router-dom";
@@ -8,9 +8,26 @@ import FoodCentre from "./pages/FoodCentre.jsx";
 import MyFood from "./pages/MyFood.jsx";
 import MyDonation from "./pages/MyDonation.jsx";
 import Dashboard from "./pages/Dashboard.jsx";
+import AuthLayout from "./AuthLayout.jsx";
+import Login from "./pages/Login.jsx";
+import Register from "./pages/Register.jsx";
+import Settings from "./pages/Settings.jsx";
+import Verify from "./pages/Verify.jsx";
 import "./main.css";
 
 const router = createBrowserRouter([
+  // Auth pages (no header)
+  {
+    path: "/login",
+    element: <Login />,
+  },
+  {
+    path: "/register",
+    element: <Register />,
+  },
+
+
+  // Main app (with header)
   {
     path: "/",
     element: <App />,
@@ -20,14 +37,24 @@ const router = createBrowserRouter([
         path: "food",
         element: <FoodCentre />,
         children: [
-          { index: true, element: <MyFood /> },        // /food
-          { path: "donation", element: <MyDonation /> } // /food/donation
+          { index: true, element: <MyFood /> },
+          { path: "donation", element: <MyDonation /> },
         ],
       },
       { path: "dashboard", element: <Dashboard /> },
+      { path: "settings", element: <Settings /> },
     ],
   },
-  { path: "*", element: <div>404</div> },
+
+  // Redirect old account path
+  { path: "/account", element: <Navigate to="/login" replace /> },
+
+  { path: "*", element: <div>404 Not Found</div> },
+
+  {
+  path: "/verify",
+  element: <Verify />
+  },
 ]);
 
 ReactDOM.createRoot(document.getElementById("root")).render(
