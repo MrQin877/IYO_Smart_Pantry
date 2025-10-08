@@ -66,6 +66,11 @@ export default function FoodDetailModal({
           userID: "U1"   // ✅ Add this line
         });
 
+        if (isIntegerUnit(food.unitName) && used % 1 !== 0) {
+          alert("Please enter a whole number for this unit.");
+          return;
+        }
+
         if (!res.ok) throw new Error(res.error || "Delete failed");
         alert("Food item deleted successfully!");
       } else {
@@ -83,6 +88,12 @@ export default function FoodDetailModal({
       console.error("❌ HandleUsed error:", err);
       alert("Failed to update food quantity.");
     }
+  };
+
+  const isIntegerUnit = (unitName) => {
+    if (!unitName) return false;
+    const lower = unitName.toLowerCase();
+    return ["pcs", "pack", "bottle", "other"].includes(lower);
   };
 
 
@@ -156,19 +167,34 @@ export default function FoodDetailModal({
 
             {/* 🔹 Action buttons */}
             <div className="actions" style={{ marginTop: "20px" }}>
+              {/* --- Quantity Used Input --- */}
               <div style={{ marginBottom: "10px" }}>
                 <label>
                   Quantity used:{" "}
                   <input
                     type="number"
                     min="0"
-                    step="1"
+                    step={isIntegerUnit(food.unitName) ? "1" : "0.01"} // integer vs decimal
                     value={usedQty}
-                    onChange={(e) => setUsedQty(e.target.value)}
+                    onKeyDown={(e) => {
+                      // 🔹 Block '.' or ',' typing for integer units
+                      if (isIntegerUnit(food.unitName) && (e.key === "." || e.key === ",")) {
+                        e.preventDefault();
+                      }
+                    }}
+                    onChange={(e) => {
+                      let val = e.target.value;
+                      if (isIntegerUnit(food.unitName)) {
+                        // ✅ Strip any non-digit input
+                        val = val.replace(/\D/g, "");
+                      }
+                      setUsedQty(val);
+                    }}
                     style={{ width: "80px" }}
                   />
                 </label>
               </div>
+
               <div className="detail-actions">
                 <button className="btn used" onClick={handleUsed}>
                   Used
