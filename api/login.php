@@ -1,39 +1,43 @@
 <?php
-require __DIR__ . '/config.php';   // this should start the session (guarded)
+require __DIR__ . '/config.php';
 
-// Optional: ensure clean JSON output
+// Always return JSON
 header('Content-Type: application/json; charset=utf-8');
 
-// Read JSON
-$body = json_input();
-$email = strtolower(trim($body['email'] ?? ''));
-$password = $body['password'] ?? '';
+// Read JSON from frontend
+$data = json_input();
+$email = strtolower(trim($data['email'] ?? ''));
+$password = $data['password'] ?? '';
 
-// Validate input (align rules with frontend)
-if (!filter_var($email, FILTER_VALIDATE_EMAIL) || strlen($password) < 8) {
-  respond(['ok' => false, 'error' => 'Invalid input'], 422);
+// Validate inputs
+if (!filter_var($email, FILTER_VALIDATE_EMAIL) || $password === '') {
+  respond(['ok' => false, 'error' => 'Invalid email or password format'], 422);
 }
 
-// Find user
-$stmt = $pdo->prepare('SELECT userID, password, status FROM USERS WHERE email=? LIMIT 1');
+// Find user — match your table name exactly (MySQL is case-sensitive in some systems)
+$stmt = $pdo->prepare("SELECT userID, password, status FROM users WHERE email = ? LIMIT 1");
 $stmt->execute([$email]);
-$user = $stmt->fetch(PDO::FETCH_ASSOC);
+$user = $stmt->fetch();
 
 if (!$user) {
   respond(['ok' => false, 'error' => 'User not found'], 404);
 }
 
 if ($user['status'] !== 'Active') {
-  respond(['ok' => false, 'error' => 'Account not activated'], 403);
+  respond(['ok' => false, 'error' => 'Account not active'], 403);
 }
 
-// Verify password
+// Verify hashed password
 if (!password_verify($password, $user['password'])) {
-  respond(['ok' => false, 'error' => 'Wrong email or password'], 401);
+  respond(['ok' => false, 'error' => 'Incorrect password'], 401);
 }
 
-// Set session (if you need it)
+// Optional: start a session
 $_SESSION['userID'] = $user['userID'];
 
-// Success
-respond(['ok' => true, 'userID' => $user['userID']]);
+// ✅ Return success response to frontend
+respond([
+  'ok' => true,
+  'userID' => $user['userID'],
+  'message' => 'Login successful'
+]);

@@ -1,3 +1,62 @@
+.auth-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  background: #f5f5f5;
+}
+
+.auth-card {
+  background: white;
+  padding: 32px;
+  border-radius: 16px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  width: 320px;
+  text-align: center;
+}
+
+.auth-card h2 {
+  margin-bottom: 20px;
+}
+
+.auth-card input {
+  width: 100%;
+  padding: 10px;
+  margin-bottom: 12px;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+}
+
+.btn-primary {
+  width: 100%;
+  padding: 10px;
+  background-color: #0077cc;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.btn-primary:hover {
+  background-color: #005fa3;
+}
+
+.switch-text {
+  margin-top: 16px;
+  font-size: 14px;
+}
+
+.link-btn {
+  background: none;
+  border: none;
+  color: #0077cc;
+  cursor: pointer;
+  text-decoration: underline;
+  font-size: 14px;
+}
+
+
+/*
 .account-page {
   min-height: 100vh;
   display: flex;
@@ -44,3 +103,4 @@
 .account-image {
   background: url("https://images.unsplash.com/photo-1625246333195-78f8b4aefcea?q=80&w=1400&auto=format&fit=crop") center/cover;
 }
+*/
