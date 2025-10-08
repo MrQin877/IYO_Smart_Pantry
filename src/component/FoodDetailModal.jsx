@@ -170,7 +170,7 @@ export default function FoodDetailModal({
                 </label>
               </div>
               <div className="detail-actions">
-                <button className="btn primary" onClick={handleUsed}>
+                <button className="btn used" onClick={handleUsed}>
                   Used
                 </button>
 

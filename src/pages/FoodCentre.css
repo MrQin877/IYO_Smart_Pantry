@@ -211,14 +211,18 @@ input:-webkit-autofill{
   grid-template-columns: 1fr 1fr;
   row-gap: 12px;
 }
-
-/* --- Action buttons (Food Detail Modal) --- */
+/* Flex container */
 .detail-actions {
   margin-top: 24px;
   display: flex;
   gap: 12px;
   flex-wrap: wrap;
-  justify-content: flex-start;
+  justify-content: flex-start; /* keep Used & Plan left */
+}
+
+/* Push Donate button to the right */
+.detail-actions .btn.used {
+  margin-right: auto;
 }
 
 /* Base button design – smaller & consistent */
