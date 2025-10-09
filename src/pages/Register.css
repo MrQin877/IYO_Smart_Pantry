@@ -75,16 +75,20 @@
   background: none;
   border: none;
   color: #2a7ade;
-  text-decoration: underline;
   cursor: pointer;
-  font-size: 14px;
+  font-size: 16px;
 }
 
 .link-btn:hover {
   color: #1f65c0;
+  text-decoration: underline;
 }
 
 .register-linktologin {
-  margin-top: 16px;
-  font-size: 14px;
+  background: none;
+  border: none;
+  color: #007bff;
+  font-weight: 600;
+  cursor: pointer;
+  font-size: 16px;
 }

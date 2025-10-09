@@ -38,61 +38,84 @@ export default function Register() {
     }
   }
 
+
   return (
-    <div className="register-container">
-      <img className="register-logo" src="/logo.svg" alt="IYO Logo" />
-
-      <p className="register-linktologin">
-        <button className="link-btn" onClick={() => navigate("/login")}>
-          Login
-        </button>
-      </p>
-
-      <form onSubmit={handleSubmit} className="register-card">
-        <h2>Register</h2>
-
-        <input
-          type="text"
-          placeholder="Full Name"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          required
-        />
-        <input
-          type="email"
-          placeholder="Email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          required
-        />
-        <input
-          type="password"
-          placeholder="Password (min 8 chars)"
-          value={pwd}
-          onChange={(e) => setPwd(e.target.value)}
-          required
-        />
-
-        <div className="household-section">
-          <label>Household Size:</label>
-          <div className="household-control">
-            <button
-              type="button"
-              onClick={() => setHousehold(Math.max(1, household - 1))}
-            >
-              −
-            </button>
-            <span>{household}</span>
-            <button type="button" onClick={() => setHousehold(household + 1)}>
-              +
-            </button>
-          </div>
+    <div className="login-wrapper">
+      <div className="login-page">
+        {/* Header Logo */}
+        <div className="login-header">
+          <img className="login-logo" src="/logo.svg" alt="IYO Logo" />
         </div>
 
-        <button type="submit" className="btn btn-primary mt-4" disabled={loading}>
-          {loading ? "Registering..." : "Register"}
-        </button>
-      </form>
+        {/* Main Content */}
+        <div className="login-content">
+          {/* Left Side Form */}
+          <div className="login-form-container">
+            <p className="register-linktologin">
+              <button className="link-btn" onClick={() => navigate("/login")}>
+                Login
+              </button>
+            </p>
+
+            <form onSubmit={handleSubmit} className="login-card">
+              <h2>Register</h2>
+
+              <input
+                type="text"
+                placeholder="Full Name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                required
+              />
+              <input
+                type="email"
+                placeholder="Email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+              />
+              <input
+                type="password"
+                placeholder="Password (min 8 chars)"
+                value={pwd}
+                onChange={(e) => setPwd(e.target.value)}
+                required
+              />
+
+              <div className="household-section">
+                <label>Household Size:</label>
+                <div className="household-control">
+                  <button
+                    type="button"
+                    onClick={() => setHousehold(Math.max(1, household - 1))}
+                  >
+                    −
+                  </button>
+                  <span>{household}</span>
+                  <button type="button" onClick={() => setHousehold(household + 1)}>
+                    +
+                  </button>
+                </div>
+              </div>
+
+              <button type="submit" className="btn btn-primary mt-4" disabled={loading}>
+                {loading ? "Registering..." : "Register"}
+              </button>
+            </form>
+          </div>
+          
+
+          {/* Right Side Image */}
+          <div className="login-image-container">
+            <img
+              className="register-image"
+              src="/Elain/register.png"
+            />
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
+
+
