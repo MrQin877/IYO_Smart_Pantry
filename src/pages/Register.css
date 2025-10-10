@@ -92,3 +92,43 @@
   cursor: pointer;
   font-size: 16px;
 }
+
+/* ===== Error Input Styling ===== */
+.input-group {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+}
+
+.input-group input {
+  padding-right: 30px; /* space for ❗ icon */
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  padding: 10px;
+  font-size: 16px;
+}
+
+.input-group.error input {
+  border-color: #e74c3c;
+  background-color: #fff6f6;
+}
+
+.error-icon {
+  position: absolute;
+  right: 10px;
+  top: 12px;
+  color: #e74c3c;
+  font-size: 18px;
+}
+
+.error-text {
+  color: #e74c3c;
+  font-size: 13px;
+  margin-top: 4px;
+}
+
+.error-text.general {
+  text-align: center;
+  margin-top: 10px;
+  font-weight: bold;
+}

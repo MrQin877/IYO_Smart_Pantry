@@ -10,10 +10,30 @@ export default function Register() {
   const [pwd, setPwd] = useState("");
   const [household, setHousehold] = useState(1);
   const [loading, setLoading] = useState(false);
+  const [errors, setErrors] = useState({});
   const navigate = useNavigate();
 
   async function handleSubmit(e) {
     e.preventDefault();
+    setErrors({}); // reset old errors
+
+    // basic frontend validation before sending to backend
+    const newErrors = {};
+    if (!/^[\p{L}\s]{2,50}$/u.test(name)) {
+      newErrors.name = "Only letters and spaces allowed (2–50 chars)";
+    }
+    if (!/\S+@\S+\.\S+/.test(email)) {
+      newErrors.email = "Invalid email format";
+    }
+    if (pwd.length < 8) {
+      newErrors.password = "Password must be at least 8 characters";
+    }
+
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      return;
+    }
+
     setLoading(true);
     try {
       const resp = await apiPost("/register.php", {
@@ -67,6 +87,9 @@ export default function Register() {
                 onChange={(e) => setName(e.target.value)}
                 required
               />
+              {errors.name && <span className="error-icon">❗</span>}
+              {errors.name && <p className="error-text">{errors.name}</p>}
+              
               <input
                 type="email"
                 placeholder="Email"
@@ -74,6 +97,9 @@ export default function Register() {
                 onChange={(e) => setEmail(e.target.value)}
                 required
               />
+              {errors.email && <span className="error-icon">❗</span>}
+              {errors.email && <p className="error-text">{errors.email}</p>}
+
               <input
                 type="password"
                 placeholder="Password (min 8 chars)"
@@ -81,6 +107,8 @@ export default function Register() {
                 onChange={(e) => setPwd(e.target.value)}
                 required
               />
+              {errors.password && <span className="error-icon">❗</span>}
+              {errors.password && <p className="error-text">{errors.password}</p>}
 
               <div className="household-section">
                 <label>Household Size:</label>

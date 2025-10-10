@@ -11,8 +11,21 @@ $email = strtolower(trim($body['email'] ?? ''));
 $password = $body['password'] ?? '';
 $household = intval($body['householdSize'] ?? 1);
 
-if (!$name || !filter_var($email, FILTER_VALIDATE_EMAIL) || strlen($password) < 8) {
-  respond(['ok' => false, 'error' => 'Invalid input']);
+
+// Username validation
+// Allow only letters (a–z, A–Z) and spaces, length between 2–50 characters
+if (!preg_match("/^[a-zA-Z\s]{2,50}$/", $name)) {
+  respond(['ok' => false, 'error' => 'Invalid name: only letters and spaces allowed (2–50 characters)']);
+}
+
+
+// Email and password validation
+if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+  respond(['ok' => false, 'error' => 'Invalid email address']);
+}
+
+if (strlen($password) < 8) {
+  respond(['ok' => false, 'error' => 'Password must be at least 8 characters']);
 }
 
 // 检查邮箱是否已注册
@@ -34,7 +47,7 @@ $stmt->execute([$name, $email, $hash, $household]);
 $code = str_pad(rand(0, 999999), 6, '0', STR_PAD_LEFT);
 $_SESSION['verify_email'] = $email;
 $_SESSION['verify_code'] = $code;
-$_SESSION['verify_expire'] = time() + 6; // 0.1分钟有效
+$_SESSION['verify_expire'] = time() + 60; // 1分钟有效
 
 // 寄信
 $mail = new PHPMailer(true);
@@ -51,7 +64,7 @@ try {
   $mail->addAddress($email, $name);
   $mail->isHTML(true);
   $mail->Subject = 'Your Verification Code';
-  $mail->Body = "<p>Hello $name,</p><p>Your verification code is <b>$code</b>.</p><p>It expires in 6 seconds.</p>";
+  $mail->Body = "<p>Hello $name,</p><p>Your verification code is <b>$code</b>.</p><p>It expires in 1 minutes.</p>";
 
   $mail->send();
   respond(['ok' => true, 'message' => 'Verification code sent.']);
