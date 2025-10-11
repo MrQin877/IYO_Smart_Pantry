@@ -123,7 +123,6 @@ export default function MyDonation() {
 
     try {
       const res = await apiPost("/donation_cancel.php", {
-        userID: "U1",           // <-- your logged-in user
         donationID,             // <-- the donation to cancel
       });
 
