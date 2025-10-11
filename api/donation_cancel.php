@@ -10,12 +10,9 @@ Expected JSON:
 }aa
 */
 $userID = $_SESSION['userID'] ?? null;
+
 $d = json_input();
 $donationID = $d['donationID'] ?? '';
-
-
-
-
 
 
 if (!$userID || !$donationID) {

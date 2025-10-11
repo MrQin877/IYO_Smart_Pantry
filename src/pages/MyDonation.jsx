@@ -259,11 +259,18 @@ export default function MyDonation() {
     setDeletingId(donationID);
 
     try {
-      const res = await apiPost("/donation_cancel.php", { userID: "U1", donationID });
-      if (!res?.ok) throw new Error(res?.error || "Delete failed");
-      // optionally refresh backend list:
-      // re-fetch or remove from allDonations too
-      setAllDonations((prevAll) => prevAll.filter((x) => (x.donationID || x.id) !== donationID));
+
+      const res = await apiPost("/donation_cancel.php", {
+        donationID,             // <-- the donation to cancel
+      });
+
+      if (!res?.ok) {
+        throw new Error(res?.error || "Delete failed");
+      }
+
+      // Optional: if you want to refresh other views (e.g. food list), call a prop or trigger a reload here
+      // onRefreshFoods?.();
+
     } catch (err) {
       alert(err.message || "Delete failed. Reverting.");
       setRows(prev);

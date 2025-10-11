@@ -148,7 +148,6 @@ export default function MyFood() {
 
     try {
       const res = await apiPost("/food_delete.php", {
-        userID: "U1",     // <-- your logged-in user id
         foodID,           // <-- the one to delete
       });
 

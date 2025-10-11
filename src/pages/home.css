@@ -1,0 +1,185 @@
+/* === Home page styles (full file) ======================================== */
+@import url('https://fonts.googleapis.com/css2?family=Dancing+Script:wght@600;700&display=swap');
+
+/* --- Global base (safe to keep here or in your global.css) --- */
+* { box-sizing: border-box; }
+html, body, #root { height: 100%; }
+body { margin: 0; background: #F7F3E3; }
+
+/* --- Theme tokens --- */
+:root{
+  --green:#7E9F62;
+  --green2:#8BAE5D;
+  --ink:#2f2f2f;
+      /* page background */
+  --panel:#F4F1E6;     /* hero panel tint */
+  
+}
+
+/* --- Page wrapper --- */
+.hp{ background: var(--page); }
+
+/* Hero “panel” with isolation so blends don’t leak into header */
+.hp-frame{
+  position: relative;
+  border-radius: 18px;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+/* Soft background gradient so content “sits” */
+.hero-bg {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+}
+
+
+/* Dots: very light, only as texture */
+.dots-img{
+  position: absolute; inset: 0;
+  width: 100%; height: 100%; object-fit: cover;
+  opacity: .06;                    /* softer */
+  mix-blend-mode: multiply;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Core hero spacing */
+.hero-wrap{
+  position: relative; z-index: 1;
+  padding: clamp(28px, 5vw, 48px) 0 clamp(48px, 8vw, 96px);
+}
+
+/* Center content while keeping background full-bleed */
+.hero-inner{
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 0 clamp(16px, 4vw, 28px);
+  display: grid;
+  grid-template-columns: 1.05fr 1fr;
+  gap: clamp(28px, 5.5vw, 56px);
+  align-items: center;
+}
+
+.hero-col{ min-width: 0; }
+
+/* --- Typography ---------------------------------------------------------- */
+.hero-script{
+  font-family:'Dancing Script', cursive;
+  font-weight: 700;                         /* punchier */
+  font-size: clamp(36px, 6.2vw, 76px);
+  line-height: 1.05;
+  color:#2E4023;
+  letter-spacing: 0.1px;                    /* reduce airy gaps */
+  margin: 6px 0 14px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+.hero-script span{ display:block; }
+
+.hero-sub{
+  color:#4a4a4a;
+  margin: 12px 0 26px;
+  max-width: 560px;
+  font-size: clamp(15px, 1.2vw, 17px);
+}
+
+/* --- CTAs --------------------------------------------------------------- */
+.hero-cta{ display:flex; gap:14px; align-items:center; }
+.hero-cta a{
+  text-decoration: none;
+  display:inline-flex; align-items:center; justify-content:center;
+  min-height: 48px; padding: 12px 28px;
+  border-radius: 12px;
+  font-weight: 700; line-height: 1;
+  transition:
+    transform .06s ease,
+    box-shadow .12s ease,
+    background-color .12s ease,
+    color .12s ease,
+    border-color .12s ease;
+}
+
+/* Primary (Get Started) */
+.btn-start{
+  background: var(--green); color:#fff;
+  border: 1px solid #6C8C55;
+  box-shadow: 0 12px 22px rgba(126,159,98,.22), inset 0 -2px 0 rgba(0,0,0,.08);
+}
+.btn-start:hover{ background:#749659; }
+.btn-start:active{ transform: translateY(1px); box-shadow: 0 8px 16px rgba(126,159,98,.20), inset 0 -1px 0 rgba(0,0,0,.08); }
+
+/* Secondary (Login) */
+.btn-login{
+  background:#fff; color:#5F7B49;
+  border: 2px solid #DCE7CC;
+  box-shadow: 0 6px 14px rgba(40,55,25,.06);
+}
+.btn-login:hover{ background:#F7FAF3; border-color:#CEDDB9; }
+.btn-login:active{ transform: translateY(1px); box-shadow: 0 4px 10px rgba(40,55,25,.05); }
+
+/* Focus a11y */
+.btn-start:focus-visible, .btn-login:focus-visible{
+  outline: 2px solid #8BAE5D; outline-offset: 2px;
+}
+
+/* --- Artwork ------------------------------------------------------------- */
+.hero-art{
+  display: flex;
+  justify-content: flex-end;   /* push art to the right column edge */
+  min-width: 320px;            /* avoid accidental collapse */
+}
+.art-stage{
+  min-width: 420px;            /* fallback if aspect-ratio fails */
+  min-height: 420px;           /* fallback if aspect-ratio fails */
+
+  z-index: 1;
+}
+
+/* Subtle vignette behind art to anchor it */
+.art-stage::before{
+  content:"";
+  position:absolute; inset: 14% 14% 18% 14%;
+  background: radial-gradient(closest-side, rgba(0,0,0,.10), transparent 65%);
+  filter: blur(26px);
+  opacity:.22;
+  z-index:0;
+}
+
+.art-disc{ position:absolute; border-radius:50%; background:#e8efdd; }
+.art-disc.outer{ inset: 10% 10% 10% 10%; opacity:.85; }
+.art-disc.inner{ inset: 24% 24% 24% 24%; background:#f3f6ec; }
+
+.art-img{ position:absolute; inset:0; width:100%; height:100%; object-fit:contain; filter: drop-shadow(0 16px 24px rgba(0,0,0,.12)); }
+
+/* Lift art up + slightly to the right on desktop */
+@media (min-width: 980px){
+  .art-stage{ transform: translate(12px, -28px); }
+
+}
+
+/* --- Responsive ---------------------------------------------------------- */
+
+@media (max-width:560px){
+  .hero-cta a{ padding: 12px 20px; min-height: 44px; }
+  .hero-script{ font-size: clamp(30px, 8.2vw, 52px); }
+}
+
+/* Respect reduced motion */
+@media (prefers-reduced-motion: reduce){
+  .hero-cta a{ transition: none; }
+}
+
+/* --- Optional: Use a mask instead of blend (if your SVG is black dots on white) ---
+.hp-frame::before{
+  content:"";
+  position:absolute; inset:0;
+  background: url("/HomePageDot.svg") center/cover no-repeat;
+  -webkit-mask-image: url("/HomePageDot.svg");
+  mask-image: url("/HomePageDot.svg");
+  -webkit-mask-size: cover; mask-size: cover;
+  -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat;
+  opacity:.35;
+}
+*/
