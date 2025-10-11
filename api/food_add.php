@@ -4,8 +4,13 @@ require_once __DIR__ . '/config.php';
 
 $d = json_input();
 
+$userID = $_SESSION['userID'] ?? null;
+if (!$userID) {
+  respond(['ok'=>false,'error'=>'Not authenticated'], 401);
+}
+
 // --- Basic validation ---
-$need = ['foodName','quantity','expiryDate','userID','categoryID','unitID'];
+$need = ['foodName','quantity','expiryDate','categoryID','unitID'];
 foreach ($need as $k) {
   if (!isset($d[$k]) || $d[$k] === '') {
     respond(['ok'=>false,'error'=>"Missing $k"], 400);
@@ -30,7 +35,7 @@ try {
     ':is_plan'         => $is_plan,
     ':storageID'       => !empty($d['storageID']) ? $d['storageID'] : null, // ✅ NULL instead of ''
     ':remark'          => $d['remark'] ?? null,
-    ':userID'          => $d['userID'],
+    ':userID'          => $userID,
     ':categoryID'      => $d['categoryID'],
     ':unitID'          => $d['unitID'],
   ]);
@@ -41,7 +46,7 @@ try {
                       WHERE userID = :uid 
                       ORDER BY CAST(SUBSTRING(foodID,2) AS UNSIGNED) DESC 
                       LIMIT 1");
-  $q->execute([':uid' => $d['userID']]);
+  $q->execute([':uid' => $userID]);
   $row = $q->fetch();
 
   respond(['ok'=>true, 'foodID'=>$row['foodID'] ?? null]);

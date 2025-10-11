@@ -33,7 +33,7 @@ function format_picktime_string(array $slot): string {
 }
 
 $d = json_input();
-$userID   = s($d['userID']   ?? '');
+$userID = $_SESSION['userID'] ?? null;
 $foodID   = s($d['foodID']   ?? '');
 $donQty   = (float)($d['donateQty'] ?? 0);
 $contact  = s($d['contact']  ?? '');
