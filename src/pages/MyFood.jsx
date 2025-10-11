@@ -197,37 +197,67 @@ export default function MyFood() {
     const cat = (f.category ?? "").trim();      // categoryID
     const storage = (f.storageID ?? "").trim(); // storageID
 
-    // Determine expiry range
+    // Helper → consistent local YYYY-MM-DD (avoid timezone shift)
+    const fmt = (d) => {
+      const offset = d.getTimezoneOffset();
+      const local = new Date(d.getTime() - offset * 60000);
+      return local.toISOString().split("T")[0];
+    };
+
     let from = "";
     let to = "";
     const today = new Date();
 
-    if (f.expiryRange === "3days") {
-      from = today.toISOString().split("T")[0];
-      const d = new Date();
-      d.setDate(today.getDate() + 3);
-      to = d.toISOString().split("T")[0];
-    } else if (f.expiryRange === "week") {
-      from = today.toISOString().split("T")[0];
-      const d = new Date();
-      const day = d.getDay(); // 0 (Sun) - 6 (Sat)
-      d.setDate(today.getDate() + (7 - day)); // end of week
-      to = d.toISOString().split("T")[0];
-    } else if (f.expiryRange === "month") {
-      from = today.toISOString().split("T")[0];
-      const d = new Date(today.getFullYear(), today.getMonth() + 1, 0); // last day of month
-      to = d.toISOString().split("T")[0];
-    } else {
-      // fallback to any manually set expiryFrom / expiryTo
+    if (f.expiryRange === "today") {
+      // ✅ Only today’s date
+      from = fmt(today);
+      to = fmt(today);
+    } 
+    else if (f.expiryRange === "3days") {
+      // ✅ Tomorrow + next 2 days = total 3 (e.g., 10–12 if today is 9)
+      const start = new Date(today);
+      start.setDate(today.getDate() + 1);
+      const end = new Date(today);
+      end.setDate(today.getDate() + 3);
+      from = fmt(start);
+      to = fmt(end);
+    } 
+    else if (f.expiryRange === "week") {
+      // ✅ Monday → Sunday of this week (e.g., 6–12 Oct)
+      const day = today.getDay(); // 0 (Sun) – 6 (Sat)
+      const diffToMonday = day === 0 ? -6 : 1 - day;
+      const start = new Date(today);
+      start.setDate(today.getDate() + diffToMonday);
+      const end = new Date(start);
+      end.setDate(start.getDate() + 6);
+      from = fmt(start);
+      to = fmt(end);
+    } 
+    else if (f.expiryRange === "month") {
+      const start = new Date(today.getFullYear(), today.getMonth(), 1);
+      const end = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+      from = fmt(start);
+      to = fmt(end);
+    } 
+    else if (f.expiryRange === "nextmonth") {
+      const start = new Date(today.getFullYear(), today.getMonth() + 1, 1);
+      const end = new Date(today.getFullYear(), today.getMonth() + 2, 0);
+      from = fmt(start);
+      to = fmt(end);
+    } 
+    else {
       from = (f.expiryFrom ?? "").trim();
       to = (f.expiryTo ?? "").trim();
     }
 
-    const filtered = allFoods.filter(r => {
+    // ✅ Filter logic
+    const filtered = allFoods.filter((r) => {
       if (cat && r.categoryID !== cat) return false;
       if (storage && r.storageID !== storage) return false;
-      if (from && new Date(r.expiry) < new Date(from)) return false;
-      if (to && new Date(r.expiry) > new Date(to)) return false;
+
+      const exp = fmt(new Date(r.expiry));
+      if (from && exp < from) return false;
+      if (to && exp > to) return false;
       return true;
     });
 
@@ -235,6 +265,10 @@ export default function MyFood() {
     setPage(1);
     setFilterOpen(false);
   }
+
+
+
+
 
   return (
     <>
