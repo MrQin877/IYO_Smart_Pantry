@@ -6,7 +6,7 @@ export default function DonationModal({
   open,
   onClose,
   onPublish,
-  userId = "U1",
+
   // Pass: { foodID (or id), name, qty, unit, expiry, category? }
   item = {},
 }) {
@@ -45,7 +45,7 @@ export default function DonationModal({
     (async () => {
       try {
         setLoadingAddr(true);
-        const res = await apiGet(`/get_last_address.php?userID=${userId}`);
+        const res = await apiGet(`/get_last_address.php`);
         setLastAddress(res?.ok && res.address ? res.address : null);
       } catch {
         setLastAddress(null);
@@ -53,7 +53,7 @@ export default function DonationModal({
         setLoadingAddr(false);
       }
     })();
-  }, [open, userId]);
+  }, [open]);
 
   // If "Use Previous Address" on and lastAddress loaded, apply it
   useEffect(() => {
@@ -168,7 +168,6 @@ export default function DonationModal({
     try {
       // extra server-side safety: send expiry so PHP can re-check if needed
       const res = await apiPost("/donation_convert.php", {
-        userID: userId,
         foodID: item.foodID || item.id,
         donateQty: Number(f.qty),
         contact: f.contact.trim(),

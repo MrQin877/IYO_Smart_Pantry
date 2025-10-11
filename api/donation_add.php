@@ -33,7 +33,10 @@ function format_picktime_string(array $slot): string {
 
 $d = json_input();
 
-if (empty($d['userID'])) respond(['ok'=>false,'error'=>'Missing userID'],400);
+$userID = $_SESSION['userID'] ?? null;
+if (!$userID) {
+  respond(['ok'=>false,'error'=>'Not authenticated'], 401);
+}
 if (empty($d['contact'])) respond(['ok'=>false,'error'=>'Missing contact'],400);
 if (empty($d['food']) || !is_array($d['food'])) respond(['ok'=>false,'error'=>'Missing food'],400);
 
@@ -59,14 +62,14 @@ try {
     ':quantity'   => (float)$food['quantity'],
     ':expiryDate' => $food['expiryDate'],
     ':remark'     => $food['remark'] ?? null,
-    ':userID'     => $d['userID'],
+    ':userID'     => $userID,
     ':categoryID' => $food['categoryID'],
     ':unitID'     => $food['unitID'],
   ]);
 
   // get generated foodID
   $qFood = $pdo->prepare("SELECT foodID FROM foods WHERE userID = :uid ORDER BY CAST(SUBSTRING(foodID,2) AS UNSIGNED) DESC LIMIT 1");
-  $qFood->execute([':uid'=>$d['userID']]);
+  $qFood->execute([':uid'=>$userID]);
   $foodID = $qFood->fetchColumn();
   if (!$foodID) throw new RuntimeException('Failed to fetch foodID');
 
@@ -81,12 +84,12 @@ try {
     ':note'           => $d['donationNote'] ?? null,
     ':pickupLocation' => $pickupLocation,
     ':foodID'         => $foodID,
-    ':userID'         => $d['userID'],
+    ':userID'         => $userID,
   ]);
 
   // get donationID
   $qDon = $pdo->prepare("SELECT donationID FROM donations WHERE userID = :uid ORDER BY CAST(SUBSTRING(donationID,2) AS UNSIGNED) DESC LIMIT 1");
-  $qDon->execute([':uid'=>$d['userID']]);
+  $qDon->execute([':uid'=>$userID]);
   $donationID = $qDon->fetchColumn();
   if (!$donationID) throw new RuntimeException('Failed to fetch donationID');
 

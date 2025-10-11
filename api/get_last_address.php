@@ -2,9 +2,9 @@
 // C:\xampp\htdocs\IYO_Smart_Pantry\api\get_last_address.php
 require_once __DIR__ . '/config.php';
 
-$userID = $_GET['userID'] ?? '';
+$userID = $_SESSION['userID'] ?? null;
 if (!$userID) {
-  respond(['ok' => false, 'error' => 'Missing userID'], 400);
+  respond(['ok'=>false,'error'=>'Not authenticated'], 401);
 }
 
 /**
