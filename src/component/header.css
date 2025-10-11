@@ -88,3 +88,18 @@
   cursor:pointer;
 }
 .icon:active{ transform: translateY(1px); }
+/* right side auth buttons */
+.auth-actions{ display:flex; align-items:center; gap:14px; }
+.login-link{ color:#2b2e29; text-decoration: underline; font-weight:600; padding:8px 6px; }
+.register-btn{
+  display:inline-block; font-weight:700; color:#fff;
+  background: linear-gradient(180deg,#f3ac4f,#e59a2e);
+  padding:10px 18px; border-radius:999px; border:1px solid #e7a040;
+  box-shadow:0 10px 20px rgba(229,154,46,.25), inset 0 -2px 0 rgba(0,0,0,.08);
+}
+.logout-link{
+  margin-left: 6px;
+  background: transparent; border: none; color: #6b6b6b; cursor: pointer;
+  padding: 8px 6px; text-decoration: underline;
+}
+

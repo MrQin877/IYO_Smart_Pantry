@@ -1,0 +1,155 @@
+@import url('https://fonts.googleapis.com/css2?family=Dancing+Script:wght@600;700&display=swap');
+
+:root{
+  --green:#7E9F62;
+  --green2:#8BAE5D;
+  --ink:#2f2f2f;
+}
+
+/* frame = needs a real bg + its own blending sandbox */
+.hp-frame{
+  position: relative;
+  max-width: 1200px;
+  margin: 0 auto 40px;
+  padding: 28px 28px 36px;
+  border-radius: 18px;          /* light panel so Multiply has something to blend with */
+  overflow: hidden;                /* keep overlay inside rounded corners */
+  isolation: isolate;              /* confine blend effects to this element */
+}
+
+/* overlay image that leaves only dark dots visible */
+.dots-img{
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  pointer-events: none;
+  opacity: 0;
+  mix-blend-mode: multiply;        /* white disappears over light bg */
+  z-index: 0;
+}
+
+/* If your dots look too faint, try one of these:
+.dots-img{ filter: contrast(1.25) brightness(.96); }      // punchier
+.dots-img{ mix-blend-mode: darken; }                      // alternate
+*/
+
+/* Optional alternative: mask the white out entirely (uncomment to use)
+.hp-frame::before{
+  content:"";
+  position:absolute; inset:0;
+  background: url("/HomePageDot.svg") center/cover no-repeat;
+  -webkit-mask-image: url("/HomePageDot.svg");
+  mask-image: url("/HomePageDot.svg");
+  -webkit-mask-size: cover; mask-size: cover;
+  -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat;
+  opacity:.35;
+}
+*/
+
+.hero-wrap{
+  position: relative;              /* sits above dots */
+  z-index: 1;
+  display:grid;
+  grid-template-columns: 1.1fr 1fr;
+  gap: 32px;
+  align-items:center;
+  padding: 24px 18px 32px;
+}
+
+.hero-col{ min-width: 0; }
+
+/* left side */
+.hero-script{
+  font-family:'Dancing Script', cursive;
+  font-size: clamp(34px, 5vw, 64px);
+  line-height: 1.1;
+  color:#324529;
+  margin: 8px 0 10px;
+}
+.hero-script span{ display:block; }
+
+.hero-sub{
+  color:#4b4b4b;
+  margin: 12px 0 22px;
+  max-width: 520px;
+}
+
+/* generic buttons */
+.hero-cta { display:flex; gap:14px; align-items:center; }
+.hero-cta a{
+  text-decoration: none;
+  display:inline-block;
+  font-weight: 700;
+  border-radius: 12px;
+  padding: 12px 28px;
+  line-height: 1;
+  cursor: pointer;
+  transition: transform .06s ease, box-shadow .12s ease, background-color .12s ease, color .12s ease;
+}
+
+/* GET STARTED (filled green) */
+.btn-start{
+  background: #7E9F62;
+  color: #ffffff;
+  border: 1px solid #6C8C55;
+  box-shadow:
+    0 10px 18px rgba(126,159,98,.25),
+    inset 0 -2px 0 rgba(0,0,0,.08);
+}
+.btn-start:hover{ background:#749659; }
+.btn-start:active{ transform: translateY(1px); box-shadow: 0 6px 12px rgba(126,159,98,.22), inset 0 -1px 0 rgba(0,0,0,.08); }
+
+/* LOGIN (white ghost) */
+.btn-login{
+  background: #ffffff;
+  color: #6F8B57;
+  border: 2px solid #DCE7CC;
+  box-shadow: 0 6px 14px rgba(40,55,25,.06);
+}
+.btn-login:hover{
+  background: #F7FAF3;
+  border-color:#CEDDB9;
+}
+.btn-login:active{ transform: translateY(1px); box-shadow: 0 4px 10px rgba(40,55,25,.05); }
+
+/* right side artwork; still looks fine if image missing */
+.art-stage{ position:relative; width:min(520px, 90%); aspect-ratio:1/1; margin: 0 auto; }
+.art-disc{ position:absolute; border-radius:50%; background:#e8efdd; }
+.art-disc.outer{ inset: 10% 10% 10% 10%; opacity:.85; }
+.art-disc.inner{ inset: 24% 24% 24% 24%; background:#f3f6ec; }
+.art-img{ position:absolute; inset:0; width:100%; height:100%; object-fit:contain; filter: drop-shadow(0 16px 24px rgba(0,0,0,.12)); }
+
+/* accessibility: visible keyboard focus */
+.btn-start:focus-visible,
+.btn-login:focus-visible{
+  outline: 2px solid #8BAE5D;
+  outline-offset: 2px;
+}
+
+/* responsive */
+@media (min-width: 981px){
+  .hero-art { display: flex;}
+  .hero-art .art-stage{
+    transform: translateY(-34px);   /* tweak this value */
+  }
+}
+
+@media (max-width: 980px){
+  .hero-wrap{ grid-template-columns: 1fr; gap: 16px; }
+  .hero-art{ order:-1; }
+}
+
+@media (max-width:560px){
+  .hero-cta a{ padding: 12px 20px; }
+}
+@media (max-width: 420px){
+  .hero-wrap{ padding: 18px 12px 24px; }
+  .hero-script{ font-size: clamp(30px, 8vw, 52px); }
+}
+
+/* respect reduced motion */
+@media (prefers-reduced-motion: reduce){
+  .hero-cta a{ transition: none; }
+}

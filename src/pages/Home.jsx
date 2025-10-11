@@ -1,3 +1,45 @@
+import { Link } from "react-router-dom";
+import "./home.css";
+
 export default function Home() {
-  return <h2>Home Page</h2>;
+  return (
+    <div className="hp">
+      <div className="hp-frame">
+        {/* 🔹 Dots overlay (white will be removed via blend-mode) */}
+        <img
+          src="/HomePageDot.svg"
+          alt=""
+          aria-hidden="true"
+          className="dots-img"
+        />
+
+        <section className="hero-wrap">
+          <div className="hero-col hero-text">
+            <h1 className="hero-script">
+              <span>Save Food,</span>
+              <span>Share Meals,</span>
+              <span>Strengthen Community</span>
+            </h1>
+
+            <p className="hero-sub">
+              “Smart Pantry helps you track, plan, and donate with ease — making every meal matter.”
+            </p>
+
+            <div className="hero-cta">
+              <Link to="/register" className="btn-start">Get Started</Link>
+              <Link to="/login" className="btn-login">Login</Link>
+            </div>
+          </div>
+
+          <div className="hero-col hero-art">
+            <div className="art-stage">
+              <div className="art-disc outer" />
+              <div className="art-disc inner" />
+              <img src="/HomePageFork.svg" alt="" className="art-img" />
+            </div>
+          </div>
+        </section>
+      </div>
+    </div>
+  );
 }
