@@ -13,12 +13,16 @@ Response:
 { ok: true, mode: "zeroed" | "deleted" }
 */
 
+$userID = $_SESSION['userID'] ?? null;
+if (!$userID) {
+  respond(['ok'=>false,'error'=>'Not authenticated'], 401);
+}
+
 $d = json_input();
-$userID = $d['userID'] ?? '';
 $foodID = $d['foodID'] ?? '';
 
 if (!$userID || !$foodID) {
-  respond(['ok'=>false,'error'=>'Missing userID or foodID'], 400);
+  respond(['ok'=>false,'error'=>'Missing  foodID'], 400);
 }
 
 try {
