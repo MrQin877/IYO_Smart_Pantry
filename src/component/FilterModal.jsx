@@ -50,32 +50,40 @@ export default function FilterModal({ open, type = "food", filters, setFilters, 
     <div className="modal" onClick={onClose}>
       <div className="panel" onClick={(e) => e.stopPropagation()}>
         <button className="close" onClick={onClose}>✕</button>
-        <h3 className="modal-title">Filter Foods</h3>
+        <h3 className="modal-title">Filters</h3>
 
         <div className="form-grid">
           {/* Category */}
-          <select
-            className="input"
-            value={filters.category}
-            onChange={(e) => setFilters({ ...filters, category: e.target.value })}
-          >
-            <option value="">All</option>
-            {categories.map(c => (
-              <option key={c.id} value={c.id}>{c.name}</option>
-            ))}
-          </select>
+          <div className="form-row">
+            <label>Category</label>
+            <select
+              className="input"
+              value={filters.category}
+              onChange={(e) => setFilters({ ...filters, category: e.target.value })}
+            >
+              <option value="">All</option>
+              {categories.map(c => (
+                <option key={c.id} value={c.id}>{c.name}</option>
+              ))}
+            </select>
+          </div>
 
-          {/* Storage */}
-          <select
-            className="input"
-            value={filters.storageID}
-            onChange={(e) => setFilters({ ...filters, storageID: e.target.value })}
-          >
-            <option value="">All</option>
-            {storages.map(s => (
-              <option key={s.id} value={s.id}>{s.name}</option>
-            ))}
-          </select>
+          {/* Storage Location */}
+          <div className="form-row">
+            <label>Storage Location</label>
+            <select
+              className="input"
+              value={filters.storageID}
+              onChange={(e) => setFilters({ ...filters, storageID: e.target.value })}
+            >
+              <option value="">All</option>
+              {storages.map(s => (
+                <option key={s.id} value={s.id}>{s.name}</option>
+              ))}
+            </select>
+          </div>
+
+
 
           {/* Expiry */}
           <div className="form-row">
@@ -89,9 +97,11 @@ export default function FilterModal({ open, type = "food", filters, setFilters, 
               })}
             >
               <option value="">Any</option>
+              <option value="today">Today</option>
               <option value="3days">Next 3 Days</option>
               <option value="week">This Week</option>
               <option value="month">This Month</option>
+              <option value="nextmonth">Next Month</option>
             </select>
           </div>
 

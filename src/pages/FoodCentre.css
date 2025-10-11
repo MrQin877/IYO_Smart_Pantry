@@ -458,3 +458,62 @@ tr:hover.planned-row {
 }
 
 
+.bubble {
+  display: inline-block;
+  margin: 2px 4px;
+  padding: 4px 8px;
+  background: #dfe7d3;
+  border-radius: 12px;
+  font-size: 0.9rem;
+}
+
+.slot-container {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: #f9fdfb;
+  border: 1px solid #d6f5dc;
+  border-radius: 12px;
+  padding: 8px 10px;
+  min-width: 160px;
+}
+
+.slot-item {
+  background: #dfe7d3;
+  border-radius: 10px;
+  padding: 6px 10px;
+  font-size: 0.9rem;
+  color: #ffffff;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.slot-date {
+  font-weight: 600;
+  color: #292b2a;
+}
+
+.slot-time {
+  font-size: 0.88rem;
+  color: #292b2a;
+}
+
+
+
+th.sortable {
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+}
+
+th.sortable span {
+  font-size: 0.9em;
+  margin-left: 4px;
+  opacity: 0.6;
+  transition: opacity 0.2s;
+}
+
+th.sortable:hover span {
+  opacity: 1;
+}
