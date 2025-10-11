@@ -6,7 +6,7 @@ export default function App() {
   return (
     <>
       <HeaderNav />
-      <main style={{ maxWidth: 1100, margin: "0 auto", padding: "0 24px" }}>
+      <main style={{ maxWidth: 1100, margin: "30px auto", padding: "0 24px" }}>
         <Outlet />
       </main>
     </>

@@ -11,14 +11,14 @@ export default function HeaderNav() {
   useEffect(() => {
     (async () => {
       try {
-        const j = await apiGet("/api/session.php");
+        const j = await apiGet("/session.php");
         setUser(j.user);
       } catch { setUser(null); }
     })();
   }, []);
 
   async function handleLogout() {
-    try { await apiGet("/api/logout.php"); } catch {}
+    try { await apiGet("/logout.php"); } catch {}
     setUser(null);
     navigate("/");
   }
