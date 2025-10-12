@@ -3,6 +3,7 @@ import { useState, useEffect, useMemo } from "react";
 import AddDonationModal from "../component/AddDonationModal.jsx";
 import EditDonationModal from "../component/EditDonationModal.jsx";
 import FilterModal from "../component/FilterModal.jsx";
+import ConfirmDialog from "../component/ConfirmDialog.jsx";
 import { apiPost } from "../lib/api";
 
 export default function MyDonation() {
@@ -10,7 +11,9 @@ export default function MyDonation() {
   const [allDonations, setAllDonations] = useState([]);
   const [loading, setLoading] = useState(false);
   const [deletingId, setDeletingId] = useState(null);
-
+  const [delOpen, setDelOpen] = useState(false);
+  const [delBusy, setDelBusy] = useState(false);
+  const [pendingDel, setPendingDel] = useState(null); // { id, name, slotsCount }
   const [openAdd, setOpenAdd] = useState(false);
   // at top of the component:
   const [editOpen, setEditOpen] = useState(false);
@@ -112,6 +115,37 @@ export default function MyDonation() {
       const [start = "", end = ""] = range.split("-").map((x) => x.trim());
       return { id: crypto.randomUUID?.() ?? String(Math.random()), date, start, end, note: "" };
     });
+
+  function askDeleteDonation(row) {
+    setPendingDel({
+      id: row.id || row.donationID,
+      name: row.name,
+      slotsCount: (row.slots || []).length,
+    });
+    setDelOpen(true);
+  }
+  async function doDeleteDonation() {
+    if (!pendingDel) return;
+    setDelBusy(true);
+
+    // optimistic UI
+    const prev = rows;
+    setRows(prev.filter(r => (r.id || r.donationID) !== pendingDel.id));
+
+    try {
+      const res = await apiPost("/donation_delete.php", { donationID: pendingDel.id });
+      if (!res?.ok) throw new Error(res?.error || "Delete failed");
+      // success → also OK if pickup_times removed by backend
+    } catch (e) {
+      alert(e.message || "Delete failed. Reverting.");
+      // rollback
+      setRows(prev);
+    } finally {
+      setDelBusy(false);
+      setDelOpen(false);
+      setPendingDel(null);
+    }
+  }
 
   function parsePickupToAddress(pickup = "") {
   const lines = String(pickup)
@@ -463,7 +497,7 @@ export default function MyDonation() {
                       className="icon-btn"
                       title="Delete"
                       disabled={deletingId === (r.donationID || r.id)}
-                      onClick={() => handleDeleteDonation(r.donationID || r.id)}
+                      onClick={() => askDeleteDonation(r)}
                     >
                       {deletingId === (r.donationID || r.id) ? "⏳" : "🗑️"}
                     </button>
@@ -500,6 +534,25 @@ export default function MyDonation() {
           setEditOpen(false);
           setEditItem(null);
         }}
+      />
+
+      <ConfirmDialog
+        open={delOpen}
+        title="Cancel donation?"
+        message={
+          pendingDel
+            ? `“${pendingDel.name}” will be cancelled.` +
+              (pendingDel.slotsCount > 0
+                ? `\nThis will also remove ${pendingDel.slotsCount} pickup time(s).`
+                : "")
+            : ""
+        }
+        confirmText="Yes"
+        cancelText="No"
+        danger
+        busy={delBusy}
+        onCancel={() => { if (!delBusy) { setDelOpen(false); setPendingDel(null); } }}
+        onConfirm={doDeleteDonation}
       />
 
 
