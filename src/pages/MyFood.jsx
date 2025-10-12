@@ -6,6 +6,7 @@ import DonationModal from "../component/DonationModal.jsx";
 import FoodFormModal from "../component/FoodFormModal.jsx"; // <-- new
 import FoodDetailModal from "../component/FoodDetailModal.jsx";
 import FilterModal from "../component/FilterModal.jsx";
+import FoodDeleteConfirm from "../component/FoodDeleteConfirm.jsx";
 
 
 
@@ -19,6 +20,11 @@ export default function MyFood() {
   const [detailItem, setDetailItem] = useState(null);
   const [editItem, setEditItem] = useState(null);
   const [deletingId, setDeletingId] = useState(null);
+
+  // for the confirm modal
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleteItem, setDeleteItem] = useState(null);
+  const [deleteFlags, setDeleteFlags] = useState({ inDonation: false, reserved: false });
 
   const [donateOpen, setDonateOpen] = useState(false);
   const [donateItem, setDonateItem] = useState(null);
@@ -127,6 +133,19 @@ export default function MyFood() {
     setPage(Math.ceil(next.length / pageSize));
   }
 
+  function askDelete(item) {
+  // derive flags from the row you already render
+  const flags = {
+    // if your list has a boolean like item.inDonation, use it; else default false
+    inDonation: !!item.inDonation, 
+    // treat either "is_plan" (meal plan) or "reserved" (if you have it) as "reserved"
+    reserved: !!item.is_plan || !!item.reserved,
+  };
+  setDeleteFlags(flags);
+  setDeleteItem(item);
+  setDeleteOpen(true);
+}
+
   function handleUpdate(data) {
     const updated = {
       ...editItem,
@@ -137,31 +156,29 @@ export default function MyFood() {
     setEditItem(null);
   }
 
-  async function handleDelete(foodID) {
-    if (!window.confirm("Delete this item?")) return;
-
-    // optimistic UI
-    const prev = rows;
-    const next = rows.filter(r => r.foodID !== foodID);
-    setRows(next);
+  // runs after user confirms
+  async function reallyDelete(foodID) {
     setDeletingId(foodID);
+    const prev = rows;
 
     try {
-      const res = await apiPost("/food_delete.php", {
-        foodID,           // <-- the one to delete
-      });
+      const res = await apiPost("/food_delete.php", { foodID });
+      if (!res?.ok) throw new Error(res?.error || "Delete failed");
 
-      if (!res?.ok) {
-        throw new Error(res?.error || "Delete failed");
+      if (res.mode === "zeroed") {
+        // keep the item but set qty to 0
+        setRows(prev.map(r => (r.foodID === foodID ? { ...r, qty: 0 } : r)));
+      } else {
+        // fully deleted
+        setRows(prev.filter(r => r.foodID !== foodID));
       }
-
-      // Optional: refresh from server to be perfectly in sync
-      setRefreshKey(k => k + 1);
     } catch (err) {
-      alert(err.message || "Delete failed. Reverting UI.");
-      setRows(prev);        // rollback
+      alert(err.message || "Delete failed. Please try again.");
+      setRows(prev); // rollback if you had changed the UI
     } finally {
       setDeletingId(null);
+      setDeleteOpen(false);
+      setDeleteItem(null);
     }
   }
 
@@ -347,8 +364,8 @@ export default function MyFood() {
                       title="Delete"
                       disabled={deletingId === r.foodID}
                       onClick={(e) => {
-                        e.stopPropagation(); // don't open detail modal
-                        handleDelete(r.foodID);
+                        e.stopPropagation();
+                        askDelete(r);   // <-- open confirm based on row flags
                       }}
                     >
                       {deletingId === r.foodID ? "⏳" : "🗑️"}
@@ -397,8 +414,17 @@ export default function MyFood() {
         }}
       />
 
-
-
+      <FoodDeleteConfirm
+        open={deleteOpen}
+        onClose={() => setDeleteOpen(false)}
+        foodName={deleteItem?.name}
+        flags={deleteFlags}           // { inDonation, reserved }
+        onConfirm={() => {
+          if (deleteItem?.foodID) {
+            reallyDelete(deleteItem.foodID);
+          }
+        }}
+      />
 
       <DonationModal
         open={donateOpen}

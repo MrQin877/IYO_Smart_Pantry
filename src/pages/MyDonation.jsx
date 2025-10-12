@@ -12,6 +12,8 @@ export default function MyDonation() {
   const [deletingId, setDeletingId] = useState(null);
 
   const [openAdd, setOpenAdd] = useState(false);
+  // at top of the component:
+  const [editOpen, setEditOpen] = useState(false);
   const [editItem, setEditItem] = useState(null);
   const [showFilter, setShowFilter] = useState(false);
   const [page, setPage] = useState(1);
@@ -101,7 +103,47 @@ export default function MyDonation() {
     })();
   }, []);
 
+  // helpers to normalize slots if you sometimes store strings like
+  // "2025-02-10, 11:00-12:00" and sometimes objects
+  const normalizeSlots = (slots = []) =>
+    slots.map((s) => {
+      if (typeof s === "object") return s; // already normalized
+      const [date, range = ""] = s.split(",").map((x) => x.trim());
+      const [start = "", end = ""] = range.split("-").map((x) => x.trim());
+      return { id: crypto.randomUUID?.() ?? String(Math.random()), date, start, end, note: "" };
+    });
 
+  function parsePickupToAddress(pickup = "") {
+  const lines = String(pickup)
+    .split(/\r?\n/)
+    .map((s) => s.trim())
+    .filter(Boolean);
+
+  let label = "", line1 = "", line2 = "", postcode = "", city = "", state = "", country = "";
+
+  // Line 1: "Label, Line 1"
+  if (lines[0]) {
+    const parts = lines[0].split(",").map((s) => s.trim());
+    label = parts.shift() || "";
+    line1 = parts.join(", ");
+  }
+
+  // Line 2
+  if (lines[1]) line2 = lines[1];
+
+  // Line 3: "postcode, city, state, country"
+  if (lines[2]) {
+    const parts = lines[2].split(",").map((s) => s.trim());
+    postcode = parts[0] || "";
+    city = parts[1] || "";
+    state = parts[2] || "";
+    country = parts.slice(3).join(", ") || "";
+  }
+
+  return { label, line1, line2, postcode, city, state, country };
+}
+
+  
   // sorting (client-side)
   const sortedRows = useMemo(() => {
     const copy = [...rows];
@@ -397,7 +439,24 @@ export default function MyDonation() {
                   <td>{r.donorName || "-"}</td>
 
                   <td className="row-actions">
-                    <button className="icon-btn" title="Edit" onClick={() => setEditItem(r)}>
+                    <button
+                      className="icon-btn"
+                      title="Edit"
+                      onClick={() => {
+                        const addressObj = r.address ?? parsePickupToAddress(r.pickup || r.pickupLocation || "");
+
+                        setEditItem({
+                          id: r.donationID || r.id,
+                          name: r.name,
+                          category: r.category,
+                          qty: r.qty,
+                          expiry: r.expiry,
+                          address: addressObj,
+                          slots: normalizeSlots(r.slots),
+                        });
+                        setEditOpen(true);
+                      }}
+                    >
                       ✏️
                     </button>
                     <button
@@ -419,7 +478,31 @@ export default function MyDonation() {
 
       <AddDonationModal open={openAdd} onClose={() => setOpenAdd(false)} onPublish={handlePublish} />
 
-      <EditDonationModal open={!!editItem} item={editItem} onClose={() => setEditItem(null)} onUpdate={handleUpdate} />
+      <EditDonationModal
+        open={editOpen}
+        item={editItem}
+        onClose={() => { setEditOpen(false); setEditItem(null); }}
+        onUpdate={(updated) => {
+          // update local rows after saving
+          setRows((prev) =>
+            prev.map((row) =>
+              (row.donationID || row.id) === updated.id
+                ? {
+                    ...row,
+                    // keep read-only stuff, but update address/slots flags you allow to edit
+                    address: updated.address ?? row.address,
+                    useDefaultAddress: updated.useDefaultAddress ?? row.useDefaultAddress,
+                    slots: updated.slots ?? row.slots,
+                  }
+                : row
+            )
+          );
+          setEditOpen(false);
+          setEditItem(null);
+        }}
+      />
+
+
 
       <FilterModal
         open={showFilter}

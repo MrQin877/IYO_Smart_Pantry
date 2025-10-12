@@ -332,7 +332,7 @@ input:-webkit-autofill{
 /* Keep +Add aligned right and same height as inputs */
 .add-slot{
   height: 42px;
-  padding: 0 16px;
+  padding: 0 10px;
   border-radius: 10px;
   background: var(--green);
   color: #fff;
