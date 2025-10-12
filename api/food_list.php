@@ -1,24 +1,24 @@
 <?php
 require __DIR__ . '/config.php';
 
-
 session_start();
 $userID = $_SESSION['userID'] ?? null;
 
 if (!$userID) {
   respond(['ok' => false, 'error' => 'User not logged in'], 401);
 }
+
 $d = json_input();
-$categoryID    = $d['categoryID']    ?? null;
-$storageType   = $d['status']        ?? null; // e.g. 'Fridge', 'Freezer', etc.
-$pickupArea    = $d['pickupArea']    ?? null;
-//$ignorePlanned = $d['ignorePlanned'] ?? false;
+$categoryID  = $d['categoryID'] ?? null;
+$storageType = $d['status']     ?? null;
 
 $sql = "
   SELECT 
     f.foodID,
     f.foodName,
     f.quantity,
+    f.reservedQty,
+    (f.quantity + f.reservedQty) AS totalQty,  -- ✅ total available + reserved
     f.expiryDate,
     f.is_plan,
     f.storageID,
@@ -44,16 +44,10 @@ $params = [];
 if ($userID)      { $sql .= " AND f.userID = ?"; $params[] = $userID; }
 if ($categoryID)  { $sql .= " AND f.categoryID = ?"; $params[] = $categoryID; }
 if ($storageType) { $sql .= " AND s.storageName LIKE ?"; $params[] = "%$storageType%"; }
-if ($pickupArea)  { $sql .= " AND s.storageName LIKE ?"; $params[] = "%$pickupArea%"; }
 
-/*
-if ($ignorePlanned) {
-  $sql .= " AND f.is_plan = 0";
-}
-  */
 
-// ✅ Exclude deleted or zero-quantity foods
-$sql .= " AND f.quantity > 0";
+// ✅ Only show items with totalQty > 0
+$sql .= " AND (f.quantity + f.reservedQty) > 0";
 
 $sql .= " ORDER BY f.expiryDate ASC";
 
