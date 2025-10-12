@@ -1,6 +1,12 @@
 <?php
-// api/food_update_used.php
 require_once __DIR__ . "/config.php";
+session_start();
+
+// ✅ Get logged-in user
+$userID = $_SESSION['userID'] ?? null;
+if (!$userID) {
+  respond(['ok' => false, 'error' => 'User not logged in'], 401);
+}
 
 $d = json_input();
 $foodID = $d['foodID'] ?? null;
@@ -11,44 +17,38 @@ if (!$foodID || $newQuantity === null) {
 }
 
 try {
-  // Ensure the quantity cannot be negative
-  if ($newQuantity == 0) {
-    // ✅ Double-check existence first
-    $check = $pdo->prepare("SELECT 1 FROM foods WHERE foodID = :id");
-    $check->execute([':id' => $foodID]);
-
-    if (!$check->fetch()) {
-      respond(['ok' => false, 'error' => 'Item not found'], 404);
-    }
-
-    // ✅ Delete the item completely when quantity reaches zero
-    $del = $pdo->prepare("DELETE FROM foods WHERE foodID = :id");
-    $del->execute([':id' => $foodID]);
-
-    if ($del->errorCode() === '00000') {
-      respond(['ok' => true, 'deleted' => true]);
-    } else {
-      $err = implode(' | ', $del->errorInfo());
-      respond(['ok' => false, 'error' => 'Delete failed: ' . $err], 500);
-    }
-  }else {
-    // ✅ Update only the quantity
-    $stmt = $pdo->prepare("
-      UPDATE foods
-      SET quantity = :qty
-      WHERE foodID = :id
-    ");
-    $stmt->execute([
-      ':qty' => $newQuantity,
-      ':id' => $foodID
-    ]);
-
-    if ($stmt->rowCount() > 0) {
-      respond(['ok' => true, 'updated' => 1, 'newQuantity' => $newQuantity]);
-    } else {
-      respond(['ok' => false, 'error' => 'Food item not found or not updated'], 404);
-    }
+  if ($newQuantity < 0) {
+    respond(['ok' => false, 'error' => 'Quantity cannot be negative'], 400);
   }
+
+  // ✅ Verify ownership
+  $check = $pdo->prepare("SELECT * FROM foods WHERE foodID = :id AND userID = :userID");
+  $check->execute([':id' => $foodID, ':userID' => $userID]);
+  $food = $check->fetch(PDO::FETCH_ASSOC);
+
+  if (!$food) {
+    respond(['ok' => false, 'error' => 'Food not found or not owned by this user'], 403);
+  }
+
+  // ✅ Always just update quantity (do not delete)
+  $stmt = $pdo->prepare("
+    UPDATE foods
+    SET quantity = :qty
+    WHERE foodID = :id AND userID = :userID
+  ");
+  $stmt->execute([
+    ':qty' => $newQuantity,
+    ':id' => $foodID,
+    ':userID' => $userID
+  ]);
+
+  respond([
+    'ok' => true,
+    'updated' => 1,
+    'newQuantity' => $newQuantity,
+    'usedUp' => $newQuantity == 0
+  ]);
+
 } catch (PDOException $e) {
   respond(['ok' => false, 'error' => 'Database error: ' . $e->getMessage()], 500);
 }
