@@ -36,7 +36,7 @@ export default function MyFood() {
     (async () => {
       setLoading(true);
       try {
-        const res = await apiPost("/food_list.php", { userID: "U1" });
+        const res = await apiPost("/food_list.php", {});
 
         if (res.ok) {
           console.log("✅ Foods fetched:", res.foods);

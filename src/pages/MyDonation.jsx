@@ -19,11 +19,9 @@ export default function MyDonation() {
 
   const [filters, setFilters] = useState({
     category: "",
-    storageID: "",
     expiryRange: "",
     expiryFrom: "",
     expiryTo: "",
-    pickupArea: "",
   });
 
   const [sort, setSort] = useState({ key: "name", dir: "asc" });
@@ -233,17 +231,6 @@ export default function MyDonation() {
     };
     return map[categoryID] || "";
   }
-
-
-
-
-
-
-
-
-
-
-
 
 
 

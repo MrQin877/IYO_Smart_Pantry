@@ -40,6 +40,7 @@ export default function FoodDetailModal({
   };
 
   // 🔹 Handle "Used" click
+// 🔹 Handle "Used" click
   const handleUsed = async () => {
     if (!usedQty || isNaN(usedQty) || usedQty <= 0) {
       alert("Please enter a valid quantity used.");
@@ -55,40 +56,45 @@ export default function FoodDetailModal({
       return;
     }
 
+    if (isIntegerUnit(food.unitName) && used % 1 !== 0) {
+      alert("Please enter a whole number for this unit.");
+      return;
+    }
+
     try {
+      // 🟡 Ask for confirmation when fully using up the item
       if (newQty === 0) {
-        const confirmDelete = confirm("Quantity will become 0. Delete this food item?");
+        const confirmDelete = confirm(
+          "Quantity will become 0. This will remove the food item. Continue?"
+        );
         if (!confirmDelete) return;
+      }
 
-        // ✅ Use the same test userID you use in food_list.php
-        const res = await apiPost("/food_delete.php", { 
-          foodID: food.foodID,
-          userID: "U1"   // ✅ Add this line
-        });
+      const res = await apiPost("/food_update_used.php", {
+        foodID: food.foodID,
+        newQuantity: newQty,
+      });
 
-        if (isIntegerUnit(food.unitName) && used % 1 !== 0) {
-          alert("Please enter a whole number for this unit.");
-          return;
-        }
+      if (!res.ok) {
+        throw new Error(res.error || "Failed to update quantity.");
+      }
 
-        if (!res.ok) throw new Error(res.error || "Delete failed");
-        alert("Food item deleted successfully!");
+      if (res.deleted) {
+        alert("✅ Food item used up and deleted.");
+      } else if (res.updated) {
+        alert("✅ Food quantity updated successfully.");
       } else {
-        const res = await apiPost("/food_update_used.php", {
-          foodID: food.foodID,
-          newQuantity: newQty,
-        });
-        if (!res.ok) throw new Error(res.error || "Update failed");
-        alert("Food quantity updated successfully!");
+        alert("⚠️ No changes were made.");
       }
 
       onUpdate?.(); // refresh parent list
       onClose();
     } catch (err) {
       console.error("❌ HandleUsed error:", err);
-      alert("Failed to update food quantity.");
+      alert("Failed to update food quantity: " + err.message);
     }
   };
+
 
   const isIntegerUnit = (unitName) => {
     if (!unitName) return false;

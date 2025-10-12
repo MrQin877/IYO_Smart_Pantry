@@ -68,23 +68,6 @@ export default function FilterModal({ open, type = "food", filters, setFilters, 
             </select>
           </div>
 
-          {/* Storage Location */}
-          <div className="form-row">
-            <label>Storage Location</label>
-            <select
-              className="input"
-              value={filters.storageID}
-              onChange={(e) => setFilters({ ...filters, storageID: e.target.value })}
-            >
-              <option value="">All</option>
-              {storages.map(s => (
-                <option key={s.id} value={s.id}>{s.name}</option>
-              ))}
-            </select>
-          </div>
-
-
-
           {/* Expiry */}
           <div className="form-row">
             <label>Expiry</label>
@@ -105,18 +88,22 @@ export default function FilterModal({ open, type = "food", filters, setFilters, 
             </select>
           </div>
 
-          {/* Pickup Area (optional) */}
-          {type !== "food" && (
-            <div className="form-row">
-              <label>Pickup Area</label>
-              <input
-                className="input"
-                placeholder="Any"
-                value={filters.pickupArea}
-                onChange={(e) => setFilters({ ...filters, pickupArea: e.target.value })}
-              />
-            </div>
-          )}
+          {/* Storage Location */}
+          {type !== "donation" && (
+          <div className="form-row">
+            <label>Storage Location</label>
+            <select
+              className="input"
+              value={filters.storageID}
+              onChange={(e) => setFilters({ ...filters, storageID: e.target.value })}
+            >
+              <option value="">All</option>
+              {storages.map(s => (
+                <option key={s.id} value={s.id}>{s.name}</option>
+              ))}
+            </select>
+          </div>)}
+
         </div>
 
         <div className="modal-actions">
