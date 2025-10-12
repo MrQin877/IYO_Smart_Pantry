@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Oct 12, 2025 at 10:29 PM
+-- Generation Time: Oct 12, 2025 at 11:13 PM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -17,12 +17,11 @@ SET time_zone = "+00:00";
 /*!40101 SET @OLD_COLLATION_CONNECTION=@@COLLATION_CONNECTION */;
 /*!40101 SET NAMES utf8mb4 */;
 
-CREATE DATABASE IF NOT EXISTS `iyo_smart_pantry` DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-USE `iyo_smart_pantry`;
-
 --
 -- Database: `iyo_smart_pantry`
 --
+CREATE DATABASE IF NOT EXISTS `iyo_smart_pantry` DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+USE `iyo_smart_pantry`;
 
 -- --------------------------------------------------------
 
@@ -83,16 +82,16 @@ CREATE TABLE `donations` (
 --
 
 INSERT INTO `donations` (`donationID`, `quantity`, `contact`, `note`, `pickupLocation`, `foodID`, `userID`) VALUES
-('D10', 1.00, '0123443456', '', 'Office, ddd\nddd\n40160, Shah, sss, Malaysia', NULL, 'U1'),
-('D11', 1.00, '0123443456', '', 'Office, ddd\nddd\n40160, Shah, sss, Malaysia', NULL, 'U1'),
-('D2', 1.00, '0123443456', NULL, 'Office, ddd\nddd\n40160, Shah, sss, Malaysia', NULL, 'U1'),
-('D3', 1.00, '0123455788', '', 'Office, aaa\nbbb\n238490, ccc, HELP, Malaysia', NULL, 'U1'),
-('D4', 1.00, '0123443456', '', 'Office, ddd\nddd\n40160, Shah, sss, Malaysia', NULL, 'U1'),
-('D5', 1.00, '0123443456', '', 'Office, ddd\nddd\n40160, Shah, sss, Malaysia', NULL, 'U1'),
-('D6', 1.00, '0123443456', '', 'Office, ddd\naaa\nddd, sss, sss, ddd', NULL, 'U1'),
-('D7', 1.00, '0123443456', '', 'Office, ddd\nddd\n40160, Shah, sss, Malaysia', NULL, 'U1'),
-('D8', 1.00, '0123443456', '', 'Office, ddd\nddd\n40160, Shah, sss, Malaysia', NULL, 'U1'),
-('D9', 1.00, '0123443456', '', 'Office, ddd\nddd\n40160, Shah, sss, Malaysia', NULL, 'U1');
+('D1', 1.50, '012-3456789', 'Please call before pickup', 'Block A, HELP Residence', 'F1', 'U1'),
+('D10', 1.00, '014-9998887', 'Fresh juice, please collect ASAP', 'HELP Residence Kitchen', 'F10', 'U2'),
+('D2', 2.00, '011-5566778', 'Still fresh, stored in fridge', 'HELP University Cafeteria Entrance', 'F3', 'U1'),
+('D3', 1.00, '018-9012345', 'Family-sized pack, unopened', 'Lobby, Wisma HELP', 'F6', 'U2'),
+('D4', 3.00, '010-8877665', 'Organic vegetables, please bring cooler bag', 'HELP Residence Gate 2', 'F7', 'U2'),
+('D5', 0.50, '017-5544332', 'Near expiry, but still good', 'Block B, Level 2 Pantry', 'F5', 'U1'),
+('D6', 2.00, '012-2223344', 'Available this weekend only', 'Outside Block K Canteen', 'F8', 'U2'),
+('D7', 1.00, '019-6677889', 'Oil bottle sealed', 'HELP Main Lobby', 'F9', 'U2'),
+('D8', 1.50, '013-1112223', 'Can pick up after 6 PM', 'HELP Hostel Reception', 'F2', 'U1'),
+('D9', 2.00, '016-5556667', 'Stored frozen', 'HELP College Freezer Area', 'F4', 'U1');
 
 --
 -- Triggers `donations`
@@ -134,16 +133,17 @@ CREATE TABLE `foods` (
 --
 
 INSERT INTO `foods` (`foodID`, `foodName`, `quantity`, `reservedQty`, `usedQty`, `expiryDate`, `is_plan`, `remark`, `storageID`, `userID`, `categoryID`, `unitID`) VALUES
-('F001', 'Chicken Breast', 2.50, 0.50, 0.20, '2025-11-05', 0, 'Fresh, store in freezer', 'ST2', 'U1', 'C1', 'UN1'),
-('F002', 'White Rice', 5.00, 0.00, 1.00, '2026-02-10', 1, 'Staple food, store dry', 'ST7', 'U1', 'C2', 'UN1'),
-('F003', 'Apple', 6.00, 0.00, 2.00, '2025-10-20', 0, 'Keep refrigerated', 'ST1', 'U1', 'C3', 'UN3'),
-('F004', 'Broccoli', 3.00, 0.00, 1.00, '2025-10-18', 0, 'Fresh produce', 'ST1', 'U1', 'C4', 'UN3'),
-('F005', 'Milk', 1.00, 0.00, 0.20, '2025-10-25', 0, 'Low fat milk', 'ST1', 'U1', 'C5', 'UN6'),
-('F006', 'Canned Tuna', 4.00, 1.00, 0.00, '2027-03-15', 1, 'Long shelf life, protein source', 'ST3', 'U2', 'C6', 'UN4'),
-('F007', 'Carrot', 10.00, 2.00, 1.00, '2025-10-22', 0, 'Organic carrots', 'ST1', 'U2', 'C4', 'UN3'),
-('F008', 'Yogurt', 2.00, 0.00, 0.50, '2025-10-19', 1, 'Strawberry flavor yogurt', 'ST1', 'U2', 'C5', 'UN4'),
-('F009', 'Olive Oil', 1.00, 0.00, 0.00, '2027-06-30', 0, 'Extra virgin olive oil', 'ST4', 'U2', 'C7', 'UN7'),
-('F010', 'Orange Juice', 2.00, 0.00, 0.30, '2025-11-12', 0, 'Freshly squeezed juice', 'ST1', 'U2', 'C3', 'UN6');
+('F1', 'Chicken Breast', 2.50, 0.50, 0.20, '2025-11-05', 0, 'Fresh, store in freezer', 'ST2', 'U1', 'C1', 'UN1'),
+('F10', 'Orange Juice', 2.00, 0.00, 0.30, '2025-11-12', 0, 'Freshly squeezed juice', 'ST1', 'U2', 'C3', 'UN6'),
+('F11', 'dsad', 3.00, 0.00, 0.00, '2025-10-23', 0, NULL, NULL, 'U2', 'C6', 'UN7'),
+('F2', 'White Rice', 5.00, 0.00, 1.00, '2026-02-10', 1, 'Staple food, store dry', 'ST7', 'U1', 'C2', 'UN1'),
+('F3', 'Apple', 6.00, 0.00, 2.00, '2025-10-20', 0, 'Keep refrigerated', 'ST1', 'U1', 'C3', 'UN3'),
+('F4', 'Broccoli', 3.00, 0.00, 1.00, '2025-10-18', 0, 'Fresh produce', 'ST1', 'U1', 'C4', 'UN3'),
+('F5', 'Milk', 1.00, 0.00, 0.20, '2025-10-25', 0, 'Low fat milk', 'ST1', 'U1', 'C5', 'UN6'),
+('F6', 'Canned Tuna', 4.00, 1.00, 0.00, '2027-03-15', 1, 'Long shelf life, protein source', 'ST3', 'U2', 'C6', 'UN4'),
+('F7', 'Carrot', 10.00, 2.00, 1.00, '2025-10-22', 0, 'Organic carrots', 'ST1', 'U2', 'C4', 'UN3'),
+('F8', 'Yogurt', 2.00, 0.00, 0.50, '2025-10-19', 1, 'Strawberry flavor yogurt', 'ST1', 'U2', 'C5', 'UN4'),
+('F9', 'Olive Oil', 1.00, 0.00, 0.00, '2027-06-30', 0, 'Extra virgin olive oil', 'ST4', 'U2', 'C7', 'UN7');
 
 --
 -- Triggers `foods`
@@ -367,17 +367,16 @@ CREATE TABLE `pickup_times` (
 --
 
 INSERT INTO `pickup_times` (`pickupID`, `pickTime`, `donationID`) VALUES
-('PK10', '2025-10-10, 04:05 - 04:06', 'D9'),
-('PK11', '2025-10-08, 04:44 - 09:40', 'D10'),
-('PK12', '2025-10-07, 04:47 - 10:43', 'D11'),
-('PK2', '2025-10-18, 12:39 - 13:43', 'D2'),
-('PK3', '2025-10-22, 04:49 - 05:49', 'D3'),
-('PK4', '2025-10-23, 12:05 - 12:08', 'D4'),
-('PK5', '2025-10-18, 12:08 - 12:11', 'D4'),
-('PK6', '2025-10-20, 21:02 - 21:13', 'D5'),
-('PK7', '2025-10-22, 18:13 - 18:14', 'D6'),
-('PK8', '2025-10-29, 02:52 - 02:53', 'D7'),
-('PK9', '2025-10-07, 03:46 - 07:41', 'D8');
+('PK1', '2025-10-14, 10:00 - 10:30', 'D1'),
+('PK10', '2025-10-19, 08:00 - 08:15', 'D10'),
+('PK2', '2025-10-14, 11:00 - 11:15', 'D2'),
+('PK3', '2025-10-15, 09:00 - 09:30', 'D3'),
+('PK4', '2025-10-15, 14:00 - 14:30', 'D4'),
+('PK5', '2025-10-16, 16:30 - 17:00', 'D5'),
+('PK6', '2025-10-17, 10:00 - 10:45', 'D6'),
+('PK7', '2025-10-17, 13:00 - 13:30', 'D7'),
+('PK8', '2025-10-18, 18:00 - 18:30', 'D8'),
+('PK9', '2025-10-18, 09:30 - 10:00', 'D9');
 
 --
 -- Triggers `pickup_times`
@@ -752,6 +751,460 @@ ALTER TABLE `recipe_ingredients`
   ADD CONSTRAINT `fk_ri_ingredient` FOREIGN KEY (`ingredientID`) REFERENCES `ingredients` (`ingredientID`) ON UPDATE CASCADE,
   ADD CONSTRAINT `fk_ri_recipe` FOREIGN KEY (`recipeID`) REFERENCES `recipes` (`recipeID`) ON DELETE CASCADE ON UPDATE CASCADE,
   ADD CONSTRAINT `fk_ri_unit` FOREIGN KEY (`unitID`) REFERENCES `units` (`unitID`) ON UPDATE CASCADE;
+--
+-- Database: `phpmyadmin`
+--
+CREATE DATABASE IF NOT EXISTS `phpmyadmin` DEFAULT CHARACTER SET utf8 COLLATE utf8_bin;
+USE `phpmyadmin`;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `pma__bookmark`
+--
+
+CREATE TABLE `pma__bookmark` (
+  `id` int(10) UNSIGNED NOT NULL,
+  `dbase` varchar(255) NOT NULL DEFAULT '',
+  `user` varchar(255) NOT NULL DEFAULT '',
+  `label` varchar(255) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL DEFAULT '',
+  `query` text NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin COMMENT='Bookmarks';
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `pma__central_columns`
+--
+
+CREATE TABLE `pma__central_columns` (
+  `db_name` varchar(64) NOT NULL,
+  `col_name` varchar(64) NOT NULL,
+  `col_type` varchar(64) NOT NULL,
+  `col_length` text DEFAULT NULL,
+  `col_collation` varchar(64) NOT NULL,
+  `col_isNull` tinyint(1) NOT NULL,
+  `col_extra` varchar(255) DEFAULT '',
+  `col_default` text DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin COMMENT='Central list of columns';
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `pma__column_info`
+--
+
+CREATE TABLE `pma__column_info` (
+  `id` int(5) UNSIGNED NOT NULL,
+  `db_name` varchar(64) NOT NULL DEFAULT '',
+  `table_name` varchar(64) NOT NULL DEFAULT '',
+  `column_name` varchar(64) NOT NULL DEFAULT '',
+  `comment` varchar(255) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL DEFAULT '',
+  `mimetype` varchar(255) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL DEFAULT '',
+  `transformation` varchar(255) NOT NULL DEFAULT '',
+  `transformation_options` varchar(255) NOT NULL DEFAULT '',
+  `input_transformation` varchar(255) NOT NULL DEFAULT '',
+  `input_transformation_options` varchar(255) NOT NULL DEFAULT ''
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin COMMENT='Column information for phpMyAdmin';
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `pma__designer_settings`
+--
+
+CREATE TABLE `pma__designer_settings` (
+  `username` varchar(64) NOT NULL,
+  `settings_data` text NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin COMMENT='Settings related to Designer';
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `pma__export_templates`
+--
+
+CREATE TABLE `pma__export_templates` (
+  `id` int(5) UNSIGNED NOT NULL,
+  `username` varchar(64) NOT NULL,
+  `export_type` varchar(10) NOT NULL,
+  `template_name` varchar(64) NOT NULL,
+  `template_data` text NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin COMMENT='Saved export templates';
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `pma__favorite`
+--
+
+CREATE TABLE `pma__favorite` (
+  `username` varchar(64) NOT NULL,
+  `tables` text NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin COMMENT='Favorite tables';
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `pma__history`
+--
+
+CREATE TABLE `pma__history` (
+  `id` bigint(20) UNSIGNED NOT NULL,
+  `username` varchar(64) NOT NULL DEFAULT '',
+  `db` varchar(64) NOT NULL DEFAULT '',
+  `table` varchar(64) NOT NULL DEFAULT '',
+  `timevalue` timestamp NOT NULL DEFAULT current_timestamp(),
+  `sqlquery` text NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin COMMENT='SQL history for phpMyAdmin';
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `pma__navigationhiding`
+--
+
+CREATE TABLE `pma__navigationhiding` (
+  `username` varchar(64) NOT NULL,
+  `item_name` varchar(64) NOT NULL,
+  `item_type` varchar(64) NOT NULL,
+  `db_name` varchar(64) NOT NULL,
+  `table_name` varchar(64) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin COMMENT='Hidden items of navigation tree';
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `pma__pdf_pages`
+--
+
+CREATE TABLE `pma__pdf_pages` (
+  `db_name` varchar(64) NOT NULL DEFAULT '',
+  `page_nr` int(10) UNSIGNED NOT NULL,
+  `page_descr` varchar(50) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL DEFAULT ''
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin COMMENT='PDF relation pages for phpMyAdmin';
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `pma__recent`
+--
+
+CREATE TABLE `pma__recent` (
+  `username` varchar(64) NOT NULL,
+  `tables` text NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin COMMENT='Recently accessed tables';
+
+--
+-- Dumping data for table `pma__recent`
+--
+
+INSERT INTO `pma__recent` (`username`, `tables`) VALUES
+('root', '[{\"db\":\"iyo_smart_pantry\",\"table\":\"users\"},{\"db\":\"iyo_smart_pantry\",\"table\":\"pickup_times\"},{\"db\":\"iyo_smart_pantry\",\"table\":\"meal_plan_calendars\"},{\"db\":\"iyo_smart_pantry\",\"table\":\"action_types\"},{\"db\":\"iyo_smart_pantry\",\"table\":\"actions\"}]');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `pma__relation`
+--
+
+CREATE TABLE `pma__relation` (
+  `master_db` varchar(64) NOT NULL DEFAULT '',
+  `master_table` varchar(64) NOT NULL DEFAULT '',
+  `master_field` varchar(64) NOT NULL DEFAULT '',
+  `foreign_db` varchar(64) NOT NULL DEFAULT '',
+  `foreign_table` varchar(64) NOT NULL DEFAULT '',
+  `foreign_field` varchar(64) NOT NULL DEFAULT ''
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin COMMENT='Relation table';
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `pma__savedsearches`
+--
+
+CREATE TABLE `pma__savedsearches` (
+  `id` int(5) UNSIGNED NOT NULL,
+  `username` varchar(64) NOT NULL DEFAULT '',
+  `db_name` varchar(64) NOT NULL DEFAULT '',
+  `search_name` varchar(64) NOT NULL DEFAULT '',
+  `search_data` text NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin COMMENT='Saved searches';
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `pma__table_coords`
+--
+
+CREATE TABLE `pma__table_coords` (
+  `db_name` varchar(64) NOT NULL DEFAULT '',
+  `table_name` varchar(64) NOT NULL DEFAULT '',
+  `pdf_page_number` int(11) NOT NULL DEFAULT 0,
+  `x` float UNSIGNED NOT NULL DEFAULT 0,
+  `y` float UNSIGNED NOT NULL DEFAULT 0
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin COMMENT='Table coordinates for phpMyAdmin PDF output';
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `pma__table_info`
+--
+
+CREATE TABLE `pma__table_info` (
+  `db_name` varchar(64) NOT NULL DEFAULT '',
+  `table_name` varchar(64) NOT NULL DEFAULT '',
+  `display_field` varchar(64) NOT NULL DEFAULT ''
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin COMMENT='Table information for phpMyAdmin';
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `pma__table_uiprefs`
+--
+
+CREATE TABLE `pma__table_uiprefs` (
+  `username` varchar(64) NOT NULL,
+  `db_name` varchar(64) NOT NULL,
+  `table_name` varchar(64) NOT NULL,
+  `prefs` text NOT NULL,
+  `last_update` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin COMMENT='Tables'' UI preferences';
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `pma__tracking`
+--
+
+CREATE TABLE `pma__tracking` (
+  `db_name` varchar(64) NOT NULL,
+  `table_name` varchar(64) NOT NULL,
+  `version` int(10) UNSIGNED NOT NULL,
+  `date_created` datetime NOT NULL,
+  `date_updated` datetime NOT NULL,
+  `schema_snapshot` text NOT NULL,
+  `schema_sql` text DEFAULT NULL,
+  `data_sql` longtext DEFAULT NULL,
+  `tracking` set('UPDATE','REPLACE','INSERT','DELETE','TRUNCATE','CREATE DATABASE','ALTER DATABASE','DROP DATABASE','CREATE TABLE','ALTER TABLE','RENAME TABLE','DROP TABLE','CREATE INDEX','DROP INDEX','CREATE VIEW','ALTER VIEW','DROP VIEW') DEFAULT NULL,
+  `tracking_active` int(1) UNSIGNED NOT NULL DEFAULT 1
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin COMMENT='Database changes tracking for phpMyAdmin';
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `pma__userconfig`
+--
+
+CREATE TABLE `pma__userconfig` (
+  `username` varchar(64) NOT NULL,
+  `timevalue` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  `config_data` text NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin COMMENT='User preferences storage for phpMyAdmin';
+
+--
+-- Dumping data for table `pma__userconfig`
+--
+
+INSERT INTO `pma__userconfig` (`username`, `timevalue`, `config_data`) VALUES
+('root', '2025-10-01 02:38:22', '{\"Console\\/Mode\":\"collapse\"}');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `pma__usergroups`
+--
+
+CREATE TABLE `pma__usergroups` (
+  `usergroup` varchar(64) NOT NULL,
+  `tab` varchar(64) NOT NULL,
+  `allowed` enum('Y','N') NOT NULL DEFAULT 'N'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin COMMENT='User groups with configured menu items';
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `pma__users`
+--
+
+CREATE TABLE `pma__users` (
+  `username` varchar(64) NOT NULL,
+  `usergroup` varchar(64) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin COMMENT='Users and their assignments to user groups';
+
+--
+-- Indexes for dumped tables
+--
+
+--
+-- Indexes for table `pma__bookmark`
+--
+ALTER TABLE `pma__bookmark`
+  ADD PRIMARY KEY (`id`);
+
+--
+-- Indexes for table `pma__central_columns`
+--
+ALTER TABLE `pma__central_columns`
+  ADD PRIMARY KEY (`db_name`,`col_name`);
+
+--
+-- Indexes for table `pma__column_info`
+--
+ALTER TABLE `pma__column_info`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `db_name` (`db_name`,`table_name`,`column_name`);
+
+--
+-- Indexes for table `pma__designer_settings`
+--
+ALTER TABLE `pma__designer_settings`
+  ADD PRIMARY KEY (`username`);
+
+--
+-- Indexes for table `pma__export_templates`
+--
+ALTER TABLE `pma__export_templates`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `u_user_type_template` (`username`,`export_type`,`template_name`);
+
+--
+-- Indexes for table `pma__favorite`
+--
+ALTER TABLE `pma__favorite`
+  ADD PRIMARY KEY (`username`);
+
+--
+-- Indexes for table `pma__history`
+--
+ALTER TABLE `pma__history`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `username` (`username`,`db`,`table`,`timevalue`);
+
+--
+-- Indexes for table `pma__navigationhiding`
+--
+ALTER TABLE `pma__navigationhiding`
+  ADD PRIMARY KEY (`username`,`item_name`,`item_type`,`db_name`,`table_name`);
+
+--
+-- Indexes for table `pma__pdf_pages`
+--
+ALTER TABLE `pma__pdf_pages`
+  ADD PRIMARY KEY (`page_nr`),
+  ADD KEY `db_name` (`db_name`);
+
+--
+-- Indexes for table `pma__recent`
+--
+ALTER TABLE `pma__recent`
+  ADD PRIMARY KEY (`username`);
+
+--
+-- Indexes for table `pma__relation`
+--
+ALTER TABLE `pma__relation`
+  ADD PRIMARY KEY (`master_db`,`master_table`,`master_field`),
+  ADD KEY `foreign_field` (`foreign_db`,`foreign_table`);
+
+--
+-- Indexes for table `pma__savedsearches`
+--
+ALTER TABLE `pma__savedsearches`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `u_savedsearches_username_dbname` (`username`,`db_name`,`search_name`);
+
+--
+-- Indexes for table `pma__table_coords`
+--
+ALTER TABLE `pma__table_coords`
+  ADD PRIMARY KEY (`db_name`,`table_name`,`pdf_page_number`);
+
+--
+-- Indexes for table `pma__table_info`
+--
+ALTER TABLE `pma__table_info`
+  ADD PRIMARY KEY (`db_name`,`table_name`);
+
+--
+-- Indexes for table `pma__table_uiprefs`
+--
+ALTER TABLE `pma__table_uiprefs`
+  ADD PRIMARY KEY (`username`,`db_name`,`table_name`);
+
+--
+-- Indexes for table `pma__tracking`
+--
+ALTER TABLE `pma__tracking`
+  ADD PRIMARY KEY (`db_name`,`table_name`,`version`);
+
+--
+-- Indexes for table `pma__userconfig`
+--
+ALTER TABLE `pma__userconfig`
+  ADD PRIMARY KEY (`username`);
+
+--
+-- Indexes for table `pma__usergroups`
+--
+ALTER TABLE `pma__usergroups`
+  ADD PRIMARY KEY (`usergroup`,`tab`,`allowed`);
+
+--
+-- Indexes for table `pma__users`
+--
+ALTER TABLE `pma__users`
+  ADD PRIMARY KEY (`username`,`usergroup`);
+
+--
+-- AUTO_INCREMENT for dumped tables
+--
+
+--
+-- AUTO_INCREMENT for table `pma__bookmark`
+--
+ALTER TABLE `pma__bookmark`
+  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `pma__column_info`
+--
+ALTER TABLE `pma__column_info`
+  MODIFY `id` int(5) UNSIGNED NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `pma__export_templates`
+--
+ALTER TABLE `pma__export_templates`
+  MODIFY `id` int(5) UNSIGNED NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `pma__history`
+--
+ALTER TABLE `pma__history`
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `pma__pdf_pages`
+--
+ALTER TABLE `pma__pdf_pages`
+  MODIFY `page_nr` int(10) UNSIGNED NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `pma__savedsearches`
+--
+ALTER TABLE `pma__savedsearches`
+  MODIFY `id` int(5) UNSIGNED NOT NULL AUTO_INCREMENT;
+--
+-- Database: `test`
+--
+CREATE DATABASE IF NOT EXISTS `test` DEFAULT CHARACTER SET latin1 COLLATE latin1_swedish_ci;
+USE `test`;
+--
+-- Database: `tutorial_3`
+--
+CREATE DATABASE IF NOT EXISTS `tutorial_3` DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci;
+USE `tutorial_3`;
 COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
