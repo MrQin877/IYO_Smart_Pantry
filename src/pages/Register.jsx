@@ -8,21 +8,21 @@ export default function Register() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [pwd, setPwd] = useState("");
-  const [household, setHousehold] = useState(1);
+  const [household, setHousehold] = useState("NA");
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
   const navigate = useNavigate();
 
   async function handleSubmit(e) {
     e.preventDefault();
-    setErrors({}); // reset old errors
+    setErrors({});
 
     // basic frontend validation before sending to backend
     const newErrors = {};
-    if (!/^[\p{L}\s]{2,50}$/u.test(name)) {
-      newErrors.name = "Only letters and spaces allowed (2–50 chars)";
+    if (!/^[A-Za-z\s]$/.test(name)) {
+      newErrors.name = "User name contain number or punctuation mark";
     }
-    if (!/\S+@\S+\.\S+/.test(email)) {
+    if (!/^[A-Za-z0-9._%+-]+@(gmail|yahoo|outlook)\.com$/.test(email)) {
       newErrors.email = "Invalid email format";
     }
     if (pwd.length < 8) {
@@ -40,13 +40,11 @@ export default function Register() {
         fullName: name,
         email,
         password: pwd,
-        householdSize: household,
+        householdSize: household === "NA" ? null : household,
       });
       if (resp.ok) {
         alert("✅ Registered successfully! Please check your email for the verification code.");
-        // 保存 email 到 localStorage 以便 verify 页面自动读取
         localStorage.setItem("verifyEmail", email);
-        // 跳转 verify 页面
         navigate("/Verify");
       } else {
         alert(resp.error || "Register failed");
@@ -80,49 +78,76 @@ export default function Register() {
             <form onSubmit={handleSubmit} className="login-card">
               <h2>Register</h2>
 
-              <input
-                type="text"
-                placeholder="Full Name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                required
-              />
-              {errors.name && <span className="error-icon">❗</span>}
-              {errors.name && <p className="error-text">{errors.name}</p>}
-              
-              <input
-                type="email"
-                placeholder="Email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-              />
-              {errors.email && <span className="error-icon">❗</span>}
-              {errors.email && <p className="error-text">{errors.email}</p>}
+              {/* Full Name */}
+              <div className={`input-group ${errors.name ? "error" : ""}`}>
+                <input
+                  type="text"
+                  placeholder="Full Name"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  required
+                />
+                {errors.name && (
+                  <span className="error-icon" title={errors.name}>❗</span>
+                )}
+              </div>
 
-              <input
-                type="password"
-                placeholder="Password (min 8 chars)"
-                value={pwd}
-                onChange={(e) => setPwd(e.target.value)}
-                required
-              />
-              {errors.password && <span className="error-icon">❗</span>}
-              {errors.password && <p className="error-text">{errors.password}</p>}
+              {/* Email */}
+              <div className={`input-group ${errors.email ? "error" : ""}`}>
+                <input
+                  type="text"
+                  placeholder="Email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                />
+                {errors.email && (
+                  <span className="error-icon" title={errors.email}>❗</span>
+                )}
+              </div>
 
+              {/* Password */}
+              <div className={`input-group ${errors.password ? "error" : ""}`}>
+                <input
+                  type="password"
+                  placeholder="Password (min 8 chars)"
+                  value={pwd}
+                  onChange={(e) => setPwd(e.target.value)}
+                  required
+                />
+                {errors.password && (
+                  <span className="error-icon" title={errors.password}>❗</span>
+                )}
+              </div>
+
+              {/* Household Size */}
               <div className="household-section">
                 <label>Household Size:</label>
                 <div className="household-control">
-                  <button
-                    type="button"
-                    onClick={() => setHousehold(Math.max(1, household - 1))}
-                  >
-                    −
-                  </button>
-                  <span>{household}</span>
-                  <button type="button" onClick={() => setHousehold(household + 1)}>
-                    +
-                  </button>
+                  {household === "NA" ? (
+                    <>
+                      <span className="household-na">NA</span>
+                      <button type="button" onClick={() => setHousehold(1)}>
+                        +
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (household <= 1) setHousehold("NA");
+                          else setHousehold(household - 1);
+                        }}
+                      >
+                        −
+                      </button>
+                      <span>{household}</span>
+                      <button type="button" onClick={() => setHousehold(household + 1)}>
+                        +
+                      </button>
+                    </>
+                  )}
                 </div>
               </div>
 
