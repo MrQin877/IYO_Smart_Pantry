@@ -12,21 +12,26 @@ if (!$foodID || $newQuantity === null) {
 
 try {
   // Ensure the quantity cannot be negative
-  if ($newQuantity < 0) {
-    respond(['ok' => false, 'error' => 'Quantity cannot be negative'], 400);
-  }
-
   if ($newQuantity == 0) {
+    // ✅ Double-check existence first
+    $check = $pdo->prepare("SELECT 1 FROM foods WHERE foodID = :id");
+    $check->execute([':id' => $foodID]);
+
+    if (!$check->fetch()) {
+      respond(['ok' => false, 'error' => 'Item not found'], 404);
+    }
+
     // ✅ Delete the item completely when quantity reaches zero
     $del = $pdo->prepare("DELETE FROM foods WHERE foodID = :id");
     $del->execute([':id' => $foodID]);
 
-    if ($del->rowCount() > 0) {
+    if ($del->errorCode() === '00000') {
       respond(['ok' => true, 'deleted' => true]);
     } else {
-      respond(['ok' => false, 'error' => 'Item not found or already deleted'], 404);
+      $err = implode(' | ', $del->errorInfo());
+      respond(['ok' => false, 'error' => 'Delete failed: ' . $err], 500);
     }
-  } else {
+  }else {
     // ✅ Update only the quantity
     $stmt = $pdo->prepare("
       UPDATE foods
