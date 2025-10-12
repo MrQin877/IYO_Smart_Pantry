@@ -1,91 +1,91 @@
+// src/pages/Setting.jsx
 import React, { useState, useEffect } from "react";
 import { apiGet, apiPost } from "../lib/api";
 import { clearAuth } from "../utils/auth.js";
+import "./Setting.css";
 
-export default function Settings({ setBanner }) {
-  const [twoFA, setTwoFA] = useState(true);
-  const [visible, setVisible] = useState(false);
-  const [notif, setNotif] = useState(true);
+export default function Settings() {
+  const [twoFA, setTwoFA] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [showPopup, setShowPopup] = useState(false);
 
+  // Load settings when page opens
   useEffect(() => {
-    apiGet("/settings.php").then(resp => {
-      if (resp.ok && resp.settings) {
-        setTwoFA(!!resp.settings.twoFA);
-        setVisible(!!resp.settings.foodVisibility);
-        setNotif(!!resp.settings.notification);
+    async function fetchSettings() {
+      try {
+        const resp = await apiGet("/settings.php");
+        if (resp.ok && resp.settings) {
+          setTwoFA(!!resp.settings.twoFA);
+        }
+      } catch (err) {
+        console.error("Failed to load settings:", err);
+      } finally {
+        setLoading(false);
       }
-    });
+    }
+    fetchSettings();
   }, []);
 
-  async function save() {
+  // Save new setting when toggled
+  async function save(newVal) {
+    setSaving(true);
     try {
-      await apiPost("/settings.php", {
-        twoFA: twoFA ? 1 : 0,
-        foodVisibility: visible ? 1 : 0,
-        notification: notif ? 1 : 0,
-      });
-      setBanner({ kind: "ok", msg: "Settings saved" });
+      const resp = await apiPost("/settings.php", { twoFA: newVal ? 1 : 0 });
+      if (resp.ok) {
+        setShowPopup(true);
+        setTimeout(() => setShowPopup(false), 2500);
+      } else {
+        alert(resp.error || "Save failed");
+      }
     } catch (err) {
-      setBanner({ kind: "err", msg: err.message || "Save failed" });
+      alert("Save failed: " + err.message);
+    } finally {
+      setSaving(false);
     }
   }
 
+  if (loading) return <div className="container">Loading settings...</div>;
+
   return (
-    <div className="container">
-      <div className="card grid" style={{ gridTemplateColumns: "220px 1fr" }}>
-        <div className="side">
-          <button className="tab active">Setting</button>
-          <button
-            className="btn btn-secondary"
-            onClick={() => {
-              clearAuth();
-              location.reload();
-            }}
-          >
-            Logout
-          </button>
-        </div>
-        <div>
-          <h1 className="h1">Privacy & Security</h1>
-          <div className="card" style={{ padding: 16 }}>
-            <div className="row" style={{ justifyContent: "space-between" }}>
-              <div>Two-Factor Verification</div>
-              <button
-                className={`toggle ${twoFA ? "on" : ""}`}
-                onClick={() => setTwoFA(!twoFA)}
-              >
-                <span></span>
-              </button>
-            </div>
-            <div className="row" style={{ justifyContent: "space-between" }}>
-              <div>Food Listing Visibility</div>
-              <button
-                className={`toggle ${visible ? "on" : ""}`}
-                onClick={() => setVisible(!visible)}
-              >
-                <span></span>
-              </button>
-            </div>
-            <div className="row" style={{ justifyContent: "space-between" }}>
-              <div>Notification</div>
-              <button
-                className={`toggle ${notif ? "on" : ""}`}
-                onClick={() => setNotif(!notif)}
-              >
-                <span></span>
-              </button>
-            </div>
+    <div className="container settings-page">
+      {/* ✅ Success Popup */}
+      {showPopup && <div className="popup">✅ Your settings have been saved</div>}
+
+      <div className="settings-content">
+        <h1>Privacy & Security Setting</h1>
+
+        <div className="setting-item">
+          <div className="setting-label">
+            <h3>Two-Factor Verification</h3>
           </div>
-          <div className="actions" style={{ marginTop: 12 }}>
-            <button className="btn btn-secondary" onClick={() => location.reload()}>
-              Cancel
-            </button>
-            <button className="btn btn-primary" onClick={save}>
-              Save
-            </button>
-          </div>
+
+          <label className={`switch ${saving ? "saving" : ""}`}>
+            <input
+              type="checkbox"
+              checked={twoFA}
+              disabled={saving}
+              onChange={async (e) => {
+                const newVal = e.target.checked;
+                setTwoFA(newVal);
+                await save(newVal);
+              }}
+            />
+            <span className="slider"></span>
+          </label>
         </div>
       </div>
+
+      {/* 🚪 Logout button at bottom */}
+      <button
+        className="btn btn-secondary logout-btn"
+        onClick={() => {
+          clearAuth();
+          location.reload();
+        }}
+      >
+        Logout
+      </button>
     </div>
   );
 }
