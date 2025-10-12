@@ -318,7 +318,11 @@ export default function MyFood() {
             {view.length === 0 ? (
               <tr>
                 <td colSpan={7}>
-                  <div className="no-items">No items found. Please adjust your filters.</div>
+                  <div className="no-items">
+                    {appliedFilterCount > 0
+                      ? "No items found. Please adjust your filters."
+                      : "You don’t have any food items yet. Add one to get started."}
+                  </div>
                 </td>
               </tr>
             ) : (

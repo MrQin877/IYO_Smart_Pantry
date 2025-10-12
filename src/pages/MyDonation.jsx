@@ -385,7 +385,11 @@ export default function MyDonation() {
             {rows.length === 0 ? (
               <tr>
                 <td colSpan={8}>
-                  <div className="no-items">No items found. Please adjust your filters.</div>
+                  <div className="no-items">
+                    {appliedFilterCount > 0
+                      ? "No items found. Please adjust your filters."
+                      : "You haven’t made any donations yet. Add one to get started."}
+                  </div>
                 </td>
               </tr>
             ) : (
