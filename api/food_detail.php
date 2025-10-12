@@ -14,28 +14,14 @@ $sql = "
     f.foodID,
     f.foodName,
     f.quantity,
+    f.usedQty,
+    f.reservedQty,
     f.expiryDate,
     f.remark,
-    f.is_plan,                    -- ✅ include this field
+    f.is_plan,
     c.categoryName,
     s.storageName,
-    u.unitName,
-    -- Total reserved quantity
-    COALESCE((
-      SELECT SUM(a.actionQty)
-      FROM actions a
-      WHERE a.foodID = f.foodID
-        AND a.actionTypeID = 'AT2'
-    ), 0) AS reservedQty,
-    -- Latest status (Used / Reserved / Donated / Added)
-    (
-      SELECT at.actionTypeName
-      FROM actions a2
-      JOIN action_types at ON a2.actionTypeID = at.actionTypeID
-      WHERE a2.foodID = f.foodID
-      ORDER BY a2.actionDate DESC
-      LIMIT 1
-    ) AS status
+    u.unitName
   FROM foods f
   LEFT JOIN categories c ON f.categoryID = c.categoryID
   LEFT JOIN storages s ON f.storageID = s.storageID
@@ -49,6 +35,9 @@ try {
     $food = $stmt->fetch(PDO::FETCH_ASSOC);
 
     if ($food) {
+        // ✅ Ensure non-negative availableQty
+        $food['availableQty'] = max(0, (float)$food['availableQty']);
+
         respond(["ok" => true, "food" => $food]);
     } else {
         respond(["ok" => false, "error" => "Food not found"], 404);

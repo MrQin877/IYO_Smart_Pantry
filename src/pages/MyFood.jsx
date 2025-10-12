@@ -45,7 +45,7 @@ export default function MyFood() {
             id: f.foodID,
             foodID: f.foodID,
             name: f.foodName,
-            qty: f.quantity,
+            qty: f.totalQty ?? f.quantity, // ✅ show totalQty (quantity + reservedQty)
             categoryID: f.categoryID,    // <-- store IDs for filtering
             category: f.categoryName,
             storageID: f.storageID,      // <-- store IDs

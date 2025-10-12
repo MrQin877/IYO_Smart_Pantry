@@ -40,7 +40,6 @@ export default function FoodDetailModal({
   };
 
   // 🔹 Handle "Used" click
-// 🔹 Handle "Used" click
   const handleUsed = async () => {
     if (!usedQty || isNaN(usedQty) || usedQty <= 0) {
       alert("Please enter a valid quantity used.");
@@ -49,6 +48,8 @@ export default function FoodDetailModal({
 
     const used = parseFloat(usedQty);
     const current = parseFloat(food.quantity);
+    const reserved = parseFloat(food.reservedQty ?? 0); // ✅ ensure numeric
+
     const newQty = parseFloat((current - used).toFixed(2));
 
     if (newQty < 0) {
@@ -61,39 +62,42 @@ export default function FoodDetailModal({
       return;
     }
 
-    try {
-      // 🟡 Ask for confirmation when fully using up the item
-      if (newQty === 0) {
-        const confirmDelete = confirm(
-          "Quantity will become 0. This will remove the food item. Continue?"
-        );
-        if (!confirmDelete) return;
-      }
+    // ✅ Only confirm deletion if both available and reserved quantities are 0
+    if (newQty === 0 && reserved === 0) {
+      const confirmDelete = confirm(
+        "⚠️ Quantity will become 0. This will remove the food item. Continue?"
+      );
+      if (!confirmDelete) return;
+    }
 
+    try {
       const res = await apiPost("/food_update_used.php", {
         foodID: food.foodID,
-        newQuantity: newQty,
+        usedAmount: used,
       });
 
       if (!res.ok) {
         throw new Error(res.error || "Failed to update quantity.");
       }
 
-      if (res.deleted) {
-        alert("✅ Food item used up and deleted.");
+      // ✅ Show different alerts depending on result
+      if (res.warning) {
+        alert(res.message); // ✅ will show both success + warning
+      } else if (res.deleted) {
+        alert(res.message || "✅ Food item used up and removed.");
       } else if (res.updated) {
-        alert("✅ Food quantity updated successfully.");
-      } else {
-        alert("⚠️ No changes were made.");
+        alert(res.message || "✅ Food quantity updated successfully.");
       }
 
-      onUpdate?.(); // refresh parent list
+      onUpdate?.();
       onClose();
     } catch (err) {
-      console.error("❌ HandleUsed error:", err);
       alert("Failed to update food quantity: " + err.message);
     }
   };
+
+
+
 
 
   const isIntegerUnit = (unitName) => {
@@ -155,8 +159,9 @@ export default function FoodDetailModal({
                 <b>Category:</b> {food.categoryName || "-"}
               </li>
               <li>
-                <b>Quantity:</b> {food.quantity} {food.unitName || ""}
+                <b>Available Quantity:</b> {food.quantity} {food.unitName || ""}
               </li>
+              <li><b>Reserved Quantity:</b> {food.reservedQty ?? 0} {food.unitName || ""}</li>
               <li>
                 <b>Status:</b> {food.is_plan ? "Planned for Meal" : "Normal"}
               </li>
