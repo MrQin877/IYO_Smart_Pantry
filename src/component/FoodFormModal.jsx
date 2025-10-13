@@ -100,7 +100,7 @@ export default function FoodFormModal({
     const pickStorageID =
       init.storageID ||
       storageOpts.find((s) => s.name === init.storageName)?.id ||
-      storageOpts[0]?.id || "";
+      "";
 
     setF((prev) => ({
       // keep user typing if options arrive later
@@ -128,7 +128,6 @@ export default function FoodFormModal({
     f.expiry &&
     (f.categoryID || catOpts.length === 0) &&
     (f.unitID || unitOpts.length === 0) &&
-    (f.storageID || storageOpts.length === 0) &&
     Number(f.qty) > 0;
 
   const step = (d) =>
@@ -299,14 +298,12 @@ export default function FoodFormModal({
               value={f.storageID}
               onChange={(e) => setF({ ...f, storageID: e.target.value })}
             >
-              {storageOpts.length === 0 ? (
-                <option value="">Loading…</option>
-              ) : (
-                storageOpts.map((s) => (
-                  <option key={s.id} value={s.id}>{s.name}</option>
-                ))
-              )}
+              <option value="">None</option>
+              {storageOpts.length === 0 ? null : storageOpts.map((s) => (
+                <option key={s.id} value={s.id}>{s.name}</option>
+              ))}
             </select>
+
           </div>
 
           <div className="form-row">
