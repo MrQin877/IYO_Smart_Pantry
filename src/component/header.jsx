@@ -1,8 +1,22 @@
-import React from "react";
+// src/component/header.jsx
+import React, { useEffect, useState } from "react";
 import { NavLink, Link } from "react-router-dom";
 import "./header.css";
 
 export default function HeaderNav() {
+  const [initial, setInitial] = useState("");
+
+  useEffect(() => {
+    const name = localStorage.getItem("userName");
+    const email = localStorage.getItem("userEmail");
+
+    if (name && name.trim() !== "") {
+      setInitial(name.trim().charAt(0).toUpperCase());
+    } else if (email) {
+      setInitial(email.trim().charAt(0).toUpperCase());
+    }
+  }, []);
+
   return (
     <header className="nav-wrap">
       <div className="nav-pill">
@@ -22,9 +36,17 @@ export default function HeaderNav() {
         {/* right icons */}
         <div className="icons">
           <IconButton title="Notifications">🔔</IconButton>
+          
           <Link to="/account">
-            <IconButton title="Account">🧑</IconButton>
+            {initial ? (
+              <div className="avatar-circle" title="Account">
+                {initial}
+              </div>
+            ) : (
+              <IconButton title="Account">🧑</IconButton>
+            )}
           </Link>
+
           <Link to="/settings">
             <IconButton title="Settings">⚙️</IconButton>
           </Link>
