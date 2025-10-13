@@ -196,7 +196,7 @@ export default function MyFood() {
     }
     setDonateOpen(false);
     setDonateItem(null);
-    alert("Donation published (demo).");
+    alert("Donation Convert Sucessful.");
   }
 
   function handleRefresh() {
@@ -388,6 +388,7 @@ export default function MyFood() {
         onSave={handleAdd}
       />
       <FoodFormModal
+        key={editItem?.foodID || editItem?.id || "edit"}
         open={!!editItem}
         mode="edit"
         initial={editItem || {}}
