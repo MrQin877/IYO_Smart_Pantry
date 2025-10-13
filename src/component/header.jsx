@@ -2,6 +2,7 @@
 import React, { useEffect, useState } from "react";
 import { NavLink, Link } from "react-router-dom";
 import "./header.css";
+import { apiGet } from "../lib/api";
 
 export default function HeaderNav() {
   const [initial, setInitial] = useState("");
@@ -20,14 +21,12 @@ export default function HeaderNav() {
   return (
     <header className="nav-wrap">
       <div className="nav-pill">
-        {/* logo + wordmark */}
         <Link to="/" className="brand" aria-label="IYO Smart Pantry – Home">
-          <img className="logo" src="/logo.svg" alt='IYO Logo' />
+          <img className="logo" src="/logo.svg" alt="IYO Logo" />
         </Link>
 
-        {/* centered navigation */}
-        <nav className="main">
-          <NavItem to="/dashboard">Dashboard</NavItem>
+        <nav className="main" aria-label="Primary">
+          <NavItem to="/">Home</NavItem>
           <NavItem to="/food">Food Center</NavItem>
           <NavItem to="/plan">Plan Meals</NavItem>
           <NavItem to="/analytics">Food Analytics</NavItem>
@@ -53,17 +52,12 @@ export default function HeaderNav() {
         </div>
       </div>
     </header>
-  )
-  };
+  );
+}
 
 function NavItem({ to, children }) {
   return (
-    <NavLink
-      to={to}
-      className={({ isActive }) =>
-        "link" + (isActive ? " active" : "")
-      }
-    >
+    <NavLink to={to} end={to === "/"} className={({ isActive }) => "link" + (isActive ? " active" : "")}>
       {children}
     </NavLink>
   );

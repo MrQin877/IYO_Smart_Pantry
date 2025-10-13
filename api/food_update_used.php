@@ -1,49 +1,100 @@
 <?php
-// api/food_update_used.php
-require_once __DIR__ . "/config.php";
+require __DIR__ . '/config.php';
+session_start();
+
+$userID = $_SESSION['userID'] ?? null;
+if (!$userID) {
+  respond(['ok' => false, 'error' => 'User not logged in'], 401);
+}
 
 $d = json_input();
 $foodID = $d['foodID'] ?? null;
-$newQuantity = $d['newQuantity'] ?? null;
+$usedAmount = $d['usedAmount'] ?? null;
 
-if (!$foodID || $newQuantity === null) {
+if (!$foodID || $usedAmount === null) {
   respond(['ok' => false, 'error' => 'Missing parameters'], 400);
 }
 
 try {
-  // Ensure the quantity cannot be negative
-  if ($newQuantity < 0) {
-    respond(['ok' => false, 'error' => 'Quantity cannot be negative'], 400);
+  // ✅ Fetch food & verify ownership
+  $check = $pdo->prepare("SELECT * FROM foods WHERE foodID = :id AND userID = :userID");
+  $check->execute([':id' => $foodID, ':userID' => $userID]);
+  $food = $check->fetch(PDO::FETCH_ASSOC);
+
+  if (!$food) {
+    respond(['ok' => false, 'error' => 'Food not found or not owned by this user'], 403);
   }
 
-  if ($newQuantity == 0) {
-    // ✅ Delete the item completely when quantity reaches zero
-    $del = $pdo->prepare("DELETE FROM foods WHERE foodID = :id");
-    $del->execute([':id' => $foodID]);
+  // ✅ Current values
+  $currentQty = (float)$food['quantity'];
+  $currentUsed = (float)$food['usedQty'];
+  $currentReserved = (float)$food['reservedQty'];
+  $use = (float)$usedAmount;
 
-    if ($del->rowCount() > 0) {
-      respond(['ok' => true, 'deleted' => true]);
-    } else {
-      respond(['ok' => false, 'error' => 'Item not found or already deleted'], 404);
-    }
-  } else {
-    // ✅ Update only the quantity
-    $stmt = $pdo->prepare("
-      UPDATE foods
-      SET quantity = :qty
-      WHERE foodID = :id
-    ");
-    $stmt->execute([
-      ':qty' => $newQuantity,
-      ':id' => $foodID
+  // ✅ Validation
+  if ($use <= 0) {
+    respond(['ok' => false, 'error' => 'Used amount must be greater than 0'], 400);
+  }
+
+  if ($use > $currentQty) {
+    respond(['ok' => false, 'error' => 'Cannot use more than available quantity'], 400);
+  }
+
+  // ✅ Compute new values
+  $newQty = $currentQty - $use;
+  $newUsed = $currentUsed + $use;
+
+  // ✅ Update foods table
+  $stmt = $pdo->prepare("
+    UPDATE foods
+    SET quantity = :qty,
+        usedQty = :used
+    WHERE foodID = :id AND userID = :userID
+  ");
+  $stmt->execute([
+    ':qty' => $newQty,
+    ':used' => $newUsed,
+    ':id' => $foodID,
+    ':userID' => $userID
+  ]);
+
+  // ✅ Logic for result cases
+  if ($newQty <= 0 && $currentReserved > 0) {
+    // ⚠️ All available used, but reserved items remain
+    respond([
+      'ok' => true,
+      'updated' => true,
+      'warning' => true,
+      'message' => '✅ Quantity updated successfully. ⚠️ All available stock used, but reserved items are still pending.',
+      'newQuantity' => $newQty,
+      'newUsedQty' => $newUsed,
+      'reservedQty' => $currentReserved
     ]);
-
-    if ($stmt->rowCount() > 0) {
-      respond(['ok' => true, 'updated' => 1, 'newQuantity' => $newQuantity]);
-    } else {
-      respond(['ok' => false, 'error' => 'Food item not found or not updated'], 404);
-    }
   }
-} catch (PDOException $e) {
-  respond(['ok' => false, 'error' => 'Database error: ' . $e->getMessage()], 500);
+
+  if ($newQty <= 0 && $currentReserved <= 0) {
+    // ✅ Fully used, can be deleted
+    respond([
+      'ok' => true,
+      'updated' => true,
+      'deleted' => true,
+      'message' => '✅ Food item fully used and removed.',
+      'newQuantity' => 0,
+      'newUsedQty' => $newUsed,
+      'reservedQty' => 0
+    ]);
+  }
+
+  // ✅ Normal update
+  respond([
+    'ok' => true,
+    'updated' => true,
+    'message' => '✅ Food quantity updated successfully.',
+    'newQuantity' => $newQty,
+    'newUsedQty' => $newUsed,
+    'reservedQty' => $currentReserved
+  ]);
+
+} catch (Throwable $e) {
+  respond(['ok' => false, 'error' => $e->getMessage()], 500);
 }

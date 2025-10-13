@@ -1,17 +1,24 @@
 <?php
 require __DIR__ . '/config.php';
 
+session_start();
+$userID = $_SESSION['userID'] ?? null;
+
+if (!$userID) {
+  respond(['ok' => false, 'error' => 'User not logged in'], 401);
+}
+
 $d = json_input();
-$userID     = $d['userID']     ?? null;
-$categoryID = $d['categoryID'] ?? null;
-$storageType = $d['status']    ?? null; // use 'status' field as storage filter
-$pickupArea = $d['pickupArea'] ?? null;
+$categoryID  = $d['categoryID'] ?? null;
+$storageType = $d['status']     ?? null;
 
 $sql = "
   SELECT 
     f.foodID,
     f.foodName,
     f.quantity,
+    f.reservedQty,
+    (f.quantity + f.reservedQty) AS totalQty,  -- ✅ total available + reserved
     f.expiryDate,
     f.is_plan,
     f.storageID,
@@ -33,25 +40,22 @@ $sql = "
 ";
 
 $params = [];
-if ($userID)     { $sql .= " AND f.userID = ?";     $params[] = $userID; }
-if ($categoryID) { $sql .= " AND f.categoryID = ?"; $params[] = $categoryID; }
-if ($storageType) { $sql .= " AND s.storageName LIKE ?"; $params[] = "%$storageType%"; }
-if ($pickupArea)  { $sql .= " AND s.storageName LIKE ?"; $params[] = "%$pickupArea%"; }
 
-// Optional: ignore planned items
+if ($userID)      { $sql .= " AND f.userID = ?"; $params[] = $userID; }
+if ($categoryID)  { $sql .= " AND f.categoryID = ?"; $params[] = $categoryID; }
+if ($storageType) { $sql .= " AND s.storageName LIKE ?"; $params[] = "%$storageType%"; }
+
+
+// ✅ Only show items with totalQty > 0
+$sql .= " AND (f.quantity + f.reservedQty) > 0";
 
 $sql .= " ORDER BY f.expiryDate ASC";
 
 try {
-    $stmt = $pdo->prepare($sql);
-    $stmt->execute($params);
-    $foods = $stmt->fetchAll(PDO::FETCH_ASSOC);
-    respond(['ok' => true, 'foods' => $foods]);
+  $stmt = $pdo->prepare($sql);
+  $stmt->execute($params);
+  $foods = $stmt->fetchAll(PDO::FETCH_ASSOC);
+  respond(['ok' => true, 'foods' => $foods]);
 } catch (Throwable $e) {
-    respond([
-        'ok' => false, 
-        'error' => $e->getMessage(), 
-        'sql' => $sql, 
-        'params' => $params
-    ], 500);
+  respond(['ok' => false, 'error' => $e->getMessage()], 500);
 }

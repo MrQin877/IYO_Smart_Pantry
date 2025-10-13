@@ -332,7 +332,7 @@ input:-webkit-autofill{
 /* Keep +Add aligned right and same height as inputs */
 .add-slot{
   height: 42px;
-  padding: 0 16px;
+  padding: 0 10px;
   border-radius: 10px;
   background: var(--green);
   color: #fff;
@@ -457,4 +457,77 @@ tr:hover.planned-row {
   box-shadow: 0 2px 6px rgba(255, 204, 0, 0.4);
 }
 
+
+.bubble {
+  display: inline-block;
+  margin: 2px 4px;
+  padding: 4px 8px;
+  background: #dfe7d3;
+  border-radius: 12px;
+  font-size: 0.9rem;
+}
+
+.slot-container {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: #f9fdfb;
+  border: 1px solid #d6f5dc;
+  border-radius: 12px;
+  padding: 8px 10px;
+  min-width: 160px;
+}
+
+.slot-item {
+  background: #dfe7d3;
+  border-radius: 10px;
+  padding: 6px 10px;
+  font-size: 0.9rem;
+  color: #ffffff;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.slot-date {
+  font-weight: 600;
+  color: #292b2a;
+}
+
+.slot-time {
+  font-size: 0.88rem;
+  color: #292b2a;
+}
+
+
+
+th.sortable {
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+}
+
+th.sortable span {
+  font-size: 0.9em;
+  margin-left: 4px;
+  opacity: 0.6;
+  transition: opacity 0.2s;
+}
+
+th.sortable:hover span {
+  opacity: 1;
+}
+
+.cd-mask{position:fixed;inset:0;background:rgba(0,0,0,.35);display:flex;align-items:center;justify-content:center;z-index:60}
+.cd-panel{background:#fff;border-radius:12px;min-width:320px;max-width:520px;width:92%;box-shadow:0 20px 40px rgba(0,0,0,.18);overflow:hidden}
+.cd-head{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid #eee}
+.cd-title{margin:0;font-size:18px}
+.cd-x{background:transparent;border:none;font-size:18px;cursor:pointer}
+.cd-body{padding:14px 16px}
+.cd-msg{margin:0;white-space:pre-wrap}
+.cd-actions{display:flex;gap:10px;justify-content:flex-end;padding:12px 16px;border-top:1px solid #eee}
+.btn{border:none;border-radius:10px;padding:10px 16px;font-weight:700;cursor:pointer}
+.btn.primary{background:#7E9F62;color:#fff}
+.btn.secondary{background:#f4f6f2;color:#394836}
+.btn.danger{background:#d92d20;color:#fff}
 
