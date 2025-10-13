@@ -89,7 +89,6 @@ export default function MyDonation() {
               contact: pick(d, ["contact"], "-"),
               note: pick(d, ["note", "remarks"], "-"),
               slots,
-              donorName: pick(d, ["donorName", "fullName", "name", "donor_name"], "-"),
             };
           });
 
@@ -415,8 +414,8 @@ export default function MyDonation() {
                 Pickup <span>{sort.key === "pickup" ? (sort.dir === "asc" ? "↑" : "↓") : "↕"}</span>
               </th>
               <th>Availability</th>
-              <th onClick={() => toggleSort("donorName")} className="sortable">
-                Donor <span>{sort.key === "donorName" ? (sort.dir === "asc" ? "↑" : "↓") : "↕"}</span>
+              <th onClick={() => toggleSort("contact")} className="sortable">
+                Contact <span>{sort.key === "contact" ? (sort.dir === "asc" ? "↑" : "↓") : "↕"}</span> {/* ✅ renamed column */}
               </th>
               <th />
             </tr>
@@ -442,9 +441,9 @@ export default function MyDonation() {
                     {r.qty} {r.unit}
                   </td>
                   <td>{formatDate(r.expiry)}</td>
-                  <td>{r.pickup}</td>
+                  <td style={{ minWidth: "121px" }}>{r.pickup}</td>
 
-                  <td style={{ minWidth: "189px" }}>
+                  <td style={{ minWidth: "224px" }}>
                     {r.slots && r.slots.length > 0 ? (
                       <div className="slot-container">
                         {r.slots.map((s, idx) => {
@@ -481,7 +480,7 @@ export default function MyDonation() {
                     )}
                   </td>
 
-                  <td>{r.donorName || "-"}</td>
+                  <td style={{ minWidth: "118px" }}>{r.contact || "-"}</td>
 
                   <td className="row-actions">
                     <button

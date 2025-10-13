@@ -21,7 +21,7 @@ $sql = "
   SELECT 
     d.donationID,
     d.quantity AS donationQuantity,
-    d.contact,
+    d.contact,                              -- ✅ donor contact number
     d.note,
     d.pickupLocation,
     f.foodName,
@@ -29,13 +29,11 @@ $sql = "
     f.expiryDate,
     c.categoryName,
     un.unitName,
-    u.fullName AS donorName,
     GROUP_CONCAT(pt.pickTime SEPARATOR '|') AS availabilityTimes
   FROM donations d
   LEFT JOIN foods f ON d.foodID = f.foodID
   LEFT JOIN categories c ON f.categoryID = c.categoryID
   LEFT JOIN units un ON f.unitID = un.unitID
-  LEFT JOIN users u ON d.userID = u.userID
   LEFT JOIN pickup_times pt ON d.donationID = pt.donationID
   WHERE d.userID = :userID
 ";
