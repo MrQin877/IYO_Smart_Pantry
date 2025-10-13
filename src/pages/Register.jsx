@@ -46,7 +46,7 @@ export default function Register() {
       if (resp.ok) {
         alert("✅ Registered successfully! Please check your email for the verification code.");
         localStorage.setItem("verifyEmail", email);
-        navigate("/Verify");
+        navigate("/Verify?context=register");
       } else {
         alert(resp.error || "Register failed");
       }

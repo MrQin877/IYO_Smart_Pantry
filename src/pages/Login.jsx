@@ -14,10 +14,16 @@ export default function Login() {
     try {
       const resp = await apiPost("/login.php", { email, password: pwd });
       if (resp.ok) {
-        localStorage.setItem("userID", resp.userID);
-        localStorage.setItem("userName", resp.fullName);
-        alert("Login successful!");
-        navigate("/dashboard");
+        if (resp.needVerify) {
+          localStorage.setItem("verifyEmail", email);
+          alert("🔒 Two-Factor Authentication required. Check your email for the code.");
+          navigate("/Verify?context=login");
+        } else {
+          localStorage.setItem("userID", resp.userID);
+          localStorage.setItem("userName", resp.fullName);
+          alert("✅ Login successful!");
+          navigate("/Dashboard");
+        }
       } else {
         alert(resp.error || "Login failed");
       }

@@ -1,6 +1,6 @@
 // src/pages/Verify.jsx
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { apiPost } from "../lib/api";
 import "./Verify.css";
 
@@ -9,6 +9,10 @@ export default function Verify() {
   const [code, setCode] = useState("");
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
+  
+  const params = new URLSearchParams(location.search);
+  const context = params.get("context") || "register"; // default register
 
   // 页面加载时自动读取本地保存的邮箱
   useEffect(() => {
@@ -22,9 +26,16 @@ export default function Verify() {
     try {
       const resp = await apiPost("/verify_2fa.php", { email, code });
       if (resp.ok) {
-        alert("✅ Verification successful! You can now log in.");
+        alert("✅ Verification successful!");
         localStorage.removeItem("verifyEmail");
-        navigate("/login");
+
+        if (context === "login") {
+          // 2FA login verification done → go to dashboard
+          navigate("/dashboard");
+        } else {
+          // Registration verification done → go to login page
+          navigate("/login");
+        }
       } else {
         alert(resp.error || "Verification failed");
       }
@@ -98,11 +109,14 @@ export default function Verify() {
           <button
             type="button"
             className="link-btn"
-            onClick={() => navigate("/login")}
+            onClick={() =>
+              navigate(context === "login" ? "/dashboard" : "/login")
+            }
           >
-            Login
+            {context === "login" ? "Go to Dashboard" : "Login"}
           </button>
         </p>
+
       </form>
     </div>
   );
