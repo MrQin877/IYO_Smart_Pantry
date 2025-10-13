@@ -147,14 +147,24 @@ export default function MyFood() {
 }
 
   function handleUpdate(data) {
+    // ✅ Find the edited item and its storage name
+    const prevItem = editItem;
+    const matchedStorage =
+      allFoods.find(f => f.storageID === data.storageID)?.storage ||
+      prevItem.storage || "-";
+
     const updated = {
-      ...editItem,
+      ...prevItem,
       ...data,
+      storageID: data.storageID,
+      storage: data.storageName || matchedStorage, // ✅ ensure the new storage name shows instantly
       status: new Date(data.expiry) < new Date() ? "Expired" : "Available",
     };
-    setRows((prev) => prev.map((r) => (r.id === updated.id ? updated : r)));
+
+    setRows(prev => prev.map(r => (r.id === updated.id ? updated : r)));
     setEditItem(null);
   }
+
 
   // runs after user confirms
   async function reallyDelete(foodID) {

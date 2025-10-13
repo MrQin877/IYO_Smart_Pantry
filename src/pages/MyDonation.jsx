@@ -413,10 +413,8 @@ export default function MyDonation() {
               <th onClick={() => toggleSort("pickup")} className="sortable">
                 Pickup <span>{sort.key === "pickup" ? (sort.dir === "asc" ? "↑" : "↓") : "↕"}</span>
               </th>
+              <th>Contact </th>
               <th>Availability</th>
-              <th onClick={() => toggleSort("contact")} className="sortable">
-                Contact <span>{sort.key === "contact" ? (sort.dir === "asc" ? "↑" : "↓") : "↕"}</span> {/* ✅ renamed column */}
-              </th>
               <th />
             </tr>
           </thead>
@@ -443,6 +441,7 @@ export default function MyDonation() {
                   <td>{formatDate(r.expiry)}</td>
                   <td style={{ minWidth: "121px" }}>{r.pickup}</td>
 
+                  <td style={{ minWidth: "118px" }}>{r.contact || "-"}</td>
                   <td style={{ minWidth: "224px" }}>
                     {r.slots && r.slots.length > 0 ? (
                       <div className="slot-container">
@@ -480,7 +479,7 @@ export default function MyDonation() {
                     )}
                   </td>
 
-                  <td style={{ minWidth: "118px" }}>{r.contact || "-"}</td>
+                  
 
                   <td className="row-actions">
                     <button
