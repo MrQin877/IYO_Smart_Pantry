@@ -347,13 +347,25 @@ export default function MyDonation() {
       const res = await apiPost("/donation_update.php", payload);
       if (!res?.ok) throw new Error(res?.error || "Update failed");
 
-      // Optimistic UI update
-      setRows((prev) =>
-        prev.map((r) => ((r.donationID || r.id) === id ? { ...r, address, slots } : r))
-      );
-      setAllDonations((prev) =>
-        prev.map((r) => ((r.donationID || r.id) === id ? { ...r, address, slots } : r))
-      );
+    // ✅ Refresh donation list immediately
+      const fresh = await fetch(`${import.meta.env.VITE_API_BASE}/donation_list.php`).then((r) => r.json());
+      if (fresh.ok && Array.isArray(fresh.data)) {
+        const mapped = fresh.data.map((d) => ({
+          id: d.donationID,
+          donationID: d.donationID,
+          name: d.foodName,
+          category: d.categoryName,
+          qty: Number(d.donationQuantity) || 0,
+          unit: d.unitName,
+          expiry: d.expiryDate,
+          pickup: d.pickupLocation,
+          contact: d.contact,
+          note: d.note,
+          slots: d.availabilityTimes ? d.availabilityTimes.split("|") : [],
+        }));
+        setRows(mapped);
+        setAllDonations(mapped);
+      }
 
       setEditOpen(false);
       setEditItem(null);
