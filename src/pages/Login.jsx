@@ -15,6 +15,7 @@ export default function Login() {
       const resp = await apiPost("/login.php", { email, password: pwd });
       if (resp.ok) {
         localStorage.setItem("userID", resp.userID);
+        localStorage.setItem("userName", resp.fullName);
         alert("Login successful!");
         navigate("/dashboard");
       } else {

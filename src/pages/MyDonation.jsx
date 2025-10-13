@@ -369,6 +369,44 @@ export default function MyDonation() {
       console.error(e);
       alert(e.message || "Server error during update.");
     }
+  async function handlePublish(payload) {
+    setOpenAdd(false);
+    setLoading(true);
+
+    try {
+      // ✅ Call your backend to create donation first (if not done inside modal)
+      // await apiPost("/donation_add.php", payload);
+
+      // ✅ Then re-fetch the full list so pickup times are included
+      const res = await fetch(`${import.meta.env.VITE_API_BASE}/donation_list.php`).then(r => r.json());
+      if (res.ok && Array.isArray(res.data)) {
+        const mapped = res.data.map((d) => ({
+          id: d.donationID,
+          donationID: d.donationID,
+          name: d.foodName,
+          category: d.categoryName,
+          qty: Number(d.donationQuantity) || 0,
+          unit: d.unitName,
+          expiry: d.expiryDate,
+          pickup: d.pickupLocation,
+          donorName: d.donorName,
+          slots: d.availabilityTimes ? d.availabilityTimes.split("|") : [],
+        }));
+        setRows(mapped);
+        setAllDonations(mapped);
+      }
+    } catch (err) {
+      console.error("Failed to refresh after publish:", err);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+
+  function handleUpdate(updated) {
+    setRows((prev) => prev.map((r) => (r.id === updated.id ? { ...r, ...updated } : r)));
+    setAllDonations((prev) => prev.map((r) => (r.id === updated.id ? { ...r, ...updated } : r)));
+    setEditItem(null);
   }
 
   // ---------- Render ----------
@@ -409,10 +447,8 @@ export default function MyDonation() {
               <th onClick={() => toggleSort("pickup")} className="sortable">
                 Pickup <span>{sort.key === "pickup" ? (sort.dir === "asc" ? "↑" : "↓") : "↕"}</span>
               </th>
+              <th>Contact </th>
               <th>Availability</th>
-              <th onClick={() => toggleSort("contact")} className="sortable">
-                Contact <span>{sort.key === "contact" ? (sort.dir === "asc" ? "↑" : "↓") : "↕"}</span>
-              </th>
               <th />
             </tr>
           </thead>
@@ -422,7 +458,7 @@ export default function MyDonation() {
               <tr>
                 <td colSpan={8}>
                   <div className="no-items">
-                    {Object.values(filters).filter((v) => v && String(v).trim() !== "").length > 0
+                    {appliedFilterCount > 0
                       ? "No items found. Please adjust your filters."
                       : "You haven’t made any donations yet. Add one to get started."}
                   </div>
@@ -439,6 +475,7 @@ export default function MyDonation() {
                   <td>{formatDate(r.expiry)}</td>
                   <td style={{ minWidth: "121px" }}>{r.pickup}</td>
 
+                  <td style={{ minWidth: "118px" }}>{r.contact || "-"}</td>
                   <td style={{ minWidth: "224px" }}>
                     {r.slots && r.slots.length > 0 ? (
                       <div className="slot-container">
@@ -473,7 +510,7 @@ export default function MyDonation() {
                     )}
                   </td>
 
-                  <td style={{ minWidth: "118px" }}>{r.contact || "-"}</td>
+                  
 
                   <td className="row-actions">
                     <button

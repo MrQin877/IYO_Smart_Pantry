@@ -2,9 +2,11 @@
 export const API = import.meta.env.VITE_API_BASE;
 
 export async function apiGet(path, init = {}) {
-  const res = await fetch(`${API}${path}`, { credentials: 'include', ...init });
-  const text = await res.text();
-  let json;
+  const res = await fetch(`${API}${path}`, { 
+    method: 'GET',
+    credentials: 'include', ...init });
+    const text = await res.text();
+    let json;
   try { json = JSON.parse(text); } catch {
     throw new Error(`Non-JSON response: ${text.slice(0,200)}`);
   }
