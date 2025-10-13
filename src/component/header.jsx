@@ -47,7 +47,7 @@ export default function HeaderNav() {
           </Link>
 
           <Link to="/settings">
-            <IconButton title="Settings">⚙️</IconButton>
+            <IconButton title="Settings">⚙</IconButton>
           </Link>
         </div>
       </div>
@@ -60,5 +60,13 @@ function NavItem({ to, children }) {
     <NavLink to={to} end={to === "/"} className={({ isActive }) => "link" + (isActive ? " active" : "")}>
       {children}
     </NavLink>
+  );
+}
+
+function IconButton({ children, title }) {
+  return (
+    <button className="icon" title={title} aria-label={title}>
+      {children}
+    </button>
   );
 }
