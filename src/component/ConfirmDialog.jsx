@@ -5,7 +5,7 @@ export default function ConfirmDialog({
   open,
   title = "Confirm",
   message = "",
-  confirmText = "Cancel",
+  confirmText = "Confirm",
   cancelText = "Cancel",
   danger = false,
   busy = false,

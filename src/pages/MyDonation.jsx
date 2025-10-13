@@ -1,10 +1,25 @@
-// src/pages/MyDonation.jsx
 import { useState, useEffect, useMemo } from "react";
 import AddDonationModal from "../component/AddDonationModal.jsx";
 import EditDonationModal from "../component/EditDonationModal.jsx";
 import FilterModal from "../component/FilterModal.jsx";
 import ConfirmDialog from "../component/ConfirmDialog.jsx";
 import { apiPost } from "../lib/api";
+
+// If your backend wants "dd/mm/yyyy, HH:MM - HH:MM (note)" per slot
+function slotToServerString({ date, start, end, note }) {
+  const d = new Date(date);
+  if (isNaN(d)) return "";
+  const dd = String(d.getDate()).padStart(2, "0");
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const yyyy = d.getFullYear();
+  return `${dd}/${mm}/${yyyy}, ${start} - ${end}${note ? ` (${note})` : ""}`;
+}
+
+// helpers
+function formatDate(iso) {
+  const d = new Date(iso);
+  return isNaN(d) ? (iso || "-") : d.toLocaleDateString("en-GB");
+}
 
 export default function MyDonation() {
   const [rows, setRows] = useState([]);
@@ -15,12 +30,11 @@ export default function MyDonation() {
   const [delBusy, setDelBusy] = useState(false);
   const [pendingDel, setPendingDel] = useState(null); // { id, name, slotsCount }
   const [openAdd, setOpenAdd] = useState(false);
-  // at top of the component:
+
   const [editOpen, setEditOpen] = useState(false);
   const [editItem, setEditItem] = useState(null);
   const [showFilter, setShowFilter] = useState(false);
   const [page, setPage] = useState(1);
-
 
   const [filters, setFilters] = useState({
     category: "",
@@ -31,7 +45,9 @@ export default function MyDonation() {
 
   const [sort, setSort] = useState({ key: "name", dir: "asc" });
   const toggleSort = (key) =>
-    setSort((s) => (s.key === key ? { key, dir: s.dir === "asc" ? "desc" : "asc" } : { key, dir: "asc" }));
+    setSort((s) =>
+      s.key === key ? { key, dir: s.dir === "asc" ? "desc" : "asc" } : { key, dir: "asc" }
+    );
 
   // small helper: read first existing key from possible keys
   const pick = (obj, keys = [], fallback = "") => {
@@ -42,33 +58,26 @@ export default function MyDonation() {
     return fallback;
   };
 
-  // normalize incoming donation rows from API (tolerant to different key names)
+  // load donations
   useEffect(() => {
     (async () => {
       setLoading(true);
       try {
         const res = await fetch(`${import.meta.env.VITE_API_BASE}/donation_list.php`).then((r) => r.json());
         if (res.ok && Array.isArray(res.data)) {
-          console.log("✅ Donations fetched:", res.data); // ✅ FIXED
-
           const mapped = res.data.map((d) => {
             const availability =
               pick(d, ["availabilityTimes", "availabilityTime", "availableTime", "availability", "availability_times", "availability_time", "pickTime", "pick_time"], "");
-            // build slots array of strings (each string like "YYYY-MM-DD, HH:MM - HH:MM" or custom text)
             let slots = [];
             if (Array.isArray(availability)) {
               slots = availability
                 .map((a) => (typeof a === "string" ? a.trim() : pick(a, ["pickTime", "pick_time", "pickTimeText", "pickTimeTxt"], "").trim()))
                 .filter(Boolean);
             } else if (typeof availability === "string" && availability.trim() !== "") {
-              // if backend stores multiple with '|' delimiter
-              if (availability.includes("|")) {
-                slots = availability.split("|").map((s) => s.trim()).filter(Boolean);
-              } else {
-                slots = [availability.trim()];
-              }
+              slots = availability.includes("|")
+                ? availability.split("|").map((s) => s.trim()).filter(Boolean)
+                : [availability.trim()];
             } else if (Array.isArray(d.pickup_times) && d.pickup_times.length) {
-              // fallback if API returned pickup_times as array of objects
               slots = d.pickup_times
                 .map((p) => (typeof p === "string" ? p : pick(p, ["pickTime", "pick_time"], "")))
                 .filter(Boolean);
@@ -105,8 +114,7 @@ export default function MyDonation() {
     })();
   }, []);
 
-  // helpers to normalize slots if you sometimes store strings like
-  // "2025-02-10, 11:00-12:00" and sometimes objects
+  // normalize slots if sometimes strings like "2025-02-10, 11:00-12:00"
   const normalizeSlots = (slots = []) =>
     slots.map((s) => {
       if (typeof s === "object") return s; // already normalized
@@ -123,18 +131,24 @@ export default function MyDonation() {
     });
     setDelOpen(true);
   }
+
   async function doDeleteDonation() {
     if (!pendingDel) return;
     setDelBusy(true);
 
-    // optimistic UI
-    const prev = rows;
-    setRows(prev.filter(r => (r.id || r.donationID) !== pendingDel.id));
+    // optimistic UI (keep copy for rollback)
+    const prev = [...rows];
+    setRows(prev.filter((r) => (r.id || r.donationID) !== pendingDel.id));
 
     try {
-      const res = await apiPost("/donation_delete.php", { donationID: pendingDel.id });
+      const userID = localStorage.getItem("userID");
+      if (!userID) throw new Error("Not logged in (missing userID).");
+
+      // Use the endpoint that exists in your backend
+      // const res = await apiPost("/donation_cancel.php", { userID, donationID: pendingDel.id });
+      const res = await apiPost("/donation_cancel.php", { userID, donationID: pendingDel.id });
+
       if (!res?.ok) throw new Error(res?.error || "Delete failed");
-      // success → also OK if pickup_times removed by backend
     } catch (e) {
       alert(e.message || "Delete failed. Reverting.");
       // rollback
@@ -147,36 +161,35 @@ export default function MyDonation() {
   }
 
   function parsePickupToAddress(pickup = "") {
-  const lines = String(pickup)
-    .split(/\r?\n/)
-    .map((s) => s.trim())
-    .filter(Boolean);
+    const lines = String(pickup)
+      .split(/\r?\n/)
+      .map((s) => s.trim())
+      .filter(Boolean);
 
-  let label = "", line1 = "", line2 = "", postcode = "", city = "", state = "", country = "";
+    let label = "", line1 = "", line2 = "", postcode = "", city = "", state = "", country = "";
 
-  // Line 1: "Label, Line 1"
-  if (lines[0]) {
-    const parts = lines[0].split(",").map((s) => s.trim());
-    label = parts.shift() || "";
-    line1 = parts.join(", ");
+    // Line 1: "Label, Line 1"
+    if (lines[0]) {
+      const parts = lines[0].split(",").map((s) => s.trim());
+      label = parts.shift() || "";
+      line1 = parts.join(", ");
+    }
+
+    // Line 2
+    if (lines[1]) line2 = lines[1];
+
+    // Line 3: "postcode, city, state, country"
+    if (lines[2]) {
+      const parts = lines[2].split(",").map((s) => s.trim());
+      postcode = parts[0] || "";
+      city = parts[1] || "";
+      state = parts[2] || "";
+      country = parts.slice(3).join(", ") || "";
+    }
+
+    return { label, line1, line2, postcode, city, state, country };
   }
 
-  // Line 2
-  if (lines[1]) line2 = lines[1];
-
-  // Line 3: "postcode, city, state, country"
-  if (lines[2]) {
-    const parts = lines[2].split(",").map((s) => s.trim());
-    postcode = parts[0] || "";
-    city = parts[1] || "";
-    state = parts[2] || "";
-    country = parts.slice(3).join(", ") || "";
-  }
-
-  return { label, line1, line2, postcode, city, state, country };
-}
-
-  
   // sorting (client-side)
   const sortedRows = useMemo(() => {
     const copy = [...rows];
@@ -207,20 +220,13 @@ export default function MyDonation() {
     return copy;
   }, [rows, sort]);
 
-  // small date helper
-  const parseDateOrNull = (v) => {
-    if (!v) return null;
-    const d = new Date(v);
-    return isNaN(d) ? null : d;
-  };
-
+  // filtering
   function applyFilters(overrideFilters = null) {
     const f = overrideFilters ?? filters;
 
     const cat = (f.category ?? "").trim();      // categoryID
     const storage = (f.storageID ?? "").trim(); // storageID
 
-    // Helper → consistent local YYYY-MM-DD (avoid timezone shift)
     const fmt = (d) => {
       const offset = d.getTimezoneOffset();
       const local = new Date(d.getTime() - offset * 60000);
@@ -232,21 +238,16 @@ export default function MyDonation() {
     const today = new Date();
 
     if (f.expiryRange === "today") {
-      // ✅ Only today’s date
       from = fmt(today);
       to = fmt(today);
-    } 
-    else if (f.expiryRange === "3days") {
-      // ✅ Tomorrow + next 2 days = total 3 (e.g., 10–12 if today is 9)
+    } else if (f.expiryRange === "3days") {
       const start = new Date(today);
       start.setDate(today.getDate() + 1);
       const end = new Date(today);
       end.setDate(today.getDate() + 3);
       from = fmt(start);
       to = fmt(end);
-    } 
-    else if (f.expiryRange === "week") {
-      // ✅ Monday → Sunday of this week (e.g., 6–12 Oct)
+    } else if (f.expiryRange === "week") {
       const day = today.getDay(); // 0 (Sun) – 6 (Sat)
       const diffToMonday = day === 0 ? -6 : 1 - day;
       const start = new Date(today);
@@ -255,40 +256,31 @@ export default function MyDonation() {
       end.setDate(start.getDate() + 6);
       from = fmt(start);
       to = fmt(end);
-    } 
-    else if (f.expiryRange === "month") {
+    } else if (f.expiryRange === "month") {
       const start = new Date(today.getFullYear(), today.getMonth(), 1);
       const end = new Date(today.getFullYear(), today.getMonth() + 1, 0);
       from = fmt(start);
       to = fmt(end);
-    } 
-    else if (f.expiryRange === "nextmonth") {
+    } else if (f.expiryRange === "nextmonth") {
       const start = new Date(today.getFullYear(), today.getMonth() + 1, 1);
       const end = new Date(today.getFullYear(), today.getMonth() + 2, 0);
       from = fmt(start);
       to = fmt(end);
-    } 
-    else {
+    } else {
       from = (f.expiryFrom ?? "").trim();
       to = (f.expiryTo ?? "").trim();
     }
 
     const filtered = allDonations.filter((r) => {
-      // ✅ Category match
       if (cat && r.category !== getCategoryName(cat)) return false;
       if (storage && r.storageID !== storage) return false;
 
-      // ✅ Expiry date match
       const exp = fmt(new Date(r.expiry));
       if (from && exp < from) return false;
       if (to && exp > to) return false;
       return true;
-
-      return true;
     });
 
-    console.log("✅ Date Range:", from, "→", to);
-    console.log("✅ Filtered results:", filtered);
     setRows(filtered);
     setPage(1);
     setShowFilter(false);
@@ -302,45 +294,81 @@ export default function MyDonation() {
       C4: "Vegetables",
       C5: "Dairy",
       C6: "Canned Food",
-      C7: "Other"
+      C7: "Other",
     };
     return map[categoryID] || "";
   }
 
-
-
-  // applied filter count for badge
-  const appliedFilterCount = Object.values(filters).filter((v) => v && String(v).trim() !== "").length;
-
-  async function handleDeleteDonation(donationID) {
-    if (!window.confirm("Cancel this donation?")) return;
-    const prev = rows;
-    const next = rows.filter((r) => (r.donationID || r.id) !== donationID);
-
-    setRows(next);
-    setDeletingId(donationID);
+  async function handlePublish(payload) {
+    setOpenAdd(false);
+    setLoading(true);
 
     try {
+      // await apiPost("/donation_add.php", payload); // if you post from modal instead, keep disabled
 
-      const res = await apiPost("/donation_cancel.php", {
-        donationID,             // <-- the donation to cancel
-      });
-
-      if (!res?.ok) {
-        throw new Error(res?.error || "Delete failed");
+      // Re-fetch
+      const res = await fetch(`${import.meta.env.VITE_API_BASE}/donation_list.php`).then((r) => r.json());
+      if (res.ok && Array.isArray(res.data)) {
+        const mapped = res.data.map((d) => ({
+          id: d.donationID,
+          donationID: d.donationID,
+          name: d.foodName,
+          category: d.categoryName,
+          qty: Number(d.donationQuantity) || 0,
+          unit: d.unitName,
+          expiry: d.expiryDate,
+          pickup: d.pickupLocation,
+          donorName: d.donorName,
+          slots: d.availabilityTimes ? d.availabilityTimes.split("|") : [],
+        }));
+        setRows(mapped);
+        setAllDonations(mapped);
       }
-
-      // Optional: if you want to refresh other views (e.g. food list), call a prop or trigger a reload here
-      // onRefreshFoods?.();
-
     } catch (err) {
-      alert(err.message || "Delete failed. Reverting.");
-      setRows(prev);
+      console.error("Failed to refresh after publish:", err);
     } finally {
-      setDeletingId(null);
+      setLoading(false);
     }
   }
 
+  // REAL update function — calls API then updates UI
+  async function handleUpdateDonation({ id, address, slots }) {
+    const userID = localStorage.getItem("userID");
+    if (!userID) {
+      alert("Not logged in (missing userID).");
+      return;
+    }
+
+    // Pick ONE payload style that matches your PHP:
+    // A) If your PHP expects pipe-joined string:
+    const payload = {
+      userID,
+      donationID: id,
+      availabilityTimes: (slots || []).map(slotToServerString).filter(Boolean).join("|"),
+      address, // JSON object; split into columns in PHP if needed
+    };
+
+    // B) If your PHP accepts JSON arrays directly:
+    // const payload = { userID, donationID: id, slots, address };
+
+    try {
+      const res = await apiPost("/donation_update.php", payload);
+      if (!res?.ok) throw new Error(res?.error || "Update failed");
+
+      // Optimistic UI update
+      setRows((prev) =>
+        prev.map((r) => ((r.donationID || r.id) === id ? { ...r, address, slots } : r))
+      );
+      setAllDonations((prev) =>
+        prev.map((r) => ((r.donationID || r.id) === id ? { ...r, address, slots } : r))
+      );
+
+      setEditOpen(false);
+      setEditItem(null);
+    } catch (e) {
+      console.error(e);
+      alert(e.message || "Server error during update.");
+    }
   async function handlePublish(payload) {
     setOpenAdd(false);
     setLoading(true);
@@ -381,6 +409,7 @@ export default function MyDonation() {
     setEditItem(null);
   }
 
+  // ---------- Render ----------
   return (
     <>
       <div className="toolbar">
@@ -389,8 +418,13 @@ export default function MyDonation() {
         </button>
         <div className="spacer" />
         <button className="btn btn-filter" onClick={() => setShowFilter(true)}>
-          <span className="i-filter" />Filter
-          {appliedFilterCount > 0 && <span className="filter-badge">{appliedFilterCount}</span>}
+          <span className="i-filter" />
+          Filter
+          {Object.values(filters).filter((v) => v && String(v).trim() !== "").length > 0 && (
+            <span className="filter-badge">
+              {Object.values(filters).filter((v) => v && String(v).trim() !== "").length}
+            </span>
+          )}
         </button>
       </div>
 
@@ -446,12 +480,10 @@ export default function MyDonation() {
                     {r.slots && r.slots.length > 0 ? (
                       <div className="slot-container">
                         {r.slots.map((s, idx) => {
-                          // Get slot string (either string or object)
                           const slotStr = typeof s === "string" ? s : s.pickTime || "";
-                          // Split into date and time range
-                          const [date, timeRange] = slotStr ? slotStr.split(",").map((p) => p.trim()) : ["", ""];
-
-                          // Helper to format "HH:MM" into "h:mm AM/PM"
+                          const [date, timeRange] = slotStr
+                            ? slotStr.split(",").map((p) => p.trim())
+                            : ["", ""];
                           const formatTimeRange = (range) => {
                             if (!range) return "-";
                             return range
@@ -465,7 +497,6 @@ export default function MyDonation() {
                               })
                               .join(" - ");
                           };
-
                           return (
                             <div key={idx} className="slot-item">
                               <div className="slot-date">📅 {date || "-"}</div>
@@ -486,8 +517,8 @@ export default function MyDonation() {
                       className="icon-btn"
                       title="Edit"
                       onClick={() => {
-                        const addressObj = r.address ?? parsePickupToAddress(r.pickup || r.pickupLocation || "");
-
+                        const addressObj =
+                          r.address ?? parsePickupToAddress(r.pickup || r.pickupLocation || "");
                         setEditItem({
                           id: r.donationID || r.id,
                           name: r.name,
@@ -515,7 +546,6 @@ export default function MyDonation() {
               ))
             )}
           </tbody>
-
         </table>
       </div>
 
@@ -524,25 +554,11 @@ export default function MyDonation() {
       <EditDonationModal
         open={editOpen}
         item={editItem}
-        onClose={() => { setEditOpen(false); setEditItem(null); }}
-        onUpdate={(updated) => {
-          // update local rows after saving
-          setRows((prev) =>
-            prev.map((row) =>
-              (row.donationID || row.id) === updated.id
-                ? {
-                    ...row,
-                    // keep read-only stuff, but update address/slots flags you allow to edit
-                    address: updated.address ?? row.address,
-                    useDefaultAddress: updated.useDefaultAddress ?? row.useDefaultAddress,
-                    slots: updated.slots ?? row.slots,
-                  }
-                : row
-            )
-          );
+        onClose={() => {
           setEditOpen(false);
           setEditItem(null);
         }}
+        onUpdate={handleUpdateDonation} // ✅ real API call
       />
 
       <ConfirmDialog
@@ -560,11 +576,14 @@ export default function MyDonation() {
         cancelText="No"
         danger
         busy={delBusy}
-        onCancel={() => { if (!delBusy) { setDelOpen(false); setPendingDel(null); } }}
+        onCancel={() => {
+          if (!delBusy) {
+            setDelOpen(false);
+            setPendingDel(null);
+          }
+        }}
         onConfirm={doDeleteDonation}
       />
-
-
 
       <FilterModal
         open={showFilter}
@@ -579,10 +598,4 @@ export default function MyDonation() {
       />
     </>
   );
-}
-
-// helpers
-function formatDate(iso) {
-  const d = new Date(iso);
-  return isNaN(d) ? (iso || "-") : d.toLocaleDateString("en-GB");
 }
