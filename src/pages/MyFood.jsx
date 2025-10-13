@@ -6,6 +6,7 @@ import DonationModal from "../component/DonationModal.jsx";
 import FoodFormModal from "../component/FoodFormModal.jsx"; // <-- new
 import FoodDetailModal from "../component/FoodDetailModal.jsx";
 import FilterModal from "../component/FilterModal.jsx";
+import FoodDeleteConfirm from "../component/FoodDeleteConfirm.jsx";
 
 
 
@@ -19,6 +20,11 @@ export default function MyFood() {
   const [detailItem, setDetailItem] = useState(null);
   const [editItem, setEditItem] = useState(null);
   const [deletingId, setDeletingId] = useState(null);
+
+  // for the confirm modal
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleteItem, setDeleteItem] = useState(null);
+  const [deleteFlags, setDeleteFlags] = useState({ inDonation: false, reserved: false });
 
   const [donateOpen, setDonateOpen] = useState(false);
   const [donateItem, setDonateItem] = useState(null);
@@ -36,7 +42,7 @@ export default function MyFood() {
     (async () => {
       setLoading(true);
       try {
-        const res = await apiPost("/food_list.php", { userID: "U1" });
+        const res = await apiPost("/food_list.php", {});
 
         if (res.ok) {
           console.log("✅ Foods fetched:", res.foods);
@@ -45,7 +51,7 @@ export default function MyFood() {
             id: f.foodID,
             foodID: f.foodID,
             name: f.foodName,
-            qty: f.quantity,
+            qty: f.totalQty ?? f.quantity, // ✅ show totalQty (quantity + reservedQty)
             categoryID: f.categoryID,    // <-- store IDs for filtering
             category: f.categoryName,
             storageID: f.storageID,      // <-- store IDs
@@ -127,6 +133,19 @@ export default function MyFood() {
     setPage(Math.ceil(next.length / pageSize));
   }
 
+  function askDelete(item) {
+  // derive flags from the row you already render
+  const flags = {
+    // if your list has a boolean like item.inDonation, use it; else default false
+    inDonation: !!item.inDonation, 
+    // treat either "is_plan" (meal plan) or "reserved" (if you have it) as "reserved"
+    reserved: !!item.is_plan || !!item.reserved,
+  };
+  setDeleteFlags(flags);
+  setDeleteItem(item);
+  setDeleteOpen(true);
+}
+
   function handleUpdate(data) {
     const updated = {
       ...editItem,
@@ -137,32 +156,29 @@ export default function MyFood() {
     setEditItem(null);
   }
 
-  async function handleDelete(foodID) {
-    if (!window.confirm("Delete this item?")) return;
-
-    // optimistic UI
-    const prev = rows;
-    const next = rows.filter(r => r.foodID !== foodID);
-    setRows(next);
+  // runs after user confirms
+  async function reallyDelete(foodID) {
     setDeletingId(foodID);
+    const prev = rows;
 
     try {
-      const res = await apiPost("/food_delete.php", {
-        userID: "U1",     // <-- your logged-in user id
-        foodID,           // <-- the one to delete
-      });
+      const res = await apiPost("/food_delete.php", { foodID });
+      if (!res?.ok) throw new Error(res?.error || "Delete failed");
 
-      if (!res?.ok) {
-        throw new Error(res?.error || "Delete failed");
+      if (res.mode === "zeroed") {
+        // keep the item but set qty to 0
+        setRows(prev.map(r => (r.foodID === foodID ? { ...r, qty: 0 } : r)));
+      } else {
+        // fully deleted
+        setRows(prev.filter(r => r.foodID !== foodID));
       }
-
-      // Optional: refresh from server to be perfectly in sync
-      setRefreshKey(k => k + 1);
     } catch (err) {
-      alert(err.message || "Delete failed. Reverting UI.");
-      setRows(prev);        // rollback
+      alert(err.message || "Delete failed. Please try again.");
+      setRows(prev); // rollback if you had changed the UI
     } finally {
       setDeletingId(null);
+      setDeleteOpen(false);
+      setDeleteItem(null);
     }
   }
 
@@ -197,37 +213,67 @@ export default function MyFood() {
     const cat = (f.category ?? "").trim();      // categoryID
     const storage = (f.storageID ?? "").trim(); // storageID
 
-    // Determine expiry range
+    // Helper → consistent local YYYY-MM-DD (avoid timezone shift)
+    const fmt = (d) => {
+      const offset = d.getTimezoneOffset();
+      const local = new Date(d.getTime() - offset * 60000);
+      return local.toISOString().split("T")[0];
+    };
+
     let from = "";
     let to = "";
     const today = new Date();
 
-    if (f.expiryRange === "3days") {
-      from = today.toISOString().split("T")[0];
-      const d = new Date();
-      d.setDate(today.getDate() + 3);
-      to = d.toISOString().split("T")[0];
-    } else if (f.expiryRange === "week") {
-      from = today.toISOString().split("T")[0];
-      const d = new Date();
-      const day = d.getDay(); // 0 (Sun) - 6 (Sat)
-      d.setDate(today.getDate() + (7 - day)); // end of week
-      to = d.toISOString().split("T")[0];
-    } else if (f.expiryRange === "month") {
-      from = today.toISOString().split("T")[0];
-      const d = new Date(today.getFullYear(), today.getMonth() + 1, 0); // last day of month
-      to = d.toISOString().split("T")[0];
-    } else {
-      // fallback to any manually set expiryFrom / expiryTo
+    if (f.expiryRange === "today") {
+      // ✅ Only today’s date
+      from = fmt(today);
+      to = fmt(today);
+    } 
+    else if (f.expiryRange === "3days") {
+      // ✅ Tomorrow + next 2 days = total 3 (e.g., 10–12 if today is 9)
+      const start = new Date(today);
+      start.setDate(today.getDate() + 1);
+      const end = new Date(today);
+      end.setDate(today.getDate() + 3);
+      from = fmt(start);
+      to = fmt(end);
+    } 
+    else if (f.expiryRange === "week") {
+      // ✅ Monday → Sunday of this week (e.g., 6–12 Oct)
+      const day = today.getDay(); // 0 (Sun) – 6 (Sat)
+      const diffToMonday = day === 0 ? -6 : 1 - day;
+      const start = new Date(today);
+      start.setDate(today.getDate() + diffToMonday);
+      const end = new Date(start);
+      end.setDate(start.getDate() + 6);
+      from = fmt(start);
+      to = fmt(end);
+    } 
+    else if (f.expiryRange === "month") {
+      const start = new Date(today.getFullYear(), today.getMonth(), 1);
+      const end = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+      from = fmt(start);
+      to = fmt(end);
+    } 
+    else if (f.expiryRange === "nextmonth") {
+      const start = new Date(today.getFullYear(), today.getMonth() + 1, 1);
+      const end = new Date(today.getFullYear(), today.getMonth() + 2, 0);
+      from = fmt(start);
+      to = fmt(end);
+    } 
+    else {
       from = (f.expiryFrom ?? "").trim();
       to = (f.expiryTo ?? "").trim();
     }
 
-    const filtered = allFoods.filter(r => {
+    // ✅ Filter logic
+    const filtered = allFoods.filter((r) => {
       if (cat && r.categoryID !== cat) return false;
       if (storage && r.storageID !== storage) return false;
-      if (from && new Date(r.expiry) < new Date(from)) return false;
-      if (to && new Date(r.expiry) > new Date(to)) return false;
+
+      const exp = fmt(new Date(r.expiry));
+      if (from && exp < from) return false;
+      if (to && exp > to) return false;
       return true;
     });
 
@@ -235,6 +281,10 @@ export default function MyFood() {
     setPage(1);
     setFilterOpen(false);
   }
+
+
+
+
 
   return (
     <>
@@ -268,7 +318,11 @@ export default function MyFood() {
             {view.length === 0 ? (
               <tr>
                 <td colSpan={7}>
-                  <div className="no-items">No items found. Please adjust your filters.</div>
+                  <div className="no-items">
+                    {appliedFilterCount > 0
+                      ? "No items found. Please adjust your filters."
+                      : "You don’t have any food items yet. Add one to get started."}
+                  </div>
                 </td>
               </tr>
             ) : (
@@ -314,8 +368,8 @@ export default function MyFood() {
                       title="Delete"
                       disabled={deletingId === r.foodID}
                       onClick={(e) => {
-                        e.stopPropagation(); // don't open detail modal
-                        handleDelete(r.foodID);
+                        e.stopPropagation();
+                        askDelete(r);   // <-- open confirm based on row flags
                       }}
                     >
                       {deletingId === r.foodID ? "⏳" : "🗑️"}
@@ -364,8 +418,17 @@ export default function MyFood() {
         }}
       />
 
-
-
+      <FoodDeleteConfirm
+        open={deleteOpen}
+        onClose={() => setDeleteOpen(false)}
+        foodName={deleteItem?.name}
+        flags={deleteFlags}           // { inDonation, reserved }
+        onConfirm={() => {
+          if (deleteItem?.foodID) {
+            reallyDelete(deleteItem.foodID);
+          }
+        }}
+      />
 
       <DonationModal
         open={donateOpen}

@@ -2,6 +2,7 @@
 import React, { useEffect, useState } from "react";
 import { NavLink, Link } from "react-router-dom";
 import "./header.css";
+import { apiGet } from "../lib/api";
 
 export default function HeaderNav() {
   const [initial, setInitial] = useState("");
@@ -20,14 +21,12 @@ export default function HeaderNav() {
   return (
     <header className="nav-wrap">
       <div className="nav-pill">
-        {/* logo + wordmark */}
         <Link to="/" className="brand" aria-label="IYO Smart Pantry – Home">
-          <img className="logo" src="/logo.svg" alt='IYO Logo' />
+          <img className="logo" src="/logo.svg" alt="IYO Logo" />
         </Link>
 
-        {/* centered navigation */}
-        <nav className="main">
-          <NavItem to="/dashboard">Dashboard</NavItem>
+        <nav className="main" aria-label="Primary">
+          <NavItem to="/">Home</NavItem>
           <NavItem to="/food">Food Center</NavItem>
           <NavItem to="/plan">Plan Meals</NavItem>
           <NavItem to="/analytics">Food Analytics</NavItem>
@@ -53,52 +52,13 @@ export default function HeaderNav() {
         </div>
       </div>
     </header>
-  )
-  };
+  );
+}
 
 function NavItem({ to, children }) {
   return (
-    <NavLink
-      to={to}
-      className={({ isActive }) =>
-        "link" + (isActive ? " active" : "")
-      }
-    >
+    <NavLink to={to} end={to === "/"} className={({ isActive }) => "link" + (isActive ? " active" : "")}>
       {children}
     </NavLink>
   );
 }
-
-function IconButton({ children, title }) {
-  return (
-    <button className="icon" title={title} aria-label={title}>
-      {children}
-    </button>
-  );
-}
-
-/*import { apiGet } from '../lib/api'
-import { useState } from 'react'
-
-export default function Header() {
-  const [pong, setPong] = useState('')
-
-  async function testPing() {
-    try {
-      const j = await apiGet('/ping.php')
-      console.log('PING JSON:', j)        // <-- look in DevTools console
-      // show fallback text if keys are missing, so you can see it's the right file
-      setPong(`${j.msg ?? '(no msg)'} @ ${j.time ?? '(no time)'} | raw=${JSON.stringify(j)}`)
-    } catch (e) {
-      console.error(e)
-      setPong('FAILED: ' + e.message)
-    }
-  }
-
-  return (
-    <header style={{padding:12}}>
-      <button onClick={testPing}>Test API</button>
-      {pong && <span style={{marginLeft:12}}>{pong}</span>}
-    </header>
-  )
-}*/

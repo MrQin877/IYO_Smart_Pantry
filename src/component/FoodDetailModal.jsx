@@ -48,6 +48,8 @@ export default function FoodDetailModal({
 
     const used = parseFloat(usedQty);
     const current = parseFloat(food.quantity);
+    const reserved = parseFloat(food.reservedQty ?? 0); // ✅ ensure numeric
+
     const newQty = parseFloat((current - used).toFixed(2));
 
     if (newQty < 0) {
@@ -55,34 +57,53 @@ export default function FoodDetailModal({
       return;
     }
 
+    if (isIntegerUnit(food.unitName) && used % 1 !== 0) {
+      alert("Please enter a whole number for this unit.");
+      return;
+    }
+
+    // ✅ Only confirm deletion if both available and reserved quantities are 0
+    if (newQty === 0 && reserved === 0) {
+      const confirmDelete = confirm(
+        "⚠️ Quantity will become 0. This will remove the food item. Continue?"
+      );
+      if (!confirmDelete) return;
+    }
+
     try {
-      if (newQty === 0) {
-        const confirmDelete = confirm("Quantity will become 0. Delete this food item?");
-        if (!confirmDelete) return;
+      const res = await apiPost("/food_update_used.php", {
+        foodID: food.foodID,
+        usedAmount: used,
+      });
 
-        // ✅ Use the same test userID you use in food_list.php
-        const res = await apiPost("/food_delete.php", { 
-          foodID: food.foodID,
-          userID: "U1"   // ✅ Add this line
-        });
-
-        if (!res.ok) throw new Error(res.error || "Delete failed");
-        alert("Food item deleted successfully!");
-      } else {
-        const res = await apiPost("/food_update_used.php", {
-          foodID: food.foodID,
-          newQuantity: newQty,
-        });
-        if (!res.ok) throw new Error(res.error || "Update failed");
-        alert("Food quantity updated successfully!");
+      if (!res.ok) {
+        throw new Error(res.error || "Failed to update quantity.");
       }
 
-      onUpdate?.(); // refresh parent list
+      // ✅ Show different alerts depending on result
+      if (res.warning) {
+        alert(res.message); // ✅ will show both success + warning
+      } else if (res.deleted) {
+        alert(res.message || "✅ Food item used up and removed.");
+      } else if (res.updated) {
+        alert(res.message || "✅ Food quantity updated successfully.");
+      }
+
+      onUpdate?.();
       onClose();
     } catch (err) {
-      console.error("❌ HandleUsed error:", err);
-      alert("Failed to update food quantity.");
+      alert("Failed to update food quantity: " + err.message);
     }
+  };
+
+
+
+
+
+  const isIntegerUnit = (unitName) => {
+    if (!unitName) return false;
+    const lower = unitName.toLowerCase();
+    return ["pcs", "pack", "bottle", "other"].includes(lower);
   };
 
 
@@ -138,8 +159,9 @@ export default function FoodDetailModal({
                 <b>Category:</b> {food.categoryName || "-"}
               </li>
               <li>
-                <b>Quantity:</b> {food.quantity} {food.unitName || ""}
+                <b>Available Quantity:</b> {food.quantity} {food.unitName || ""}
               </li>
+              <li><b>Reserved Quantity:</b> {food.reservedQty ?? 0} {food.unitName || ""}</li>
               <li>
                 <b>Status:</b> {food.is_plan ? "Planned for Meal" : "Normal"}
               </li>
@@ -147,7 +169,7 @@ export default function FoodDetailModal({
                 <b>Expiry date:</b> {formatDate(food.expiryDate)}
               </li>
               <li>
-                <b>Storage Location:</b> {food.storageLocation || "-"}
+                <b>Storage Location:</b> {food.storageName || "-"}
               </li>
               <li>
                 <b>Remark:</b> {food.remark || "-"}
@@ -156,19 +178,34 @@ export default function FoodDetailModal({
 
             {/* 🔹 Action buttons */}
             <div className="actions" style={{ marginTop: "20px" }}>
+              {/* --- Quantity Used Input --- */}
               <div style={{ marginBottom: "10px" }}>
                 <label>
                   Quantity used:{" "}
                   <input
                     type="number"
                     min="0"
-                    step="1"
+                    step={isIntegerUnit(food.unitName) ? "1" : "0.01"} // integer vs decimal
                     value={usedQty}
-                    onChange={(e) => setUsedQty(e.target.value)}
+                    onKeyDown={(e) => {
+                      // 🔹 Block '.' or ',' typing for integer units
+                      if (isIntegerUnit(food.unitName) && (e.key === "." || e.key === ",")) {
+                        e.preventDefault();
+                      }
+                    }}
+                    onChange={(e) => {
+                      let val = e.target.value;
+                      if (isIntegerUnit(food.unitName)) {
+                        // ✅ Strip any non-digit input
+                        val = val.replace(/\D/g, "");
+                      }
+                      setUsedQty(val);
+                    }}
                     style={{ width: "80px" }}
                   />
                 </label>
               </div>
+
               <div className="detail-actions">
                 <button className="btn used" onClick={handleUsed}>
                   Used

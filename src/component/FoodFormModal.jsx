@@ -14,7 +14,6 @@ export default function FoodFormModal({
   open,
   mode = "add",
   initial = {},
-  userId = "U1",
   onClose,
   onSave,
 }) {
@@ -153,7 +152,6 @@ export default function FoodFormModal({
       is_plan: 0,
       storageID: f.storageID || null,
       remark: f.remark || "",
-      userID: userId,
       categoryID: f.categoryID,
       unitID: f.unitID,
     };
@@ -176,7 +174,6 @@ export default function FoodFormModal({
           storageID: f.storageID,
           storageName,
           remark: f.remark || "",
-          userID: userId,
           categoryID: f.categoryID,
           unitID: f.unitID,
         });
@@ -199,7 +196,6 @@ export default function FoodFormModal({
           storageID: f.storageID,
           storageName,
           remark: f.remark || "",
-          userID: userId,
           categoryID: f.categoryID,
           unitID: f.unitID,
         });

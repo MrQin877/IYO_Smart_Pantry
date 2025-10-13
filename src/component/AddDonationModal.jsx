@@ -14,7 +14,6 @@ export default function AddDonationModal({
   open,
   onClose,
   onPublish,       // optional UI update callback
-  userId = "U1",   // provide your actual logged-in user ID
 }) {
   const [f, setF] = useState(initForm());
   const [saving, setSaving] = useState(false);
@@ -36,7 +35,7 @@ export default function AddDonationModal({
     (async () => {
       try {
         setLoadingAddr(true);
-        const res = await apiGet(`/get_last_address.php?userID=${userId}`);
+        const res = await apiGet(`/get_last_address.php`);
         if (res?.ok && res.address) {
           setLastAddress(res.address);
         } else {
@@ -48,7 +47,7 @@ export default function AddDonationModal({
         setLoadingAddr(false);
       }
     })();
-  }, [open, userId]);
+  }, [open]);
 
   // Reset when opened
   useEffect(() => {
@@ -205,7 +204,6 @@ export default function AddDonationModal({
 
     // Build payload for donation_add.php (direct donation)
     const payload = {
-      userID: userId,
       contact: f.contact.trim(),
       donationNote: "", // optional
       food: {

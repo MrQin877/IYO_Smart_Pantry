@@ -9,10 +9,11 @@ Expected JSON:
   "donationID": "D123"
 }aa
 */
+$userID = $_SESSION['userID'] ?? null;
 
 $d = json_input();
-$userID = $d['userID'] ?? '';
 $donationID = $d['donationID'] ?? '';
+
 
 if (!$userID || !$donationID) {
   respond(['ok'=>false,'error'=>'Missing userID or donationID'], 400);
