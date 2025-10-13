@@ -144,9 +144,9 @@ export default function MyDonation() {
       const userID = localStorage.getItem("userID");
       if (!userID) throw new Error("Not logged in (missing userID).");
 
-      // Use the endpoint that exists in your backend
-      // const res = await apiPost("/donation_cancel.php", { userID, donationID: pendingDel.id });
+      // Pick the endpoint your backend actually has:
       const res = await apiPost("/donation_cancel.php", { userID, donationID: pendingDel.id });
+      // Or: const res = await apiPost("/donation_delete.php", { userID, donationID: pendingDel.id });
 
       if (!res?.ok) throw new Error(res?.error || "Delete failed");
     } catch (e) {
@@ -168,17 +168,12 @@ export default function MyDonation() {
 
     let label = "", line1 = "", line2 = "", postcode = "", city = "", state = "", country = "";
 
-    // Line 1: "Label, Line 1"
     if (lines[0]) {
       const parts = lines[0].split(",").map((s) => s.trim());
       label = parts.shift() || "";
       line1 = parts.join(", ");
     }
-
-    // Line 2
     if (lines[1]) line2 = lines[1];
-
-    // Line 3: "postcode, city, state, country"
     if (lines[2]) {
       const parts = lines[2].split(",").map((s) => s.trim());
       postcode = parts[0] || "";
@@ -219,6 +214,9 @@ export default function MyDonation() {
     });
     return copy;
   }, [rows, sort]);
+
+  // applied filter count for badge (optional)
+  const appliedFilterCount = Object.values(filters).filter((v) => v && String(v).trim() !== "").length;
 
   // filtering
   function applyFilters(overrideFilters = null) {
@@ -304,9 +302,8 @@ export default function MyDonation() {
     setLoading(true);
 
     try {
-      // await apiPost("/donation_add.php", payload); // if you post from modal instead, keep disabled
+      // await apiPost("/donation_add.php", payload);
 
-      // Re-fetch
       const res = await fetch(`${import.meta.env.VITE_API_BASE}/donation_list.php`).then((r) => r.json());
       if (res.ok && Array.isArray(res.data)) {
         const mapped = res.data.map((d) => ({
@@ -339,17 +336,12 @@ export default function MyDonation() {
       return;
     }
 
-    // Pick ONE payload style that matches your PHP:
-    // A) If your PHP expects pipe-joined string:
     const payload = {
       userID,
       donationID: id,
       availabilityTimes: (slots || []).map(slotToServerString).filter(Boolean).join("|"),
       address, // JSON object; split into columns in PHP if needed
     };
-
-    // B) If your PHP accepts JSON arrays directly:
-    // const payload = { userID, donationID: id, slots, address };
 
     try {
       const res = await apiPost("/donation_update.php", payload);
@@ -369,44 +361,6 @@ export default function MyDonation() {
       console.error(e);
       alert(e.message || "Server error during update.");
     }
-  async function handlePublish(payload) {
-    setOpenAdd(false);
-    setLoading(true);
-
-    try {
-      // ✅ Call your backend to create donation first (if not done inside modal)
-      // await apiPost("/donation_add.php", payload);
-
-      // ✅ Then re-fetch the full list so pickup times are included
-      const res = await fetch(`${import.meta.env.VITE_API_BASE}/donation_list.php`).then(r => r.json());
-      if (res.ok && Array.isArray(res.data)) {
-        const mapped = res.data.map((d) => ({
-          id: d.donationID,
-          donationID: d.donationID,
-          name: d.foodName,
-          category: d.categoryName,
-          qty: Number(d.donationQuantity) || 0,
-          unit: d.unitName,
-          expiry: d.expiryDate,
-          pickup: d.pickupLocation,
-          donorName: d.donorName,
-          slots: d.availabilityTimes ? d.availabilityTimes.split("|") : [],
-        }));
-        setRows(mapped);
-        setAllDonations(mapped);
-      }
-    } catch (err) {
-      console.error("Failed to refresh after publish:", err);
-    } finally {
-      setLoading(false);
-    }
-  }
-
-
-  function handleUpdate(updated) {
-    setRows((prev) => prev.map((r) => (r.id === updated.id ? { ...r, ...updated } : r)));
-    setAllDonations((prev) => prev.map((r) => (r.id === updated.id ? { ...r, ...updated } : r)));
-    setEditItem(null);
   }
 
   // ---------- Render ----------
@@ -420,10 +374,8 @@ export default function MyDonation() {
         <button className="btn btn-filter" onClick={() => setShowFilter(true)}>
           <span className="i-filter" />
           Filter
-          {Object.values(filters).filter((v) => v && String(v).trim() !== "").length > 0 && (
-            <span className="filter-badge">
-              {Object.values(filters).filter((v) => v && String(v).trim() !== "").length}
-            </span>
+          {appliedFilterCount > 0 && (
+            <span className="filter-badge">{appliedFilterCount}</span>
           )}
         </button>
       </div>
@@ -510,8 +462,6 @@ export default function MyDonation() {
                     )}
                   </td>
 
-                  
-
                   <td className="row-actions">
                     <button
                       className="icon-btn"
@@ -558,7 +508,7 @@ export default function MyDonation() {
           setEditOpen(false);
           setEditItem(null);
         }}
-        onUpdate={handleUpdateDonation} // ✅ real API call
+        onUpdate={handleUpdateDonation}
       />
 
       <ConfirmDialog
@@ -598,5 +548,4 @@ export default function MyDonation() {
       />
     </>
   );
-  }
 }
