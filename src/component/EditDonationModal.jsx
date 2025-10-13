@@ -140,9 +140,16 @@ export default function EditDonationModal({ open, onClose, onUpdate, item }) {
     }));
   };
 
-  const removeSlot = (id) =>
-    setF((s) => ({ ...s, slots: s.slots.filter((x) => x.id !== id) }));
 
+  const removeSlot = (id) =>
+    setF((s) => {
+      // optional guard: don’t allow deleting the final slot
+      if (s.slots.length <= 1) {
+        alert("At least one availability time is required.");
+        return s;
+      }
+      return { ...s, slots: s.slots.filter((x) => x.id !== id) };
+    });
   // Any existing saved slots invalid?
   const invalidSlots = useMemo(() => {
     if (!latestAllowed) return [];
@@ -152,7 +159,8 @@ export default function EditDonationModal({ open, onClose, onUpdate, item }) {
     });
   }, [f.slots, latestAllowed]);
 
-  const canSave = f.slots.length >= 0 && !slotAfterLimit && invalidSlots.length === 0;
+  // must have at least 1 slot, no “after limit” date typed in the add-row, and no invalid saved slots
+  const canSave = f.slots.length > 0 && !slotAfterLimit && invalidSlots.length === 0;
 
   const save = () => {
     if (!canSave) return;
@@ -273,6 +281,11 @@ export default function EditDonationModal({ open, onClose, onUpdate, item }) {
             </div>
           </>
         )}
+         {f.slots.length === 0 && (
+           <div className="mt-2 rounded border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
+             Please add at least one availability time before saving.
+           </div>
+         )}
 
         <div className="modal-actions">
           <button className="btn secondary" onClick={onClose}>Cancel</button>
