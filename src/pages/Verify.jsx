@@ -7,14 +7,16 @@ import "./Verify.css";
 export default function Verify() {
   const [email, setEmail] = useState("");
   const [code, setCode] = useState("");
+  const [password, setPassword] = useState(""); // new password for register
   const [loading, setLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState("");
   const navigate = useNavigate();
   const location = useLocation();
-  
-  const params = new URLSearchParams(location.search);
-  const context = params.get("context") || "register"; // default register
 
-  // 页面加载时自动读取本地保存的邮箱
+  const params = new URLSearchParams(location.search);
+  const context = params.get("context") || "register"; // default: register
+
+  // Load saved email
   useEffect(() => {
     const savedEmail = localStorage.getItem("verifyEmail");
     if (savedEmail) setEmail(savedEmail);
@@ -23,24 +25,33 @@ export default function Verify() {
   async function handleVerify(e) {
     e.preventDefault();
     setLoading(true);
+    setErrorMsg("");
+
+    if (context === "register" && password.length < 8) {
+      setErrorMsg("Password must be at least 8 characters long.");
+      setLoading(false);
+      return;
+    }
+
     try {
-      const resp = await apiPost("/verify_2fa.php", { email, code });
+      const body = { email, code };
+      if (context === "register") body.password = password;
+
+      const resp = await apiPost("/verify_2fa.php", body);
       if (resp.ok) {
         alert("✅ Verification successful!");
         localStorage.removeItem("verifyEmail");
 
         if (context === "login") {
-          // 2FA login verification done → go to dashboard
           navigate("/dashboard");
         } else {
-          // Registration verification done → go to login page
           navigate("/login");
         }
       } else {
-        alert(resp.error || "Verification failed");
+        setErrorMsg(resp.error || "Verification failed.");
       }
     } catch (err) {
-      alert("Server error: " + err.message);
+      setErrorMsg("Server error: " + err.message);
     } finally {
       setLoading(false);
     }
@@ -76,12 +87,7 @@ export default function Verify() {
           We have sent a 6-digit verification code to your email.
         </p>
 
-        <input
-          type="email"
-          value={email}
-          disabled
-          className="email-disabled"
-        />
+        <input type="email" value={email} disabled className="email-disabled" />
 
         <input
           type="text"
@@ -90,6 +96,19 @@ export default function Verify() {
           onChange={(e) => setCode(e.target.value)}
           required
         />
+
+        {/* Show password field ONLY for registration verification */}
+        {context === "register" && (
+          <input
+            type="password"
+            placeholder="Enter new password (min 8 chars)"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+          />
+        )}
+
+        {errorMsg && <p className="error-msg">{errorMsg}</p>}
 
         <button type="submit" className="btn btn-primary" disabled={loading}>
           {loading ? "Verifying..." : "Verify"}
@@ -116,7 +135,6 @@ export default function Verify() {
             {context === "login" ? "Go to Dashboard" : "Login"}
           </button>
         </p>
-
       </form>
     </div>
   );
