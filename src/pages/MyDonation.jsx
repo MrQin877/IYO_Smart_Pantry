@@ -339,7 +339,10 @@ export default function MyDonation() {
     const payload = {
       userID,
       donationID: id,
-      availabilityTimes: (slots || []).map(slotToServerString).filter(Boolean).join("|"),
+      availabilityTimes: (slots || [])
+        .map(slotToServerString)
+        .filter(Boolean)
+        .join("|"),
       address, // JSON object; split into columns in PHP if needed
     };
 
@@ -514,6 +517,7 @@ export default function MyDonation() {
       <AddDonationModal open={openAdd} onClose={() => setOpenAdd(false)} onPublish={handlePublish} />
 
       <EditDonationModal
+        key={editItem?.id || editItem?.donationID || "edit"}
         open={editOpen}
         item={editItem}
         onClose={() => {
