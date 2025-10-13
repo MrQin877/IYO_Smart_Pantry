@@ -342,32 +342,39 @@ export default function MyDonation() {
     }
   }
 
-  function handlePublish(payload) {
-    const item = payload.item ?? payload;
-    const pickup = payload.useDefaultAddress
-      ? "Default address"
-      : [payload.address?.line1, payload.address?.city].filter(Boolean).join(", ");
-
-    const newRow = {
-      id: crypto.randomUUID(),
-      donationID: crypto.randomUUID(),
-      name: item.name,
-      category: item.category ?? "-",
-      categoryID: item.categoryID ?? "",
-      storage: item.storage ?? "",
-      storageID: item.storageID ?? "",
-      qty: item.qty ?? 0,
-      unit: item.unit ?? "",
-      expiry: item.expiry ?? "",
-      pickup,
-      slots: payload.slots ?? [],
-      donorName: payload.donorName ?? "-",
-    };
-
-    setRows((prev) => [newRow, ...prev]);
-    setAllDonations((prev) => [newRow, ...prev]);
+  async function handlePublish(payload) {
     setOpenAdd(false);
+    setLoading(true);
+
+    try {
+      // ✅ Call your backend to create donation first (if not done inside modal)
+      // await apiPost("/donation_add.php", payload);
+
+      // ✅ Then re-fetch the full list so pickup times are included
+      const res = await fetch(`${import.meta.env.VITE_API_BASE}/donation_list.php`).then(r => r.json());
+      if (res.ok && Array.isArray(res.data)) {
+        const mapped = res.data.map((d) => ({
+          id: d.donationID,
+          donationID: d.donationID,
+          name: d.foodName,
+          category: d.categoryName,
+          qty: Number(d.donationQuantity) || 0,
+          unit: d.unitName,
+          expiry: d.expiryDate,
+          pickup: d.pickupLocation,
+          donorName: d.donorName,
+          slots: d.availabilityTimes ? d.availabilityTimes.split("|") : [],
+        }));
+        setRows(mapped);
+        setAllDonations(mapped);
+      }
+    } catch (err) {
+      console.error("Failed to refresh after publish:", err);
+    } finally {
+      setLoading(false);
+    }
   }
+
 
   function handleUpdate(updated) {
     setRows((prev) => prev.map((r) => (r.id === updated.id ? { ...r, ...updated } : r)));
