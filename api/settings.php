@@ -1,6 +1,7 @@
 <?php
 require __DIR__.'/config.php';
 session_start();
+error_log("SESSION userID: " . ($_SESSION['userID'] ?? 'none'));
 
 header('Content-Type: application/json');
 
@@ -22,9 +23,14 @@ try {
     $stmt = $pdo->prepare('SELECT twoFA FROM USERS WHERE userID = ?');
     $stmt->execute([$userID]);
     $result = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    // ✅ Debug
+    error_log("Fetched twoFA for user $userID: " . json_encode($result));
+
     echo json_encode(['ok' => true, 'settings' => $result]);
     exit;
   }
+
 
   if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $body = json_decode(file_get_contents('php://input'), true);

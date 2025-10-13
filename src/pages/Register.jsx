@@ -19,9 +19,10 @@ export default function Register() {
 
     // basic frontend validation before sending to backend
     const newErrors = {};
-    if (!/^[A-Za-z\s]$/.test(name)) {
-      newErrors.name = "User name contain number or punctuation mark";
+    if (!/^[A-Za-z\s]+$/.test(name)) {
+      newErrors.name = "Username cannot contain numbers or punctuation marks.";
     }
+
     if (!/^[A-Za-z0-9._%+-]+@(gmail|yahoo|outlook)\.com$/.test(email)) {
       newErrors.email = "Invalid email format";
     }

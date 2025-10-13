@@ -15,8 +15,11 @@ export default function Settings() {
     async function fetchSettings() {
       try {
         const resp = await apiGet("/settings.php");
+        console.log("Fetched settings response:", resp); // 👈 add this
+
         if (resp.ok && resp.settings) {
-          setTwoFA(!!resp.settings.twoFA);
+          console.log("twoFA value from backend:", resp.settings.twoFA); // 👈 debug
+          setTwoFA(Number(resp.settings.twoFA) === 1); // ✅ ensure it's treated as number
         }
       } catch (err) {
         console.error("Failed to load settings:", err);
@@ -26,6 +29,7 @@ export default function Settings() {
     }
     fetchSettings();
   }, []);
+
 
   // Save new setting when toggled
   async function save(newVal) {
@@ -80,8 +84,8 @@ export default function Settings() {
       <button
         className="btn btn-secondary logout-btn"
         onClick={() => {
-          clearAuth();
-          location.reload();
+          clearAuth(); // remove session/token info
+          window.location.href = "/login"; // ✅ redirect to login page
         }}
       >
         Logout

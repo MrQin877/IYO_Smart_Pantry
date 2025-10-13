@@ -32,8 +32,8 @@ if (!password_verify($password, $user['password'])) {
   respond(['ok' => false, 'error' => 'Incorrect password'], 401);
 }
 
-// Optional: start a session
 $_SESSION['userID'] = $user['userID'];
+$_SESSION['email'] = $user['email'];
 
 // ✅ Return success response to frontend
 respond([
