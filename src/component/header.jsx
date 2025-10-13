@@ -1,27 +1,22 @@
 // src/component/header.jsx
 import React, { useEffect, useState } from "react";
-import { NavLink, Link, useNavigate } from "react-router-dom";
+import { NavLink, Link } from "react-router-dom";
 import "./header.css";
 import { apiGet } from "../lib/api";
 
 export default function HeaderNav() {
-  const [user, setUser] = useState(undefined); // undefined=loading, null=guest
-  const navigate = useNavigate();
+  const [initial, setInitial] = useState("");
 
   useEffect(() => {
-    (async () => {
-      try {
-        const j = await apiGet("/session.php");
-        setUser(j.user);
-      } catch { setUser(null); }
-    })();
-  }, []);
+    const name = localStorage.getItem("userName");
+    const email = localStorage.getItem("userEmail");
 
-  async function handleLogout() {
-    try { await apiGet("/logout.php"); } catch {}
-    setUser(null);
-    navigate("/");
-  }
+    if (name && name.trim() !== "") {
+      setInitial(name.trim().charAt(0).toUpperCase());
+    } else if (email) {
+      setInitial(email.trim().charAt(0).toUpperCase());
+    }
+  }, []);
 
   return (
     <header className="nav-wrap">
@@ -37,20 +32,23 @@ export default function HeaderNav() {
           <NavItem to="/analytics">Food Analytics</NavItem>
         </nav>
 
-        <div className="right-side">
-          {user === undefined ? null : !user ? (
-            <div className="auth-actions">
-              <Link to="/login" className="login-link">Login</Link>
-              <Link to="/register" className="register-btn">Register</Link>
-            </div>
-          ) : (
-            <div className="icons">
-              <button className="icon" title="Notifications" aria-label="Notifications">🔔</button>
-              <Link to="/account" aria-label="Account"><button className="icon" title="Account">🧑</button></Link>
-              <Link to="/settings" aria-label="Settings"><button className="icon" title="Settings">⚙️</button></Link>
-              <button className="logout-link" onClick={handleLogout}>Logout</button>
-            </div>
-          )}
+        {/* right icons */}
+        <div className="icons">
+          <IconButton title="Notifications">🔔</IconButton>
+          
+          <Link to="/account">
+            {initial ? (
+              <div className="avatar-circle" title="Account">
+                {initial}
+              </div>
+            ) : (
+              <IconButton title="Account">🧑</IconButton>
+            )}
+          </Link>
+
+          <Link to="/settings">
+            <IconButton title="Settings">⚙️</IconButton>
+          </Link>
         </div>
       </div>
     </header>

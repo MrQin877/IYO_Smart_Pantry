@@ -15,7 +15,7 @@ if (!filter_var($email, FILTER_VALIDATE_EMAIL) || $password === '') {
 }
 
 // Find user — match your table name exactly (MySQL is case-sensitive in some systems)
-$stmt = $pdo->prepare("SELECT userID, password, status FROM users WHERE email = ? LIMIT 1");
+$stmt = $pdo->prepare("SELECT userID, fullName, password, status FROM users WHERE email = ? LIMIT 1");
 $stmt->execute([$email]);
 $user = $stmt->fetch();
 
@@ -32,12 +32,14 @@ if (!password_verify($password, $user['password'])) {
   respond(['ok' => false, 'error' => 'Incorrect password'], 401);
 }
 
-// Optional: start a session
 $_SESSION['userID'] = $user['userID'];
+$_SESSION['email'] = $user['email'];
+$_SESSION['fullName'] = $user['fullName']??'';
 
 // ✅ Return success response to frontend
 respond([
   'ok' => true,
   'userID' => $user['userID'],
+  'fullName' => $user['fullName'],
   'message' => 'Login successful'
 ]);

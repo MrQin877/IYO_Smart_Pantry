@@ -75,16 +75,109 @@
   background: none;
   border: none;
   color: #2a7ade;
-  text-decoration: underline;
   cursor: pointer;
-  font-size: 14px;
+  font-size: 16px;
 }
 
 .link-btn:hover {
   color: #1f65c0;
+  text-decoration: underline;
 }
 
 .register-linktologin {
-  margin-top: 16px;
-  font-size: 14px;
+  background: none;
+  border: none;
+  color: #007bff;
+  font-weight: 600;
+  cursor: pointer;
+  font-size: 16px;
+}
+
+.household-na {
+  display: inline-block;
+  min-width: 40px;
+  text-align: center;
+  font-weight: 500;
+  color: #a4a4a4;
+}
+/* ===== Error Input Styling ===== */
+.input-group {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+}
+
+.input-group input {
+  padding-right: 30px; /* space for ❗ icon */
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  padding: 10px;
+  font-size: 16px;
+}
+
+.input-group.error input {
+  border-color: #e74c3c;
+  background-color: #fff6f6;
+}
+
+.error-icon {
+  position: absolute;
+  right: 10px;
+  top: 12px;
+  color: #e74c3c;
+  font-size: 18px;
+}
+
+.error-text {
+  color: #e74c3c;
+  font-size: 13px;
+  margin-top: 4px;
+}
+
+.error-text.general {
+  text-align: center;
+  margin-top: 10px;
+  font-weight: bold;
+}
+
+/* Tooltip container */
+.error-icon::after {
+  content: attr(title);
+  position: absolute;
+  bottom: 125%;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #e63946;
+  color: white;
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-size: 13px;
+  white-space: nowrap;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.2s ease, visibility 0.2s ease;
+  pointer-events: none;
+  z-index: 10;
+}
+
+/* Tooltip arrow */
+.error-icon::before {
+  content: "";
+  position: absolute;
+  bottom: 115%;
+  left: 50%;
+  transform: translateX(-50%);
+  border-width: 5px;
+  border-style: solid;
+  border-color: #e63946 transparent transparent transparent;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.2s ease, visibility 0.2s ease;
+}
+
+/* Show tooltip on hover */
+.error-icon:hover::after,
+.error-icon:hover::before {
+  opacity: 1;
+  visibility: visible;
 }
