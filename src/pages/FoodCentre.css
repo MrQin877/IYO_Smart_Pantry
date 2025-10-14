@@ -531,3 +531,8 @@ th.sortable:hover span {
 .btn.secondary{background:#f4f6f2;color:#394836}
 .btn.danger{background:#d92d20;color:#fff}
 
+.table td.center-dash {
+  text-align: center;
+  color: #555;
+  font-style: italic;
+}

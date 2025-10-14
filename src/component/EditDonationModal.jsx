@@ -12,12 +12,23 @@ export default function EditDonationModal({ open, onClose, onUpdate, item }) {
   const normalizeSlots = (slots = []) =>
     (slots || []).map((s) => {
       if (typeof s === "string") {
-        // Try to split "dd/mm/yyyy, hh:mm - hh:mm"
-        const [datePart = "", timePart = ""] = s.split(",").map((x) => x.trim());
+        // Supports:
+        //   "dd/mm/yyyy, HH:MM - HH:MM"
+        //   "yyyy-mm-dd, HH:MM - HH:MM"
+        //   (optional) trailing note in parentheses → "..., HH:MM - HH:MM (note)"
+        const [datePartRaw = "", timePartRaw = ""] = s.split(",").map((x) => x.trim());
+        // strip trailing "(...)" from time part
+        const timePart = timePartRaw.replace(/\([^)]*\)\s*$/, "").trim();
         const [start = "", end = ""] = timePart.split("-").map((x) => x.trim());
+
+        const dateISO =
+          toISOFromDMY(datePartRaw) ||               // dd/mm/yyyy → yyyy-mm-dd
+          toISOIfISO(datePartRaw) ||                 // yyyy-mm-dd → yyyy-mm-dd
+          toISOByNative(datePartRaw) || "";          // try Date(...) → yyyy-mm-dd (last resort)
+
         return {
           id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now() + Math.random()),
-          date: toISOFromDMY(datePart) || "", // keep empty if parsing fails
+          date: dateISO,                              // never leave empty if we can parse
           start: toHHMM(start),
           end: toHHMM(end),
           note: "",
@@ -331,4 +342,15 @@ function toHHMM(text) {
   if (ap === "PM" && h !== 12) h += 12;
   if (ap === "AM" && h === 12) h = 0;
   return `${String(h).padStart(2, "0")}:${min}`;
+}
+// accept exact ISO "yyyy-mm-dd" as-is
+function toISOIfISO(s) {
+  const t = String(s || "").trim();
+  return /^\d{4}-\d{2}-\d{2}$/.test(t) ? t : "";
+}
+
+// last resort: try native Date parsing and normalize to yyyy-mm-dd
+function toISOByNative(s) {
+  const d = new Date(s);
+  return isNaN(d) ? "" : toISODate(new Date(d.getFullYear(), d.getMonth(), d.getDate()));
 }
