@@ -1,4 +1,3 @@
-// src/component/EditDonationModal.jsx
 import { useEffect, useMemo, useState } from "react";
 
 // 0 = allow slots on the expiry day
@@ -12,29 +11,23 @@ export default function EditDonationModal({ open, onClose, onUpdate, item }) {
   const normalizeSlots = (slots = []) =>
     (slots || []).map((s) => {
       if (typeof s === "string") {
-        // Supports:
-        //   "dd/mm/yyyy, HH:MM - HH:MM"
-        //   "yyyy-mm-dd, HH:MM - HH:MM"
-        //   (optional) trailing note in parentheses → "..., HH:MM - HH:MM (note)"
         const [datePartRaw = "", timePartRaw = ""] = s.split(",").map((x) => x.trim());
-        // strip trailing "(...)" from time part
         const timePart = timePartRaw.replace(/\([^)]*\)\s*$/, "").trim();
         const [start = "", end = ""] = timePart.split("-").map((x) => x.trim());
 
         const dateISO =
-          toISOFromDMY(datePartRaw) ||               // dd/mm/yyyy → yyyy-mm-dd
-          toISOIfISO(datePartRaw) ||                 // yyyy-mm-dd → yyyy-mm-dd
-          toISOByNative(datePartRaw) || "";          // try Date(...) → yyyy-mm-dd (last resort)
+          toISOFromDMY(datePartRaw) ||
+          toISOIfISO(datePartRaw) ||
+          toISOByNative(datePartRaw) || "";
 
         return {
           id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now() + Math.random()),
-          date: dateISO,                              // never leave empty if we can parse
+          date: dateISO,
           start: toHHMM(start),
           end: toHHMM(end),
           note: "",
         };
       }
-      // already an object
       return {
         id: s.id || (crypto.randomUUID ? crypto.randomUUID() : String(Date.now() + Math.random())),
         date: s.date || "",
@@ -45,11 +38,9 @@ export default function EditDonationModal({ open, onClose, onUpdate, item }) {
     });
 
   const [f, setF] = useState(() => ({
-    // read-only display
     name: item.name || "",
     qty: item.qty || 0,
-    expiry: item.expiry || "", // ISO yyyy-mm-dd preferred
-    // editable
+    expiry: item.expiry || "",
     address: item.address ?? {
       label: "",
       line1: "",
@@ -66,7 +57,6 @@ export default function EditDonationModal({ open, onClose, onUpdate, item }) {
     slots: normalizeSlots(item.slots),
   }));
 
-  // when item changes, re-seed form
   useEffect(() => {
     if (!open || !item) return;
     setF({
@@ -90,15 +80,21 @@ export default function EditDonationModal({ open, onClose, onUpdate, item }) {
     });
   }, [open, item]);
 
-  // close on ESC
   useEffect(() => {
     const onKey = (e) => e.key === "Escape" && onClose?.();
     if (open) document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
   }, [open, onClose]);
 
-  // ---------- expiry-guard logic (same idea as AddDonationModal) ----------
+  // ---------- dates / guards ----------
   const expiryDate = safeISOToDate(f.expiry);
+
+  const todayFloor = useMemo(() => {
+    const now = new Date();
+    return new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  }, []);
+  const todayISO = toISODate(todayFloor);
+
   const latestAllowed = useMemo(() => {
     if (!expiryDate) return null;
     const d = new Date(expiryDate);
@@ -119,6 +115,12 @@ export default function EditDonationModal({ open, onClose, onUpdate, item }) {
     return Boolean(sd && sd > latestAllowed);
   })();
 
+  const slotBeforeToday = (() => {
+    if (!f.slotDate) return false;
+    const sd = safeISOToDate(f.slotDate);
+    return Boolean(sd && startOfDay(sd) < todayFloor);
+  })();
+
   const canAddSlot = useMemo(() => {
     if (!f.slotDate || !f.slotStart || !f.slotEnd) return false;
     const startM = toMinutes(f.slotStart);
@@ -126,9 +128,13 @@ export default function EditDonationModal({ open, onClose, onUpdate, item }) {
     if (!Number.isFinite(startM) || !Number.isFinite(endM) || endM <= startM) return false;
 
     const sd = safeISOToDate(f.slotDate);
-    if (!sd || !latestAllowed) return false;
-    return sd <= latestAllowed;
-  }, [f.slotDate, f.slotStart, f.slotEnd, latestAllowed]);
+    if (!sd) return false;
+
+    if (startOfDay(sd) < todayFloor) return false;
+    if (latestAllowed && sd > latestAllowed) return false;
+
+    return true;
+  }, [f.slotDate, f.slotStart, f.slotEnd, latestAllowed, todayFloor]);
 
   const addSlot = () => {
     if (!canAddSlot) return;
@@ -152,9 +158,14 @@ export default function EditDonationModal({ open, onClose, onUpdate, item }) {
   };
 
   const removeSlot = (id) =>
-    setF((s) => ({ ...s, slots: s.slots.filter((x) => x.id !== id) }));
+    setF((s) => {
+      if ((s.slots?.length || 0) <= 1) {
+        alert("At least one availability time is required.");
+        return s;
+      }
+      return { ...s, slots: s.slots.filter((x) => x.id !== id) };
+    });
 
-  // Any existing saved slots invalid?
   const invalidSlots = useMemo(() => {
     if (!latestAllowed) return [];
     return (f.slots || []).filter((s) => {
@@ -163,10 +174,45 @@ export default function EditDonationModal({ open, onClose, onUpdate, item }) {
     });
   }, [f.slots, latestAllowed]);
 
-  const canSave = f.slots.length >= 0 && !slotAfterLimit && invalidSlots.length === 0;
+  const pastSlots = useMemo(() => {
+    return (f.slots || []).filter((s) => {
+      const d = safeISOToDate(s.date);
+      return d && startOfDay(d) < todayFloor;
+    });
+  }, [f.slots, todayFloor]);
+
+  function overlaps(a, b) {
+    if (a.date !== b.date) return false;
+    const sA = toMinutes(a.start), eA = toMinutes(a.end);
+    const sB = toMinutes(b.start), eB = toMinutes(b.end);
+    if (![sA, eA, sB, eB].every(Number.isFinite)) return false;
+    return sA < eB && sB < eA;
+  }
+  const hasOverlap = useMemo(() => {
+    const arr = f.slots || [];
+    for (let i = 0; i < arr.length; i++) {
+      for (let j = i + 1; j < arr.length; j++) {
+        if (overlaps(arr[i], arr[j])) return true;
+      }
+    }
+    return false;
+  }, [f.slots]);
+
+  const canSave =
+    f.slots.length > 0 &&
+    !slotAfterLimit &&
+    invalidSlots.length === 0 &&
+    !hasOverlap &&
+    pastSlots.length === 0;
 
   const save = () => {
-    if (!canSave) return;
+    if (!canSave) {
+      if (f.slots.length === 0) alert("Please add at least one availability time before saving.");
+      else if (slotAfterLimit || invalidSlots.length > 0) alert("Availability date must be within the allowed range.");
+      else if (pastSlots.length > 0) alert("Availability date cannot be in the past.");
+      else if (hasOverlap) alert("Some availability times overlap. Please adjust them.");
+      return;
+    }
     onUpdate?.({
       id: item.id || item.donationID,
       address: f.address,
@@ -182,7 +228,7 @@ export default function EditDonationModal({ open, onClose, onUpdate, item }) {
         <button className="close" onClick={onClose}>✕</button>
         <h3 className="modal-title">Edit Donation</h3>
 
-        {/* Read-only item info (same layout as add) */}
+        {/* Read-only item info */}
         <div className="form-grid grid-3">
           <div className="form-row">
             <label>Item name</label>
@@ -198,7 +244,7 @@ export default function EditDonationModal({ open, onClose, onUpdate, item }) {
           </div>
         </div>
 
-        {/* Address – no "use default" toggle here */}
+        {/* Address */}
         <div className="section-head">
           <span className="section-title">Address</span>
         </div>
@@ -218,7 +264,7 @@ export default function EditDonationModal({ open, onClose, onUpdate, item }) {
           ))}
         </div>
 
-        {/* Availability (same markup/classes as AddDonationModal) */}
+        {/* Availability */}
         <div className="section-head">
           <span className="section-title">Availability time(s)</span>
         </div>
@@ -229,6 +275,7 @@ export default function EditDonationModal({ open, onClose, onUpdate, item }) {
             className="input"
             value={f.slotDate}
             max={maxISOForPicker}
+            min={todayISO}
             onChange={(e) => setF({ ...f, slotDate: e.target.value })}
           />
           <input
@@ -259,9 +306,24 @@ export default function EditDonationModal({ open, onClose, onUpdate, item }) {
             Availability date must be on or before {formatDMY(latestAllowed)}.
           </div>
         )}
+        {slotBeforeToday && (
+          <div className="text-xs text-red-600 mt-1">
+            Availability date cannot be in the past.
+          </div>
+        )}
 
         {f.slots.length > 0 && (
           <>
+            {hasOverlap && (
+              <div className="mb-2 rounded border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
+                Some availability times overlap on the same day. Please adjust them.
+              </div>
+            )}
+            {pastSlots.length > 0 && (
+              <div className="mb-2 rounded border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
+                {pastSlots.length} availability {pastSlots.length > 1 ? "entries are" : "entry is"} in the past. Please update or remove them.
+              </div>
+            )}
             {invalidSlots.length > 0 && (
               <div className="mb-2 rounded border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
                 {invalidSlots.length} availability {invalidSlots.length > 1 ? "entries are" : "entry is"} past the allowed date.
@@ -271,11 +333,12 @@ export default function EditDonationModal({ open, onClose, onUpdate, item }) {
               {f.slots.map((s) => {
                 const d = safeISOToDate(s.date);
                 const late = latestAllowed && d && d > latestAllowed;
+                const past = d && startOfDay(d) < todayFloor;
                 return (
-                  <span key={s.id} className={`slot-pill ${late ? "bg-red-50" : ""}`}>
+                  <span key={s.id} className={`slot-pill ${late || past ? "bg-red-50" : ""}`}>
                     <span className="slot-main">
                       {formatDMY(s.date)}, {fmtTime(s.start)}–{fmtTime(s.end)}
-                      {s.note ? ` · ${s.note}` : ""}{late ? " ⚠️" : ""}
+                      {s.note ? ` · ${s.note}` : ""}{(late || past) ? " ⚠️" : ""}
                     </span>
                     <button className="slot-del" onClick={() => removeSlot(s.id)}>Delete</button>
                   </span>
@@ -283,6 +346,12 @@ export default function EditDonationModal({ open, onClose, onUpdate, item }) {
               })}
             </div>
           </>
+        )}
+
+        {f.slots.length === 0 && (
+          <div className="mt-2 rounded border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
+            Please add at least one availability time before saving.
+          </div>
         )}
 
         <div className="modal-actions">
@@ -302,36 +371,32 @@ function safeISOToDate(iso) {
   const d = new Date(iso);
   return isNaN(d) ? null : new Date(d.getFullYear(), d.getMonth(), d.getDate());
 }
-
+function startOfDay(d) {
+  const x = new Date(d); x.setHours(0,0,0,0); return x;
+}
 function toISODate(d) {
   const y = d.getFullYear();
   const m = String(d.getMonth() + 1).padStart(2, "0");
   const day = String(d.getDate()).padStart(2, "0");
   return `${y}-${m}-${day}`;
 }
-
 function formatDMY(dOrIso) {
   const d = dOrIso instanceof Date ? dOrIso : new Date(dOrIso);
   return isNaN(d) ? String(dOrIso) : d.toLocaleDateString("en-GB");
 }
-
 function fmtTime(hhmm) {
   if (!hhmm) return "";
   const [h, m] = hhmm.split(":").map(Number);
   const d = new Date(); d.setHours(h, m, 0, 0);
   return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: true });
 }
-
 function toISOFromDMY(dmy) {
-  // expects "dd/mm/yyyy"
   const m = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec((dmy || "").trim());
   if (!m) return "";
   const [, dd, mm, yyyy] = m;
   return `${yyyy}-${mm}-${dd}`;
 }
-
 function toHHMM(text) {
-  // if already "HH:MM" keep; else try to parse "h:mm AM/PM"
   if (/^\d{2}:\d{2}$/.test(text)) return text;
   const t = (text || "").toUpperCase().trim();
   const m = /^(\d{1,2}):(\d{2})\s*(AM|PM)$/.exec(t);
@@ -343,13 +408,10 @@ function toHHMM(text) {
   if (ap === "AM" && h === 12) h = 0;
   return `${String(h).padStart(2, "0")}:${min}`;
 }
-// accept exact ISO "yyyy-mm-dd" as-is
 function toISOIfISO(s) {
   const t = String(s || "").trim();
   return /^\d{4}-\d{2}-\d{2}$/.test(t) ? t : "";
 }
-
-// last resort: try native Date parsing and normalize to yyyy-mm-dd
 function toISOByNative(s) {
   const d = new Date(s);
   return isNaN(d) ? "" : toISODate(new Date(d.getFullYear(), d.getMonth(), d.getDate()));
