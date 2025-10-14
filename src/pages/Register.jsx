@@ -8,7 +8,7 @@ export default function Register() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [pwd, setPwd] = useState("");
-  const [household, setHousehold] = useState("NA");
+  const [household, setHousehold] = useState("NONE");
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
   const navigate = useNavigate();
@@ -41,10 +41,10 @@ export default function Register() {
         fullName: name,
         email,
         password: pwd,
-        householdSize: household === "NA" ? null : household,
+        householdSize: household === "NONE" ? null : household,
       });
       if (resp.ok) {
-        alert("✅ Registered successfully! Please check your email for the verification code.");
+        alert("✅ Registered successfully! Please check :"+ email+", for the verification code.");
         localStorage.setItem("verifyEmail", email);
         navigate("/Verify?context=register");
       } else {
@@ -111,7 +111,7 @@ export default function Register() {
               <div className={`input-group ${errors.password ? "error" : ""}`}>
                 <input
                   type="password"
-                  placeholder="Password (min 8 chars)"
+                  placeholder="Password (minimum 8 characters)"
                   value={pwd}
                   onChange={(e) => setPwd(e.target.value)}
                   required
@@ -125,9 +125,9 @@ export default function Register() {
               <div className="household-section">
                 <label>Household Size:</label>
                 <div className="household-control">
-                  {household === "NA" ? (
+                  {household === "NONE" ? (
                     <>
-                      <span className="household-na">NA</span>
+                      <span className="household-na">NONE</span>
                       <button type="button" onClick={() => setHousehold(1)}>
                         +
                       </button>
@@ -137,7 +137,7 @@ export default function Register() {
                       <button
                         type="button"
                         onClick={() => {
-                          if (household <= 1) setHousehold("NA");
+                          if (household <= 1) setHousehold("NONE");
                           else setHousehold(household - 1);
                         }}
                       >

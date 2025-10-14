@@ -122,19 +122,6 @@ export default function Verify() {
         >
           Resend Code
         </button>
-
-        <p className="verify-login-link">
-          Already verified?{" "}
-          <button
-            type="button"
-            className="link-btn"
-            onClick={() =>
-              navigate(context === "login" ? "/dashboard" : "/login")
-            }
-          >
-            {context === "login" ? "Go to Dashboard" : "Login"}
-          </button>
-        </p>
       </form>
     </div>
   );

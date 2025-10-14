@@ -45,7 +45,7 @@
 /* LEFT SIDE: Image Section */
 .login-image-container {
   flex: 1;
-  background-color: #f0f4f8;
+  background-color: #f1f5f1;
 }
 
 .login-image {
@@ -73,16 +73,23 @@
 }
 
 .register-switch {
-  background: none;
+  background: linear-gradient(135deg, #E5EBD3, #E5EBD3);
   border: none;
-  color: #007bff;
+  border-radius: 8px;
+  color: #2b2b2b;
   font-weight: 600;
-  cursor: pointer;
   font-size: 16px;
+  padding: 10px 20px;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+  letter-spacing: 0.3px;
 }
 
 .register-switch:hover {
-  text-decoration: underline;
+  background: #b1c495; /* slightly darker green */
+  color: #ffffff;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+  text-decoration: none;
 }
 
 /* Form Card Content */
@@ -125,16 +132,21 @@
 }
 
 .btn.btn-primary {
-  background-color: #3182ce;
-  color: white;
+  background: linear-gradient(135deg, #C4D2AC, #C4D2AC);
   border: none;
-  border-radius: 8px;
+  color: #000000;
+  border-radius: 10px;
   padding: 12px 32px;
   font-size: 16px;
+  font-weight: 600;
   cursor: pointer;
-  transition: background-color 0.2s;
+  transition: all 0.25s ease;
+  box-shadow: 0 4px 8px #C4D2AC;
 }
 
 .btn.btn-primary:hover {
-  background-color: #2b6cb0;
+  background: linear-gradient(135deg, #C4D2AC, #C4D2AC);
+  color: #000000;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 12px #C4D2AC;
 }

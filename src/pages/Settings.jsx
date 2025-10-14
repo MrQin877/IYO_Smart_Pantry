@@ -79,17 +79,6 @@ export default function Settings() {
           </label>
         </div>
       </div>
-
-      {/* 🚪 Logout button at bottom */}
-      <button
-        className="btn btn-secondary logout-btn"
-        onClick={() => {
-          clearAuth(); // remove session/token info
-          window.location.href = "/login"; // ✅ redirect to login page
-        }}
-      >
-        Logout
-      </button>
     </div>
   );
 }

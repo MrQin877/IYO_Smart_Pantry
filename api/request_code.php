@@ -32,7 +32,7 @@ try {
   $mail->addAddress($email);
   $mail->isHTML(true);
   $mail->Subject = 'Your New Verification Code';
-  $mail->Body = "Your new code is <b>$code</b>. It expires in 6 seconds.";
+  $mail->Body = "Your new code is <b>$code</b>. It expires in 1 minutes.";
 
   $mail->send();
   respond(['ok' => true, 'message' => 'New code sent']);
