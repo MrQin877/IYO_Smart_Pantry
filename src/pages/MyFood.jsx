@@ -147,23 +147,30 @@ export default function MyFood() {
 }
 
   function handleUpdate(data) {
-    // ✅ Find the edited item and its storage name
     const prevItem = editItem;
-    const matchedStorage =
-      allFoods.find(f => f.storageID === data.storageID)?.storage ||
-      prevItem.storage || "-";
+
+    // Handle cases where user removes storage (set to none)
+    let newStorageName = "-"; // default for none
+
+    if (data.storageID && data.storageName) {
+      newStorageName = data.storageName;
+    } else if (data.storageID) {
+      const found = allFoods.find(f => f.storageID === data.storageID);
+      if (found) newStorageName = found.storage;
+    }
 
     const updated = {
       ...prevItem,
       ...data,
-      storageID: data.storageID,
-      storage: data.storageName || matchedStorage, // ✅ ensure the new storage name shows instantly
+      storageID: data.storageID || "", // ensure it updates to empty string if none
+      storage: newStorageName,         // ✅ correctly reflects “None”
       status: new Date(data.expiry) < new Date() ? "Expired" : "Available",
     };
 
     setRows(prev => prev.map(r => (r.id === updated.id ? updated : r)));
     setEditItem(null);
   }
+
 
 
   // runs after user confirms
@@ -350,7 +357,9 @@ export default function MyFood() {
                   <td>{r.category}</td>
                   <td className="center">{r.qty}</td>
                   <td className="center">{r.unit}</td>
-                  <td>{r.storage}</td>
+                  <td className={(!r.storage || r.storage === "-") ? "center-dash" : ""}>
+                    {r.storage || "-"}
+                  </td>
                   <td>{formatDate(r.expiry)}</td>
                   <td className="row-actions">
                     <button
