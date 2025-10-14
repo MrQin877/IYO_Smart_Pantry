@@ -17,24 +17,22 @@ export default function EditDonationModal({ open, onClose, onUpdate, item }) {
         //   "yyyy-mm-dd, HH:MM - HH:MM"
         //   (optional) trailing note in parentheses → "..., HH:MM - HH:MM (note)"
         const [datePartRaw = "", timePartRaw = ""] = s.split(",").map((x) => x.trim());
-        // strip trailing "(...)" from time part
         const timePart = timePartRaw.replace(/\([^)]*\)\s*$/, "").trim();
         const [start = "", end = ""] = timePart.split("-").map((x) => x.trim());
 
         const dateISO =
-          toISOFromDMY(datePartRaw) ||               // dd/mm/yyyy → yyyy-mm-dd
-          toISOIfISO(datePartRaw) ||                 // yyyy-mm-dd → yyyy-mm-dd
-          toISOByNative(datePartRaw) || "";          // try Date(...) → yyyy-mm-dd (last resort)
+          toISOFromDMY(datePartRaw) ||
+          toISOIfISO(datePartRaw) ||
+          toISOByNative(datePartRaw) || "";
 
         return {
           id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now() + Math.random()),
-          date: dateISO,                              // never leave empty if we can parse
+          date: dateISO,
           start: toHHMM(start),
           end: toHHMM(end),
           note: "",
         };
       }
-      // already an object
       return {
         id: s.id || (crypto.randomUUID ? crypto.randomUUID() : String(Date.now() + Math.random())),
         date: s.date || "",
@@ -48,7 +46,7 @@ export default function EditDonationModal({ open, onClose, onUpdate, item }) {
     // read-only display
     name: item.name || "",
     qty: item.qty || 0,
-    expiry: item.expiry || "", // ISO yyyy-mm-dd preferred
+    expiry: item.expiry || "",
     // editable
     address: item.address ?? {
       label: "",
@@ -66,7 +64,6 @@ export default function EditDonationModal({ open, onClose, onUpdate, item }) {
     slots: normalizeSlots(item.slots),
   }));
 
-  // when item changes, re-seed form
   useEffect(() => {
     if (!open || !item) return;
     setF({
@@ -90,14 +87,13 @@ export default function EditDonationModal({ open, onClose, onUpdate, item }) {
     });
   }, [open, item]);
 
-  // close on ESC
   useEffect(() => {
     const onKey = (e) => e.key === "Escape" && onClose?.();
     if (open) document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
   }, [open, onClose]);
 
-  // ---------- expiry-guard logic (same idea as AddDonationModal) ----------
+  // ---------- expiry-guard logic ----------
   const expiryDate = safeISOToDate(f.expiry);
   const latestAllowed = useMemo(() => {
     if (!expiryDate) return null;
@@ -152,9 +148,14 @@ export default function EditDonationModal({ open, onClose, onUpdate, item }) {
   };
 
   const removeSlot = (id) =>
-    setF((s) => ({ ...s, slots: s.slots.filter((x) => x.id !== id) }));
+    setF((s) => {
+      if ((s.slots?.length || 0) <= 1) {
+        alert("At least one availability time is required.");
+        return s;
+      }
+      return { ...s, slots: s.slots.filter((x) => x.id !== id) };
+    });
 
-  // Any existing saved slots invalid?
   const invalidSlots = useMemo(() => {
     if (!latestAllowed) return [];
     return (f.slots || []).filter((s) => {
@@ -163,10 +164,13 @@ export default function EditDonationModal({ open, onClose, onUpdate, item }) {
     });
   }, [f.slots, latestAllowed]);
 
-  const canSave = f.slots.length >= 0 && !slotAfterLimit && invalidSlots.length === 0;
+  const canSave = f.slots.length > 0 && !slotAfterLimit && invalidSlots.length === 0;
 
   const save = () => {
-    if (!canSave) return;
+    if (!canSave) {
+      if (f.slots.length === 0) alert("Please add at least one availability time before saving.");
+      return;
+    }
     onUpdate?.({
       id: item.id || item.donationID,
       address: f.address,
@@ -182,7 +186,7 @@ export default function EditDonationModal({ open, onClose, onUpdate, item }) {
         <button className="close" onClick={onClose}>✕</button>
         <h3 className="modal-title">Edit Donation</h3>
 
-        {/* Read-only item info (same layout as add) */}
+        {/* Read-only item info */}
         <div className="form-grid grid-3">
           <div className="form-row">
             <label>Item name</label>
@@ -198,7 +202,7 @@ export default function EditDonationModal({ open, onClose, onUpdate, item }) {
           </div>
         </div>
 
-        {/* Address – no "use default" toggle here */}
+        {/* Address */}
         <div className="section-head">
           <span className="section-title">Address</span>
         </div>
@@ -218,7 +222,7 @@ export default function EditDonationModal({ open, onClose, onUpdate, item }) {
           ))}
         </div>
 
-        {/* Availability (same markup/classes as AddDonationModal) */}
+        {/* Availability */}
         <div className="section-head">
           <span className="section-title">Availability time(s)</span>
         </div>
@@ -285,6 +289,12 @@ export default function EditDonationModal({ open, onClose, onUpdate, item }) {
           </>
         )}
 
+        {f.slots.length === 0 && (
+          <div className="mt-2 rounded border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
+            Please add at least one availability time before saving.
+          </div>
+        )}
+
         <div className="modal-actions">
           <button className="btn secondary" onClick={onClose}>Cancel</button>
           <button className="btn primary" onClick={save} disabled={!canSave}>Save</button>
@@ -323,7 +333,6 @@ function fmtTime(hhmm) {
 }
 
 function toISOFromDMY(dmy) {
-  // expects "dd/mm/yyyy"
   const m = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec((dmy || "").trim());
   if (!m) return "";
   const [, dd, mm, yyyy] = m;
@@ -331,7 +340,6 @@ function toISOFromDMY(dmy) {
 }
 
 function toHHMM(text) {
-  // if already "HH:MM" keep; else try to parse "h:mm AM/PM"
   if (/^\d{2}:\d{2}$/.test(text)) return text;
   const t = (text || "").toUpperCase().trim();
   const m = /^(\d{1,2}):(\d{2})\s*(AM|PM)$/.exec(t);
@@ -348,7 +356,6 @@ function toISOIfISO(s) {
   const t = String(s || "").trim();
   return /^\d{4}-\d{2}-\d{2}$/.test(t) ? t : "";
 }
-
 // last resort: try native Date parsing and normalize to yyyy-mm-dd
 function toISOByNative(s) {
   const d = new Date(s);

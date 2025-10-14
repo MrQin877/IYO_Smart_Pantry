@@ -1,4 +1,3 @@
-// src/component/AddDonationModal.jsx
 import { useEffect, useMemo, useRef, useState } from "react";
 import { apiGet, apiPost } from "../lib/api";
 
@@ -169,6 +168,17 @@ export default function AddDonationModal({
     });
   }, [f.slots, latestAllowed]);
 
+  // ---------- "expiry must be today or later" ----------
+  const todayFloor = useMemo(() => {
+    const now = new Date();
+    return new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  }, []);
+  const todayISO = toISODate(todayFloor);
+  const expiryBeforeToday = useMemo(() => {
+    if (!expiryDate) return false;
+    return expiryDate < todayFloor;
+  }, [expiryDate, todayFloor]);
+
   const canPublish = useMemo(() => {
     // base checks
     if (
@@ -184,13 +194,16 @@ export default function AddDonationModal({
     // must have valid expiry to compare
     if (!expiryDate || !latestAllowed) return false;
 
+    // reject if expiry is earlier than today
+    if (expiryBeforeToday) return false;
+
     // reject if any invalid slots or current editor is invalid
     if (invalidSlots.length > 0 || slotAfterLimit) return false;
 
     return true;
   }, [
     f.name, f.categoryID, f.unitID, f.qty, f.expiry, f.slots.length, f.contact,
-    expiryDate, latestAllowed, invalidSlots.length, slotAfterLimit
+    expiryDate, latestAllowed, invalidSlots.length, slotAfterLimit, expiryBeforeToday
   ]);
 
   async function publish() {
@@ -258,7 +271,7 @@ export default function AddDonationModal({
   const addrDisabled = f.useLastAddress && !!lastAddress;
   if (!open) return null;
 
-  // For the date picker, provide a max=YYYY-MM-DD hint
+  // For the date picker, provide a max=YYYY-MM-DD hint for availability
   const maxISOForPicker = latestAllowed ? toISODate(latestAllowed) : undefined;
 
   return (
@@ -345,6 +358,7 @@ export default function AddDonationModal({
               type="date"
               className="input"
               value={f.expiry}
+              min={todayISO}
               onChange={(e) => setF({ ...f, expiry: e.target.value })}
             />
             {f.expiry && (
@@ -352,6 +366,11 @@ export default function AddDonationModal({
                 {/*Latest availability allowed:{" "}
                 <b>{latestAllowed ? formatDMY(latestAllowed) : "-"}</b>*/}
                 {MAX_SLOT_OFFSET_DAYS === 1 && " (one day before expiry)"}
+              </div>
+            )}
+            {expiryBeforeToday && (
+              <div className="text-xs text-red-600 mt-1">
+                Expiry cannot be in the past. Please choose {formatDMY(todayFloor)} or later.
               </div>
             )}
           </div>
@@ -396,7 +415,7 @@ export default function AddDonationModal({
               <label>{cap(key)}</label>
               <input
                 className="input"
-                disabled={addrDisabled}
+                disabled={f.useLastAddress && !!lastAddress}
                 value={f.address[key]}
                 onChange={(e) => setF({ ...f, address: { ...f.address, [key]: e.target.value } })}
               />
