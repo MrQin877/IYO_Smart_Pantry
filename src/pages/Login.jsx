@@ -8,21 +8,31 @@ export default function Login() {
   const [email, setEmail] = useState("");
   const [pwd, setPwd] = useState("");
   const navigate = useNavigate();
+  const [loading, setLoading] = useState(false);
 
   async function handleSubmit(e) {
     e.preventDefault();
+    setLoading(true);
     try {
       const resp = await apiPost("/login.php", { email, password: pwd });
       if (resp.ok) {
-        localStorage.setItem("userID", resp.userID);
-        localStorage.setItem("userName", resp.fullName);
-        alert("Login successful!");
-        navigate("/dashboard");
+        if (resp.needVerify) {
+          localStorage.setItem("verifyEmail", email);
+          alert("🔒 Two-Factor Authentication required. Please check :"+ email+", for the code.");
+          navigate("/Verify?context=login");
+        } else {
+          localStorage.setItem("userID", resp.userID);
+          localStorage.setItem("userName", resp.fullName);
+          alert("✅ Login successful!");
+          navigate("/Dashboard");
+        }
       } else {
         alert(resp.error || "Login failed");
       }
     } catch (err) {
       alert(err.message);
+    } finally {
+      setLoading(false);
     }
   }
 
@@ -73,8 +83,8 @@ export default function Login() {
               />
 
               <div className="login-bottom">
-                <button type="submit" className="btn btn-primary">
-                  Login
+                <button type="submit" className="btn btn-primary" disabled={loading}>
+                  {loading ? "Loging..." : "Login"}
                 </button>
               </div>
             </form>

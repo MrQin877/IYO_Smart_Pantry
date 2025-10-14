@@ -93,8 +93,8 @@
   width: 32px;
   height: 32px;
   border-radius: 50%;
-  background-color: #0078ff;
-  color: white;
+  background-color: #E6E7CF;
+  color: #303116;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -105,7 +105,7 @@
 }
 
 .avatar-circle:hover {
-  background-color: #005bb5;
+  background-color: #95B26F;
 }
 /* right side auth buttons */
 .auth-actions{ display:flex; align-items:center; gap:14px; }

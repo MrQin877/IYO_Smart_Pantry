@@ -72,16 +72,23 @@
 }
 
 .link-btn {
-  background: none;
+  background: #C4D2AC;
   border: none;
-  color: #2a7ade;
-  cursor: pointer;
+  border-radius: 8px;
+  color: #2b2b2b;
+  font-weight: 600;
   font-size: 16px;
+  padding: 10px 20px;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+  letter-spacing: 0.3px;
 }
 
 .link-btn:hover {
-  color: #1f65c0;
-  text-decoration: underline;
+  background: #b1c495; /* slightly darker green */
+  color: #ffffff;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+  text-decoration: none;
 }
 
 .register-linktologin {

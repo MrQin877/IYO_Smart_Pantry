@@ -1,16 +1,22 @@
 // src/pages/Verify.jsx
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { apiPost } from "../lib/api";
 import "./Verify.css";
 
 export default function Verify() {
   const [email, setEmail] = useState("");
   const [code, setCode] = useState("");
+  const [password, setPassword] = useState(""); // new password for register
   const [loading, setLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState("");
   const navigate = useNavigate();
+  const location = useLocation();
 
-  // 页面加载时自动读取本地保存的邮箱
+  const params = new URLSearchParams(location.search);
+  const context = params.get("context") || "register"; // default: register
+
+  // Load saved email
   useEffect(() => {
     const savedEmail = localStorage.getItem("verifyEmail");
     if (savedEmail) setEmail(savedEmail);
@@ -19,17 +25,41 @@ export default function Verify() {
   async function handleVerify(e) {
     e.preventDefault();
     setLoading(true);
+    setErrorMsg("");
+
+    if (context === "register" && password.length < 8) {
+      setErrorMsg("Password must be at least 8 characters long.");
+      setLoading(false);
+      return;
+    }
+
     try {
-      const resp = await apiPost("/verify_2fa.php", { email, code });
+      const body = { email, code };
+      if (context === "register") body.password = password;
+
+      const resp = await apiPost("/verify_2fa.php", body);
       if (resp.ok) {
-        alert("✅ Verification successful! You can now log in.");
+        alert("✅ Verification successful!");
         localStorage.removeItem("verifyEmail");
-        navigate("/login");
+
+        if (context === "login") {
+          // NEW: set localStorage so Header can show nav like normal login
+          if (resp.userID) localStorage.setItem("userID", resp.userID);
+          if (resp.fullName) localStorage.setItem("userName", resp.fullName);
+          if (email) localStorage.setItem("userEmail", email);
+
+          // Ensure listeners (Header) react immediately
+          window.dispatchEvent(new Event("storage"));
+
+          navigate("/dashboard");
+        } else {
+          navigate("/login");
+        }
       } else {
-        alert(resp.error || "Verification failed");
+        setErrorMsg(resp.error || "Verification failed.");
       }
     } catch (err) {
-      alert("Server error: " + err.message);
+      setErrorMsg("Server error: " + err.message);
     } finally {
       setLoading(false);
     }
@@ -65,12 +95,7 @@ export default function Verify() {
           We have sent a 6-digit verification code to your email.
         </p>
 
-        <input
-          type="email"
-          value={email}
-          disabled
-          className="email-disabled"
-        />
+        <input type="email" value={email} disabled className="email-disabled" />
 
         <input
           type="text"
@@ -79,6 +104,19 @@ export default function Verify() {
           onChange={(e) => setCode(e.target.value)}
           required
         />
+
+        {/* Show password field ONLY for registration verification */}
+        {context === "register" && (
+          <input
+            type="password"
+            placeholder="Enter new password (min 8 chars)"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+          />
+        )}
+
+        {errorMsg && <p className="error-msg">{errorMsg}</p>}
 
         <button type="submit" className="btn btn-primary" disabled={loading}>
           {loading ? "Verifying..." : "Verify"}
@@ -92,17 +130,6 @@ export default function Verify() {
         >
           Resend Code
         </button>
-
-        <p className="verify-login-link">
-          Already verified?{" "}
-          <button
-            type="button"
-            className="link-btn"
-            onClick={() => navigate("/login")}
-          >
-            Login
-          </button>
-        </p>
       </form>
     </div>
   );

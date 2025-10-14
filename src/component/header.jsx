@@ -1,63 +1,123 @@
-// src/component/header.jsx
+// src/component/Header.jsx
 import React, { useEffect, useState } from "react";
-import { NavLink, Link } from "react-router-dom";
+import { NavLink, Link, useNavigate } from "react-router-dom";
 import "./header.css";
-import { apiGet } from "../lib/api";
+import Swal from "sweetalert2";
 
 export default function HeaderNav() {
   const [initial, setInitial] = useState("");
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const navigate = useNavigate();
 
   useEffect(() => {
-    const name = localStorage.getItem("userName");
-    const email = localStorage.getItem("userEmail");
+    const refresh = () => {
+      const name = localStorage.getItem("userName");
+      const email = localStorage.getItem("userEmail");
+      const userID = localStorage.getItem("userID");
 
-    if (name && name.trim() !== "") {
-      setInitial(name.trim().charAt(0).toUpperCase());
-    } else if (email) {
-      setInitial(email.trim().charAt(0).toUpperCase());
-    }
+      setIsLoggedIn(!!userID);
+
+      if (name && name.trim() !== "") {
+        setInitial(name.trim().charAt(0).toUpperCase());
+      } else if (email) {
+        setInitial(email.trim().charAt(0).toUpperCase());
+      } else {
+        setInitial("");
+      }
+    };
+
+    // initial load
+    refresh();
+
+    // react to updates from login/verify/logout
+    window.addEventListener("storage", refresh);
+    return () => window.removeEventListener("storage", refresh);
   }, []);
+
+  // Handle logout click (with confirmation)
+  async function handleLogout() {
+    const result = await Swal.fire({
+      title: "Logout?",
+      text: "Are you sure you want to log out?",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonText: "Yes, logout",
+      cancelButtonText: "Cancel",
+      confirmButtonColor: "#C2D3AC",
+      cancelButtonColor: "#dee0deff",
+      buttonsStyling: true,
+    });
+
+    if (result.isConfirmed) {
+      Swal.fire({
+        icon:"success",
+        title:"Logged out",
+        text:"You have been logged out successfully.",
+        timer: 2000,
+        confirmButtonColor:"#C2D3AC",
+      });
+      localStorage.clear();
+      // make sure other tabs / listeners know
+      window.dispatchEvent(new Event("storage"));
+      window.location.href = "/";
+    }
+  }
 
   return (
     <header className="nav-wrap">
       <div className="nav-pill">
-        <Link to="/" className="brand" aria-label="IYO Smart Pantry – Home">
+        {/* Brand logo */}
+        <Link
+          to={isLoggedIn ? "/dashboard" : "/"}
+          className="brand"
+          aria-label="IYO Smart Pantry – Home"
+        >
           <img className="logo" src="/logo.svg" alt="IYO Logo" />
         </Link>
 
-        <nav className="main" aria-label="Primary">
-          <NavItem to="/">Home</NavItem>
-          <NavItem to="/food">Food Center</NavItem>
-          <NavItem to="/plan">Plan Meals</NavItem>
-          <NavItem to="/analytics">Food Analytics</NavItem>
-        </nav>
+        {/* Nav menu (only show when logged in) */}
+        {isLoggedIn && (
+          <nav className="main" aria-label="Primary">
+            <NavItem to="/dashboard">Home</NavItem>
+            <NavItem to="/food">Food Center</NavItem>
+            <NavItem to="/plan">Plan Meals</NavItem>
+            <NavItem to="/analytics">Food Analytics</NavItem>
+          </nav>
+        )}
 
-        {/* right icons */}
+        {/* Right side icons */}
         <div className="icons">
-          <IconButton title="Notifications">🔔</IconButton>
-          
-          <Link to="/account">
+          {isLoggedIn && <IconButton title="Notifications">🔔</IconButton>}
+
+          <Link to={isLoggedIn ? "/settings" : "/account"}>
             {initial ? (
-              <div className="avatar-circle" title="Account">
+              <div className="avatar-circle" title={isLoggedIn ? "Settings" : "Account"}>
                 {initial}
               </div>
             ) : (
-              <IconButton title="Account">🧑</IconButton>
+              <IconButton title={isLoggedIn ? "Settings" : "Account"}>🧑</IconButton>
             )}
           </Link>
 
-          <Link to="/settings">
-            <IconButton title="Settings">⚙</IconButton>
-          </Link>
+          {isLoggedIn ? (
+            <button className="icon" title="Logout" onClick={handleLogout}>
+              🚪
+            </button>
+          ) : null}
         </div>
       </div>
     </header>
   );
 }
 
+// Reusable components
 function NavItem({ to, children }) {
   return (
-    <NavLink to={to} end={to === "/"} className={({ isActive }) => "link" + (isActive ? " active" : "")}>
+    <NavLink
+      to={to}
+      end={to === "/"}
+      className={({ isActive }) => "link" + (isActive ? " active" : "")}
+    >
       {children}
     </NavLink>
   );

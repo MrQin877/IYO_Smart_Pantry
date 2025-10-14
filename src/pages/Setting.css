@@ -90,21 +90,3 @@ input:checked + .slider:before {
   10%, 90% { opacity: 1; transform: translateY(0); }
   100% { opacity: 0; transform: translateY(-10px); }
 }
-
-/* 🚪 Logout button at bottom */
-.logout-btn {
-  width: 100%;
-  max-width: 600px;
-  margin-bottom: 20px;
-  padding: 10px 0;
-  background: #e74c3c;
-  color: #fff;
-  border: none;
-  border-radius: 10px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: 0.2s;
-}
-.logout-btn:hover {
-  background: #c0392b;
-}
