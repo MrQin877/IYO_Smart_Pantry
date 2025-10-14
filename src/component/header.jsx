@@ -10,22 +10,31 @@ export default function HeaderNav() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const name = localStorage.getItem("userName");
-    const email = localStorage.getItem("userEmail");
-    const userID = localStorage.getItem("userID");
+    const refresh = () => {
+      const name = localStorage.getItem("userName");
+      const email = localStorage.getItem("userEmail");
+      const userID = localStorage.getItem("userID");
 
-    setIsLoggedIn(!!userID);
+      setIsLoggedIn(!!userID);
 
-    if (name && name.trim() !== "") {
-      setInitial(name.trim().charAt(0).toUpperCase());
-    } else if (email) {
-      setInitial(email.trim().charAt(0).toUpperCase());
-    }
+      if (name && name.trim() !== "") {
+        setInitial(name.trim().charAt(0).toUpperCase());
+      } else if (email) {
+        setInitial(email.trim().charAt(0).toUpperCase());
+      } else {
+        setInitial("");
+      }
+    };
+
+    // initial load
+    refresh();
+
+    // react to updates from login/verify/logout
+    window.addEventListener("storage", refresh);
+    return () => window.removeEventListener("storage", refresh);
   }, []);
 
-
   // Handle logout click (with confirmation)
-
   async function handleLogout() {
     const result = await Swal.fire({
       title: "Logout?",
@@ -46,12 +55,13 @@ export default function HeaderNav() {
         text:"You have been logged out successfully.",
         timer: 2000,
         confirmButtonColor:"#C2D3AC",
-      })
+      });
       localStorage.clear();
+      // make sure other tabs / listeners know
+      window.dispatchEvent(new Event("storage"));
       window.location.href = "/";
     }
   }
-
 
   return (
     <header className="nav-wrap">

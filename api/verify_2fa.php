@@ -38,14 +38,32 @@ if ($password) {
   $hashed = password_hash($password, PASSWORD_DEFAULT);
   $stmt = $pdo->prepare("UPDATE users SET password=?, status='Active' WHERE email=?");
   $stmt->execute([$hashed, $email]);
+
+  $payload = ['ok' => true, 'message' => 'Account verified successfully'];
 } else {
   // Login 2FA verification (don’t change password)
   $stmt = $pdo->prepare("UPDATE users SET status='Active' WHERE email=?");
   $stmt->execute([$email]);
+
+  // Return user info so frontend can set localStorage like normal login
+  $stmt = $pdo->prepare("SELECT userID, fullName FROM users WHERE email=? LIMIT 1");
+  $stmt->execute([$email]);
+  $u = $stmt->fetch();
+
+  // Also mark session as logged in (optional but consistent)
+  $_SESSION['userID'] = $u['userID'] ?? null;
+  $_SESSION['email']  = $email;
+  $_SESSION['fullName'] = $u['fullName'] ?? '';
+
+  $payload = [
+    'ok' => true,
+    'message' => 'Login verified successfully',
+    'userID' => $u['userID'] ?? null,
+    'fullName' => $u['fullName'] ?? ''
+  ];
 }
 
-// Clear session
+// Clear 2FA session bits
 unset($_SESSION['verify_email'], $_SESSION['verify_code'], $_SESSION['verify_expire']);
 
-respond(['ok' => true, 'message' => 'Account verified successfully']);
-?>
+respond($payload);

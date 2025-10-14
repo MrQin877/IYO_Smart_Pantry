@@ -43,6 +43,14 @@ export default function Verify() {
         localStorage.removeItem("verifyEmail");
 
         if (context === "login") {
+          // NEW: set localStorage so Header can show nav like normal login
+          if (resp.userID) localStorage.setItem("userID", resp.userID);
+          if (resp.fullName) localStorage.setItem("userName", resp.fullName);
+          if (email) localStorage.setItem("userEmail", email);
+
+          // Ensure listeners (Header) react immediately
+          window.dispatchEvent(new Event("storage"));
+
           navigate("/dashboard");
         } else {
           navigate("/login");
