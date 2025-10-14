@@ -12,8 +12,21 @@ export default function EditDonationModal({ open, onClose, onUpdate, item }) {
     (slots || []).map((s) => {
       if (typeof s === "string") {
         const [datePartRaw = "", timePartRaw = ""] = s.split(",").map((x) => x.trim());
-        const timePart = timePartRaw.replace(/\([^)]*\)\s*$/, "").trim();
-        const [start = "", end = ""] = timePart.split("-").map((x) => x.trim());
+        // strip trailing note "(...)", normalize dashes, and normalize spaces around dash
+        const timePartClean = timePartRaw
+          .replace(/\([^)]*\)\s*$/, "")   // remove trailing note
+          .replace(/[–—−]/g, "-")         // en/em/minus dash -> hyphen
+          .replace(/\s*-\s*/g, "-")       // squeeze spaces around hyphen
+          .trim();
+
+        // robustly capture "HH:MM", optionally with AM/PM, separated by a hyphen
+        const m = timePartClean.match(
+          /^(\d{1,2}:\d{2}\s*(?:AM|PM|am|pm)?)\-(\d{1,2}:\d{2}\s*(?:AM|PM|am|pm)?)$/
+        );
+        const startRaw = m ? m[1] : timePartClean;
+        const endRaw   = m ? m[2] : "";
+        const start = toHHMM(startRaw);
+        const end   = toHHMM(endRaw);
 
         const dateISO =
           toISOFromDMY(datePartRaw) ||
@@ -121,10 +134,21 @@ export default function EditDonationModal({ open, onClose, onUpdate, item }) {
     return Boolean(sd && startOfDay(sd) < todayFloor);
   })();
 
+  const candidate = useMemo(
+    () => (f.slotDate && f.slotStart && f.slotEnd)
+          ? { date: f.slotDate, start: f.slotStart, end: f.slotEnd }
+          : null,
+    [f.slotDate, f.slotStart, f.slotEnd]
+  );
+  const candDup  = useMemo(() => candidate ? duplicateOfAny(candidate, f.slots) : false, [candidate, f.slots]);
+  const candOver = useMemo(() => candidate && !candDup ? overlapsAny(candidate, f.slots) : false, [candidate, candDup, f.slots]);
+
+
   const canAddSlot = useMemo(() => {
     if (!f.slotDate || !f.slotStart || !f.slotEnd) return false;
+
     const startM = toMinutes(f.slotStart);
-    const endM = toMinutes(f.slotEnd);
+    const endM   = toMinutes(f.slotEnd);
     if (!Number.isFinite(startM) || !Number.isFinite(endM) || endM <= startM) return false;
 
     const sd = safeISOToDate(f.slotDate);
@@ -133,8 +157,12 @@ export default function EditDonationModal({ open, onClose, onUpdate, item }) {
     if (startOfDay(sd) < todayFloor) return false;
     if (latestAllowed && sd > latestAllowed) return false;
 
+    // NEW: block exact duplicate and overlapping with ANY existing slot
+    if (candDup || candOver) return false;
+
     return true;
-  }, [f.slotDate, f.slotStart, f.slotEnd, latestAllowed, todayFloor]);
+  }, [f.slotDate, f.slotStart, f.slotEnd, latestAllowed, todayFloor, candDup, candOver]);
+
 
   const addSlot = () => {
     if (!canAddSlot) return;
@@ -180,6 +208,20 @@ export default function EditDonationModal({ open, onClose, onUpdate, item }) {
       return d && startOfDay(d) < todayFloor;
     });
   }, [f.slots, todayFloor]);
+  
+  function overlapsAny(candidate, list = []) {
+    for (const x of list) if (overlaps(candidate, x)) return true;
+    return false;
+  }
+
+  function sameSlot(a, b) {
+    return !!a && !!b && a.date === b.date && a.start === b.start && a.end === b.end;
+  }
+
+  function duplicateOfAny(candidate, list = []) {
+    for (const x of list) if (sameSlot(candidate, x)) return true;
+    return false;
+  }
 
   function overlaps(a, b) {
     if (a.date !== b.date) return false;
@@ -300,6 +342,13 @@ export default function EditDonationModal({ open, onClose, onUpdate, item }) {
             + Add
           </button>
         </div>
+
+        {candDup && (
+          <div className="text-xs text-red-600 mt-1">This exact time already exists.</div>
+        )}
+        {!candDup && candOver && (
+          <div className="text-xs text-red-600 mt-1">This time overlaps another slot.</div>
+        )}
 
         {slotAfterLimit && (
           <div className="text-xs text-red-600 mt-1">
