@@ -166,7 +166,7 @@
 }
 
 .input-group.error input {
-  border-color: #e74d3c66;
+  border-color: #e74d3c61;
   background-color: #fff6f6;
 }
 
@@ -197,7 +197,7 @@
   bottom: 125%;
   left: 50%;
   transform: translateX(-50%);
-  background: #e74d3c66;
+  background: #e74d3c;
   color: white;
   padding: 6px 10px;
   border-radius: 6px;
