@@ -27,10 +27,11 @@
 .login-header {
   text-align: center;
   padding-top: 30px;
+  height: 80vh;
 }
 
 .login-logo {
-  width: 120px;
+  width: 180px;
   height: auto;
 }
 
@@ -73,10 +74,14 @@
 }
 
 .register-switch {
+  background: #b1c495; /* slightly darker green */
+  color: #ffffff;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+  text-decoration: none;
   background: linear-gradient(135deg, #E5EBD3, #E5EBD3);
   border: none;
   border-radius: 8px;
-  color: #2b2b2b;
+  color: #2b2b2bc1;
   font-weight: 600;
   font-size: 16px;
   padding: 10px 20px;
@@ -121,7 +126,7 @@
 }
 
 .login-card input:focus {
-  border-color: #3182ce;
+  border-color: #b1c495;
   box-shadow: 0 0 0 3px rgba(49, 130, 206, 0.2);
 }
 
@@ -132,9 +137,9 @@
 }
 
 .btn.btn-primary {
-  background: linear-gradient(135deg, #C4D2AC, #C4D2AC);
+  background: linear-gradient(135deg, #b1c495, #b1c495);
   border: none;
-  color: #000000;
+  color: #ffffff;
   border-radius: 10px;
   padding: 12px 32px;
   font-size: 16px;
