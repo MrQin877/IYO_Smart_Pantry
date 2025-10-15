@@ -17,4 +17,14 @@ export default defineConfig({
       },
     },
   },
+  test: {
+    include: ['tests/**/*.js', 'tests/**/*.jsx'],
+    environment: 'jsdom',
+    setupFiles: './tests/setupTests.js',
+    globals: true,                 // allows `describe`, `it`, etc. without import
+    css: false,                    // ignore CSS imports in components
+    exclude: ['**/node_modules/**', '**/dist/**', '**/tests/setupTests.js']
+    // If you use path aliases like "@/..." add:
+    // alias: { '@': new URL('./src', import.meta.url).pathname },
+  },
 })
