@@ -59,24 +59,24 @@ export default function Register() {
 
 
   return (
-    <div className="login-wrapper">
-      <div className="login-page">
+    <div className="register-wrapper">
+      <div className="register-page">
         {/* Header Logo */}
-        <div className="login-header">
-          <img className="login-logo" src="/logo.svg" alt="IYO Logo" />
+        <div className="register-header">
+          <img className="register-logo" src="/logo.svg" alt="IYO Logo" />
         </div>
 
         {/* Main Content */}
-        <div className="login-content">
+        <div className="register-content">
           {/* Left Side Form */}
-          <div className="login-form-container">
-            <p className="register-linktologin">
-              <button className="link-btn" onClick={() => navigate("/login")}>
+          <div className="register-form-container">
+            <div className="register-top">
+              <button className="login-switch" onClick={() => navigate("/login")}>
                 Login
               </button>
-            </p>
+            </div>
 
-            <form onSubmit={handleSubmit} className="login-card">
+            <form onSubmit={handleSubmit} className="register-card">
               <h2>Register</h2>
 
               {/* Full Name */}
@@ -160,7 +160,7 @@ export default function Register() {
           
 
           {/* Right Side Image */}
-          <div className="login-image-container">
+          <div className="register-image-container">
             <img
               className="register-image"
               src="/Elain/register.png"
