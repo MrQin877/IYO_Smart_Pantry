@@ -14,14 +14,14 @@ try {
     $mail->SMTPAuth   = true;
 
     // ⚠️ 修改成你的 Gmail 邮箱与“应用专用密码”
-    $mail->Username   = 'elainliow@gmail.com';
-    $mail->Password   = 'karn eihf zwhl rleg';
+    $mail->Username   = 'iyosmartpantry@gmail.com';
+    $mail->Password   = 'jbvm rckx dlci dgof';
 
     $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
     $mail->Port       = 587;
 
     // 发件人和收件人
-    $mail->setFrom('elainliow@gmail.com', 'IYO Smart Pantry');
+    $mail->setFrom('iyosmartpantry@gmail.com', 'IYO Smart Pantry');
     $mail->addAddress('zclim01234@gmail.com', 'Test User'); // 测试收件人
 
     // 邮件内容
