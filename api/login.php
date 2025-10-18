@@ -52,12 +52,12 @@ if ((int)$user['twoFA'] === 1){
     $mail->isSMTP();
     $mail->Host = 'smtp.gmail.com';
     $mail->SMTPAuth = true;
-    $mail->Username = 'elainliow@gmail.com'; 
-    $mail->Password = 'akse gbpy etdl iiax'; 
+    $mail->Username = 'iyosmartpantry@gmail.com'; 
+    $mail->Password = 'jbvm rckx dlci dgof'; 
     $mail->SMTPSecure = 'tls';
     $mail->Port = 587;
 
-    $mail->setFrom('elainliow@gmail.com', 'IYO Smart Pantry');
+    $mail->setFrom('iyosmartpantry@gmail.com', 'IYO Smart Pantry');
     $mail->addAddress($email, $name);
     $mail->isHTML(true);
     $mail->Subject = 'Your Verification Code';

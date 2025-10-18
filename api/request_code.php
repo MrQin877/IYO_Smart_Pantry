@@ -23,12 +23,12 @@ try {
   $mail->isSMTP();
   $mail->Host = 'smtp.gmail.com';
   $mail->SMTPAuth = true;
-  $mail->Username = 'elainliow@gmail.com'; 
-  $mail->Password = 'akse gbpy etdl iiax'; 
+  $mail->Username = 'iyosmartpantry@gmail.com'; 
+  $mail->Password = 'jbvm rckx dlci dgof'; 
   $mail->SMTPSecure = 'tls';
   $mail->Port = 587;
 
-  $mail->setFrom('elainliow@gmail.com', 'IYO Smart Pantry');
+  $mail->setFrom('iyosmartpantry@gmail.com', 'IYO Smart Pantry');
   $mail->addAddress($email);
   $mail->isHTML(true);
   $verifyLink = "{$frontendBase}/Verify?email=" . urlencode($email) . "&code=" . urlencode($code);
