@@ -6,13 +6,35 @@ import ConfirmDialog from "../component/ConfirmDialog.jsx";
 import { apiPost } from "../lib/api";
 
 // If your backend wants "dd/mm/yyyy, HH:MM - HH:MM (note)" per slot
+// If any required field is missing/invalid, return null (so we can detect empty)
 function slotToServerString({ date, start, end, note }) {
-  const d = new Date(date);
-  if (isNaN(d)) return "";
+  if (!date || !start || !end) return null;
+
+  // parse yyyy-mm-dd OR dd/mm/yyyy
+  const toDate = (v) => {
+    const t = String(v || "").trim();
+    const iso = /^\d{4}-\d{2}-\d{2}$/.test(t)
+      ? t
+      : (() => {
+          const m = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(t);
+          return m ? `${m[3]}-${m[2]}-${m[1]}` : t; // try convert d/m/Y -> Y-m-d
+        })();
+    const d = new Date(iso);
+    return isNaN(d) ? null : d;
+  };
+
+  const d = toDate(date);
+  if (!d) return null;
+
   const dd = String(d.getDate()).padStart(2, "0");
   const mm = String(d.getMonth() + 1).padStart(2, "0");
   const yyyy = d.getFullYear();
-  return `${dd}/${mm}/${yyyy}, ${start} - ${end}${note ? ` (${note})` : ""}`;
+
+  const okTime = (t) => /^([01]\d|2[0-3]):([0-5]\d)$/.test(String(t));
+  if (!okTime(start) || !okTime(end)) return null;
+
+  const safeNote = (note || "").replace(/[|\r\n]/g, " ").trim();
+  return `${dd}/${mm}/${yyyy}, ${start} - ${end}${safeNote ? ` (${safeNote})` : ""}`;
 }
 
 // helpers
@@ -149,6 +171,8 @@ export default function MyDonation() {
       // Or: const res = await apiPost("/donation_delete.php", { userID, donationID: pendingDel.id });
 
       if (!res?.ok) throw new Error(res?.error || "Delete failed");
+
+      alert("Donation cancelled.✅");
     } catch (e) {
       alert(e.message || "Delete failed. Reverting.");
       // rollback
@@ -320,6 +344,7 @@ export default function MyDonation() {
         }));
         setRows(mapped);
         setAllDonations(mapped);
+        alert("Donation added.✅");
       }
     } catch (err) {
       console.error("Failed to refresh after publish:", err);
@@ -330,27 +355,31 @@ export default function MyDonation() {
 
   // REAL update function — calls API then updates UI
   async function handleUpdateDonation({ id, address, slots }) {
-    const userID = localStorage.getItem("userID");
-    if (!userID) {
-      alert("Not logged in (missing userID).");
-      return;
-    }
+  const userID = localStorage.getItem("userID");
+  if (!userID) { alert("Not logged in (missing userID)."); return; }
 
-    const payload = {
-      userID,
-      donationID: id,
-      availabilityTimes: (slots || [])
-        .map(slotToServerString)
-        .filter(Boolean)
-        .join("|"),
-      address, // JSON object; split into columns in PHP if needed
-    };
+  const cleanedArr = (slots || [])
+    .map(slotToServerString)
+    .filter((s) => typeof s === "string" && s.trim() !== "");
 
-    try {
-      const res = await apiPost("/donation_update.php", payload);
-      if (!res?.ok) throw new Error(res?.error || "Update failed");
+  if (cleanedArr.length === 0) {
+    alert("Please keep at least one pickup time before saving.");
+    return; // ← CRITICAL: don’t send empty string to server
+  }
 
-    // ✅ Refresh donation list immediately
+  const availabilityTimes = Array.from(new Set(cleanedArr)).join("|");
+  if (availabilityTimes.length > 800) {
+    alert("Too many/long pickup slots. Please remove some.");
+    return;
+  }
+
+  const payload = { userID, donationID: id, availabilityTimes, address };
+
+  try {
+    const res = await apiPost("/donation_update.php", payload);
+    if (!res?.ok) throw new Error(res?.error || "Update failed");
+
+      // ✅ Refresh donation list immediately
       const fresh = await fetch(`${import.meta.env.VITE_API_BASE}/donation_list.php`).then((r) => r.json());
       if (fresh.ok && Array.isArray(fresh.data)) {
         const mapped = fresh.data.map((d) => ({
@@ -372,6 +401,7 @@ export default function MyDonation() {
 
       setEditOpen(false);
       setEditItem(null);
+      alert("Donation updated.✅");
     } catch (e) {
       console.error(e);
       alert(e.message || "Server error during update.");

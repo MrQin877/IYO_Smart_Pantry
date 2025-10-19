@@ -7,7 +7,10 @@
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test": "vitest",
+    "test:ui": "vitest --ui",
+    "test:run": "vitest run"
   },
   "dependencies": {
     "mailslurp": "^0.0.1-security",
@@ -21,6 +24,8 @@
     "@eslint/js": "^9.33.0",
     "@playwright/test": "^1.56.1",
     "@types/node": "^24.8.1",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.0",
     "@types/react": "^19.1.10",
     "@types/react-dom": "^19.1.7",
     "@vitejs/plugin-react": "^5.0.0",
@@ -28,6 +33,9 @@
     "eslint-plugin-react-hooks": "^5.2.0",
     "eslint-plugin-react-refresh": "^0.4.20",
     "globals": "^16.3.0",
-    "vite": "^7.1.2"
+    "jest-environment-jsdom": "^30.2.0",
+    "jsdom": "^27.0.0",
+    "vite": "^7.1.2",
+    "vitest": "^3.2.4"
   }
 }

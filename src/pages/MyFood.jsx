@@ -131,6 +131,7 @@ export default function MyFood() {
     setRows(next);
     setOpenAdd(false);
     setPage(Math.ceil(next.length / pageSize));
+    alert("Food added successfully.✅");
   }
 
   function askDelete(item) {
@@ -169,6 +170,7 @@ export default function MyFood() {
 
     setRows(prev => prev.map(r => (r.id === updated.id ? updated : r)));
     setEditItem(null);
+    alert("Food updated.✅");
   }
 
 
@@ -185,12 +187,14 @@ export default function MyFood() {
       if (res.mode === "zeroed") {
         // keep the item but set qty to 0
         setRows(prev.map(r => (r.foodID === foodID ? { ...r, qty: 0 } : r)));
+        alert("Quantity set to 0 (in use by donation).");
       } else {
         // fully deleted
         setRows(prev.filter(r => r.foodID !== foodID));
+        alert("Food successfully deleted.✅");
       }
     } catch (err) {
-      alert(err.message || "Delete failed. Please try again.");
+      alert(err.message || "Delete failed. Please try again.❌");
       setRows(prev); // rollback if you had changed the UI
     } finally {
       setDeletingId(null);
@@ -213,7 +217,7 @@ export default function MyFood() {
     }
     setDonateOpen(false);
     setDonateItem(null);
-    alert("Donation Convert Sucessful.");
+    alert("Donation Convert Sucessful. ✅");
   }
 
   function handleRefresh() {
