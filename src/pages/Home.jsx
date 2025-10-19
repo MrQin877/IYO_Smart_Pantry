@@ -23,7 +23,7 @@ export default function Home() {
               </p>
 
               <div className="hero-cta">
-                <Link to="/signup" className="btn-start">Get Started</Link>
+                <Link to="/register" className="btn-start">Get Started</Link>
                 <Link to="/login" className="btn-login">Login</Link>
               </div>
             </div>

@@ -1,4 +1,5 @@
 // src/component/AddDonationModal.jsx
+
 import { useEffect, useMemo, useRef, useState } from "react";
 import { apiGet, apiPost } from "../lib/api";
 
@@ -115,22 +116,70 @@ export default function AddDonationModal({
     return d;
   }, [expiryDate]);
 
+  // ---------- Today (block past availability) ----------
+  const todayFloor = useMemo(() => {
+    const now = new Date();
+    return new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  }, []);
+  const todayISO = toISODate(todayFloor);
+
+  function toMinutes(t) {
+    if (!t) return NaN;
+    const [h, m] = String(t).split(":").map(Number);
+    return Number.isFinite(h) && Number.isFinite(m) ? h * 60 + m : NaN;
+  }
+
+    // --- candidate derived from the inputs ---
+  const candidate = useMemo(
+    () => (f.slotDate && f.slotStart && f.slotEnd
+      ? { date: f.slotDate, start: f.slotStart, end: f.slotEnd }
+      : null),
+    [f.slotDate, f.slotStart, f.slotEnd]
+  );
+
+  // --- check against existing list (for both button-disable and warnings) ---
+  const candDup  = useMemo(
+    () => (candidate ? duplicateOfAny(candidate, f.slots) : false),
+    [candidate, f.slots]
+  );
+  const candOver = useMemo(
+    () => (candidate && !candDup ? overlapsAny(candidate, f.slots) : false),
+    [candidate, candDup, f.slots]
+  );
+
+  // Add-row validation
   const canAddSlot = useMemo(() => {
     if (!f.slotDate || !f.slotStart || !f.slotEnd) return false;
+
+    const toMinutes = (t) => {
+      const [h, m] = String(t).split(":").map(Number);
+      return Number.isFinite(h) && Number.isFinite(m) ? h * 60 + m : NaN;
+    };
     const startM = toMinutes(f.slotStart);
-    const endM = toMinutes(f.slotEnd);
+    const endM   = toMinutes(f.slotEnd);
     if (!Number.isFinite(startM) || !Number.isFinite(endM) || endM <= startM) return false;
 
-    // validate against expiry rule
     const sd = safeISOToDate(f.slotDate);
-    if (!sd || !latestAllowed) return false;
-    return sd <= latestAllowed;
-  }, [f.slotDate, f.slotStart, f.slotEnd, latestAllowed]);
+    if (!sd) return false;
+    if (startOfDay(sd) < todayFloor) return false;
+    if (latestAllowed && sd > latestAllowed) return false;
+
+    if (candDup || candOver) return false;   // <-- key bit
+
+    return true;
+  }, [f.slotDate, f.slotStart, f.slotEnd, latestAllowed, todayFloor, candDup, candOver]);
+
 
   const slotAfterLimit = (() => {
     if (!f.slotDate || !latestAllowed) return false;
     const sd = safeISOToDate(f.slotDate);
     return Boolean(sd && sd > latestAllowed);
+  })();
+
+  const slotBeforeToday = (() => {
+    if (!f.slotDate) return false;
+    const sd = safeISOToDate(f.slotDate);
+    return Boolean(sd && startOfDay(sd) < todayFloor);
   })();
 
   const addSlot = () => {
@@ -169,6 +218,57 @@ export default function AddDonationModal({
     });
   }, [f.slots, latestAllowed]);
 
+  // NEW: any saved slots in the past?
+  const pastSlots = useMemo(() => {
+    return (f.slots || []).filter((s) => {
+      const d = safeISOToDate(s.date);
+      return d && startOfDay(d) < todayFloor;
+    });
+  }, [f.slots, todayFloor]);
+
+  // ---------- "expiry must be today or later" ----------
+  const expiryBeforeToday = useMemo(() => {
+    if (!expiryDate) return false;
+    return expiryDate < todayFloor;
+  }, [expiryDate, todayFloor]);
+
+  // ---------- Contact (MY) + Slot overlaps ----------
+  const msisdnOk = useMemo(() => {
+    return /^0\d{1,3}[-\s]?\d{6,9}$/.test((f.contact || "").trim());
+  }, [f.contact]);
+
+  function overlaps(a, b) {
+    if (!a || !b) return false;
+    if (a.date !== b.date) return false; // same day only
+    const sA = toMinutes(a.start), eA = toMinutes(a.end);
+    const sB = toMinutes(b.start), eB = toMinutes(b.end);
+    if (![sA, eA, sB, eB].every(Number.isFinite)) return false;
+    return sA < eB && sB < eA;
+  }
+  function sameSlot(a, b) {
+  return !!a && !!b && a.date === b.date && a.start === b.start && a.end === b.end;
+}
+
+function duplicateOfAny(candidate, list = []) {
+  for (const x of list) if (sameSlot(candidate, x)) return true;
+  return false;
+}
+
+function overlapsAny(candidate, list = []) {
+  for (const x of list) if (overlaps(candidate, x)) return true;
+  return false;
+}
+
+  const hasOverlap = useMemo(() => {
+    const arr = f.slots || [];
+    for (let i = 0; i < arr.length; i++) {
+      for (let j = i + 1; j < arr.length; j++) {
+        if (overlaps(arr[i], arr[j])) return true;
+      }
+    }
+    return false;
+  }, [f.slots]);
+
   const canPublish = useMemo(() => {
     // base checks
     if (
@@ -184,38 +284,53 @@ export default function AddDonationModal({
     // must have valid expiry to compare
     if (!expiryDate || !latestAllowed) return false;
 
-    // reject if any invalid slots or current editor is invalid
-    if (invalidSlots.length > 0 || slotAfterLimit) return false;
+    // contact format (simple MY check)
+    if (!msisdnOk) return false;
+
+    // reject if expiry is earlier than today
+    if (expiryBeforeToday) return false;
+
+    // reject if any invalid slots, editor invalid, past slots, or overlaps
+    if (invalidSlots.length > 0 || slotAfterLimit || slotBeforeToday) return false;
+    if (pastSlots.length > 0) return false;
+    if (hasOverlap) return false;
 
     return true;
   }, [
     f.name, f.categoryID, f.unitID, f.qty, f.expiry, f.slots.length, f.contact,
-    expiryDate, latestAllowed, invalidSlots.length, slotAfterLimit
+    expiryDate, latestAllowed, invalidSlots.length, slotAfterLimit, slotBeforeToday,
+    expiryBeforeToday, msisdnOk, pastSlots.length, hasOverlap
   ]);
+
+  function slotKey(s) {
+    return `${s.date}|${s.start}|${s.end}`;
+  }
 
   async function publish() {
     if (!canPublish || saving) return;
     setSaving(true);
     setErr("");
 
-    const address = f.useLastAddress && lastAddress
-      ? lastAddress
-      : f.address;
+    const address = f.useLastAddress && lastAddress ? lastAddress : f.address;
 
-    // Build payload for donation_add.php (direct donation)
+    // NEW: force-unique slots by (date|start|end)
+    const uniqueMap = new Map();
+    for (const s of f.slots) uniqueMap.set(slotKey(s), s);
+    const uniqueSlots = Array.from(uniqueMap.values());
+
     const payload = {
       contact: f.contact.trim(),
-      donationNote: "", // optional
+      donationNote: "",
       food: {
         name: f.name.trim(),
         quantity: Number(f.qty),
-        expiryDate: f.expiry,         // YYYY-MM-DD
+        expiryDate: f.expiry,
         categoryID: f.categoryID,
         unitID: f.unitID,
         remark: f.remark.trim() || null,
       },
-      address,                        // {label,line1,line2,postcode,city,state,country}
-      availability: f.slots.map(({ date, start, end, note }) => ({
+      address,
+      availability: uniqueSlots.map(({ date, start, end, note }) => ({
         date, start, end, note: note || "",
       })),
     };
@@ -226,7 +341,6 @@ export default function AddDonationModal({
         throw new Error(res?.error || "Add failed");
       }
 
-      // Friendly names for UI
       const catName  = catOpts.find(c => c.id === f.categoryID)?.name || "";
       const unitName = unitOpts.find(u => u.id === f.unitID)?.name || "";
 
@@ -247,9 +361,11 @@ export default function AddDonationModal({
         contact: f.contact.trim(),
       });
 
+      alert("Donation created. ✅");
       onClose?.();
     } catch (e) {
       setErr(e.message || "Network error");
+      alert(e.message || "Network error");
     } finally {
       setSaving(false);
     }
@@ -258,7 +374,6 @@ export default function AddDonationModal({
   const addrDisabled = f.useLastAddress && !!lastAddress;
   if (!open) return null;
 
-  // For the date picker, provide a max=YYYY-MM-DD hint
   const maxISOForPicker = latestAllowed ? toISODate(latestAllowed) : undefined;
 
   return (
@@ -292,7 +407,6 @@ export default function AddDonationModal({
               <span className="qty-num">{f.qty}</span>
               <button className="step" onClick={() => step(1)}>+</button>
 
-              {/* Unit from DB */}
               <select
                 className="input unit"
                 value={f.unitID}
@@ -317,6 +431,11 @@ export default function AddDonationModal({
               value={f.contact}
               onChange={(e) => setF({ ...f, contact: e.target.value })}
             />
+            {f.contact && !msisdnOk && (
+              <div className="text-xs text-red-600 mt-1">
+                Please enter a valid Malaysian number (e.g. 012-3456789).
+              </div>
+            )}
           </div>
         </div>
 
@@ -345,13 +464,17 @@ export default function AddDonationModal({
               type="date"
               className="input"
               value={f.expiry}
+              min={todayISO}               // cannot pick past expiry
               onChange={(e) => setF({ ...f, expiry: e.target.value })}
             />
             {f.expiry && (
               <div className="text-xs mt-1">
-                {/*Latest availability allowed:{" "}
-                <b>{latestAllowed ? formatDMY(latestAllowed) : "-"}</b>*/}
                 {MAX_SLOT_OFFSET_DAYS === 1 && " (one day before expiry)"}
+              </div>
+            )}
+            {expiryBeforeToday && (
+              <div className="text-xs text-red-600 mt-1">
+                Expiry cannot be in the past. Please choose {formatDMY(todayFloor)} or later.
               </div>
             )}
           </div>
@@ -396,7 +519,7 @@ export default function AddDonationModal({
               <label>{cap(key)}</label>
               <input
                 className="input"
-                disabled={addrDisabled}
+                disabled={f.useLastAddress && !!lastAddress}
                 value={f.address[key]}
                 onChange={(e) => setF({ ...f, address: { ...f.address, [key]: e.target.value } })}
               />
@@ -415,6 +538,7 @@ export default function AddDonationModal({
             className="input"
             value={f.slotDate}
             max={maxISOForPicker}
+            min={todayISO}               // NEW: UI min = today
             onChange={(e) => setF({ ...f, slotDate: e.target.value })}
           />
           <input
@@ -440,14 +564,36 @@ export default function AddDonationModal({
           </button>
         </div>
 
+        {candDup && (
+          <div className="text-xs text-red-600 mt-1">This exact time already exists.</div>
+        )}
+        {!candDup && candOver && (
+          <div className="text-xs text-red-600 mt-1">This time overlaps another slot.</div>
+        )}
+
         {slotAfterLimit && (
           <div className="text-xs text-red-600 mt-1">
             Availability date must be on or before {formatDMY(latestAllowed)}.
           </div>
         )}
+        {slotBeforeToday && (
+          <div className="text-xs text-red-600 mt-1">
+            Availability date cannot be in the past.
+          </div>
+        )}
 
         {f.slots.length > 0 && (
           <>
+            {hasOverlap && (
+              <div className="mb-2 rounded border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
+                Some availability times overlap on the same day. Please adjust them.
+              </div>
+            )}
+            {pastSlots.length > 0 && (
+              <div className="mb-2 rounded border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700">
+                Some availability dates are in the past. Please update or remove them.
+              </div>
+            )}
             {invalidSlots.length > 0 && (
               <div className="mb-2 rounded border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
                 {invalidSlots.length} availability {invalidSlots.length > 1 ? "entries are" : "entry is"} past the allowed date. Please remove or change them.
@@ -457,12 +603,13 @@ export default function AddDonationModal({
               {f.slots.map((s) => {
                 const d = safeISOToDate(s.date);
                 const late = latestAllowed && d && d > latestAllowed;
+                const past = d && startOfDay(d) < todayFloor;
                 return (
-                  <span key={s.id} className={`slot-pill ${late ? "bg-red-50" : ""}`}>
+                  <span key={s.id} className={`slot-pill ${late || past ? "bg-red-50" : ""}`}>
                     <span className="slot-main">
                       {formatDMY(s.date)}, {fmtTime(s.start)}–{fmtTime(s.end)}
                       {s.note ? ` · ${s.note}` : ""}
-                      {late ? " ⚠️" : ""}
+                      {(late || past) ? " ⚠️" : ""}
                     </span>
                     <button className="slot-del" onClick={() => removeSlot(s.id)}>Delete</button>
                   </span>
@@ -519,12 +666,7 @@ function initForm() {
 }
 
 function cap(s) { return s.charAt(0).toUpperCase() + s.slice(1); }
-
-function toMinutes(t) {
-  if (!t) return NaN;
-  const [h, m] = t.split(":").map(Number);
-  return h * 60 + m;
-}
+function startOfDay(d) { const x = new Date(d); x.setHours(0,0,0,0); return x; }
 function safeISOToDate(iso) {
   if (!iso) return null;
   const d = new Date(iso);

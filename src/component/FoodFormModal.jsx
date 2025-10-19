@@ -1,4 +1,3 @@
-// src/components/FoodFormModal.jsx
 import { useEffect, useRef, useState } from "react";
 import { apiGet, apiPost } from "../lib/api";
 
@@ -115,7 +114,6 @@ export default function FoodFormModal({
     didPrefillRef.current = true;
 
     const init = initialSnapRef.current || {};
-    // console.debug("Prefill init:", init, { catOpts, unitOpts, storageOpts });
 
     const findByName = (arr, name) => arr.find((x) => x.name === name)?.id || "";
 
@@ -165,12 +163,23 @@ export default function FoodFormModal({
 
   if (!open) return null;
 
+  // ---- "expiry must be today or later" ----
+  const now = new Date();
+  const todayFloor = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const todayISO = toISODate(todayFloor);
+  const expiryDate = f.expiry ? new Date(f.expiry) : null;
+  const expiryBeforeToday = !!(
+    expiryDate &&
+    new Date(expiryDate.getFullYear(), expiryDate.getMonth(), expiryDate.getDate()) < todayFloor
+  );
+
   const canSave =
     f.name.trim() &&
     f.expiry &&
     (f.categoryID || catOpts.length === 0) &&
     (f.unitID || unitOpts.length === 0) &&
-    Number(f.qty) > 0;
+    Number(f.qty) > 0 &&
+    !expiryBeforeToday;
 
   const step = (d) =>
     setF((s) => ({ ...s, qty: Math.max(1, Number(s.qty) + d) }));
@@ -181,7 +190,10 @@ export default function FoodFormModal({
     storageOpts.find((s) => s.id === f.storageID)?.name || "";
 
   async function submit() {
-    if (!canSave || saving) return;
+    if (!canSave || saving) {
+      if (expiryBeforeToday) setErr("Expiry cannot be in the past.");
+      return;
+    }
     setSaving(true);
     setErr("");
 
@@ -316,8 +328,14 @@ export default function FoodFormModal({
               type="date"
               className="input"
               value={f.expiry}
+              min={todayISO}
               onChange={(e) => setF({ ...f, expiry: e.target.value })}
             />
+            {expiryBeforeToday && (
+              <div className="text-xs text-red-600 mt-1">
+                Expiry cannot be in the past. Please choose {formatDMY(todayFloor)} or later.
+              </div>
+            )}
           </div>
 
           <div className="form-row">
@@ -356,4 +374,16 @@ export default function FoodFormModal({
       </div>
     </div>
   );
+}
+
+/* --- local helpers (only in this file) --- */
+function toISODate(d) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+function formatDMY(dOrIso) {
+  const d = dOrIso instanceof Date ? dOrIso : new Date(dOrIso);
+  return isNaN(d) ? String(dOrIso) : d.toLocaleDateString("en-GB");
 }
