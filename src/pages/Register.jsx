@@ -23,7 +23,7 @@ export default function Register() {
       newErrors.name = "Username cannot contain numbers or punctuation marks.";
     }
 
-    if (!/^[A-Za-z0-9._%+-]+@(gmail|yahoo|outlook)\.com$/.test(email)) {
+    if (!/^[A-Za-z0-9._%+-]+@(gmail|yahoo|outlook|mailslurp)\.com|.biz$/.test(email)) {
       newErrors.email = "Invalid email format";
     }
     if (pwd.length < 8) {

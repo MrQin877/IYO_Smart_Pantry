@@ -10,6 +10,8 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "mailslurp": "^0.0.1-security",
+    "mailslurp-client": "^16.0.0",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
     "react-router-dom": "^7.9.1",
@@ -17,6 +19,8 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.33.0",
+    "@playwright/test": "^1.56.1",
+    "@types/node": "^24.8.1",
     "@types/react": "^19.1.10",
     "@types/react-dom": "^19.1.7",
     "@vitejs/plugin-react": "^5.0.0",

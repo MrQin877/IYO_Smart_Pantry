@@ -23,8 +23,8 @@ if (!preg_match("/^[A-Za-z\s]{2,50}$/", $name)) {
 }
 
 // Email validation
-if (!preg_match('/^[A-Za-z0-9._%+-]+@(gmail|yahoo|outlook)\.com$/i', $email)) {
-  respond(['ok' => false, 'error' => 'Only Gmail, Yahoo or Outlook emails allowed']);
+if (!preg_match('/^[A-Za-z0-9._%+-]+@((gmail|yahoo|outlook)\.com|mailslurp\.biz)$/i', $email)) {
+  respond(['ok' => false, 'error' => 'Only Gmail, Yahoo, Outlook, or Mailslurp emails allowed']);
 }
 
 // Password validation
