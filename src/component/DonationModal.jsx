@@ -1,4 +1,3 @@
-// src/components/DonationModal.jsx
 import { useEffect, useMemo, useState } from "react";
 import { apiGet, apiPost } from "../lib/api";
 
@@ -86,12 +85,12 @@ export default function DonationModal({
   const slotAfterExpiry =
     Boolean(slotDateObj && expiryDate) && slotDateObj > endOfDay(expiryDate);
   const slotBeforeToday =
-    Boolean(slotDateObj) && startOfDay(slotDateObj) < todayFloor; // NEW: no past slots
+    Boolean(slotDateObj) && startOfDay(slotDateObj) < todayFloor;
 
   const canAddSlot =
     Boolean(f.slotDate) &&
     !slotAfterExpiry &&
-    !slotBeforeToday && // NEW
+    !slotBeforeToday &&
     Number.isFinite(toMinutes(f.slotStart)) &&
     Number.isFinite(toMinutes(f.slotEnd)) &&
     toMinutes(f.slotEnd) > toMinutes(f.slotStart);
@@ -150,7 +149,7 @@ export default function DonationModal({
     });
   }, [f.slots, expiryDate]);
 
-  // NEW: any past slots?
+  // any past slots?
   const pastSlots = useMemo(() => {
     return (f.slots || []).filter((s) => {
       const d = safeISOToDate(s.date);
@@ -158,11 +157,11 @@ export default function DonationModal({
     });
   }, [f.slots, todayFloor]);
 
-  // NEW: overlap checks (same-day)
+  // overlap checks (same-day)
   function overlaps(a, b) {
     if (a.date !== b.date) return false;
     const sA = a.start, eA = a.end, sB = b.start, eB = b.end;
-    return (sA < eB) && (sB < eA); // "HH:MM" are zero-padded → safe string compare
+    return (sA < eB) && (sB < eA); // "HH:MM" zero-padded → safe string compare
   }
   const hasOverlap = useMemo(() => {
     const arr = f.slots || [];
@@ -174,7 +173,7 @@ export default function DonationModal({
     return false;
   }, [f.slots]);
 
-  // NEW: simple MY contact check
+  // simple MY contact check
   const msisdnOk = useMemo(() => {
     return /^0\d{1,3}[-\s]?\d{6,9}$/.test((f.contact || "").trim());
   }, [f.contact]);
@@ -188,22 +187,11 @@ export default function DonationModal({
       f.slots.length > 0;
 
     if (!base) return false;
-
-    // contact format
-    if (!msisdnOk) return false; // NEW
-
-    // Must not contain slots after expiry
+    if (!msisdnOk) return false;
     if (expiryDate && invalidSlots.length > 0) return false;
-
-    // No past slots
-    if (pastSlots.length > 0) return false; // NEW
-
-    // Also prevent adding when the "slot editor" currently has an invalid date
-    if (slotAfterExpiry || slotBeforeToday) return false; // NEW
-
-    // No overlaps
-    if (hasOverlap) return false; // NEW
-
+    if (pastSlots.length > 0) return false;
+    if (slotAfterExpiry || slotBeforeToday) return false;
+    if (hasOverlap) return false;
     return true;
   }, [
     f.name, f.qty, maxQty, f.contact, f.slots.length,
@@ -219,19 +207,15 @@ export default function DonationModal({
     const address = f.useLastAddress && lastAddress ? lastAddress : f.address;
 
     try {
-      // extra server-side safety: send expiry so PHP can re-check if needed
       const res = await apiPost("/donation_convert.php", {
         foodID: item.foodID || item.id,
         donateQty: Number(f.qty),
         contact: f.contact.trim(),
         note: "",
-        expiryDate: expiryISO, // for server validation if you add it
+        expiryDate: expiryISO,
         address,
         availability: f.slots.map(({ date, start, end, note }) => ({
-          date,
-          start,
-          end,
-          note: note || "",
+          date, start, end, note: note || "",
         })),
       });
 
@@ -261,9 +245,11 @@ export default function DonationModal({
         slotText,
       });
 
+      alert("Donation created. ✅");
       onClose?.();
     } catch (e) {
       setErr(e.message || "Network error");
+      alert(e.message || "Network error");
     } finally {
       setSaving(false);
     }
@@ -335,7 +321,6 @@ export default function DonationModal({
               value={f.contact}
               onChange={(e) => setF({ ...f, contact: e.target.value })}
             />
-            {/* NEW: contact inline message */}
             {f.contact && !msisdnOk && (
               <div className="text-xs text-red-600 mt-1">
                 Please enter a valid Malaysian number (e.g. 012-3456789).
@@ -409,8 +394,8 @@ export default function DonationModal({
             className="input"
             value={f.slotDate}
             onChange={(e) => setF({ ...f, slotDate: e.target.value })}
-            max={expiryISO || undefined}   // UI hint: prevent picking beyond expiry
-            min={todayISO}                 // NEW: no past dates in the picker
+            max={expiryISO || undefined}
+            min={todayISO}
           />
           <input
             type="time"
@@ -448,7 +433,6 @@ export default function DonationModal({
 
         {f.slots.length > 0 && (
           <>
-            {/* NEW: warnings */}
             {hasOverlap && (
               <div className="mb-2 rounded border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
                 Some availability times overlap on the same day. Please adjust them.
@@ -512,7 +496,7 @@ export default function DonationModal({
 function initForm(item, maxQty) {
   return {
     name: item.name || "",
-    qty: Math.min(1, maxQty) || 1, // keeps 1 but respects max; if no stock UI disables publish
+    qty: Math.min(1, maxQty) || 1,
     unit: item.unit || "UNIT",
     contact: "",
     useLastAddress: false,
