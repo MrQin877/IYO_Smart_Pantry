@@ -13,6 +13,8 @@ import Login from "./pages/Login.jsx";
 import Register from "./pages/Register.jsx";
 import Settings from "./pages/Settings.jsx";
 import Verify from "./pages/Verify.jsx";
+import Notification from "./pages/Notification.jsx";
+import NotificationDetail from "./pages/NotificationDetail.jsx";
 import "./main.css";
 
 const router = createBrowserRouter([
@@ -43,6 +45,8 @@ const router = createBrowserRouter([
       },
       { path: "dashboard", element: <Dashboard /> },
       { path: "settings", element: <Settings /> },
+      { path: "notification", element: <Notification /> },
+      { path: "notification/:id", element: <NotificationDetail /> },
     ],
   },
 

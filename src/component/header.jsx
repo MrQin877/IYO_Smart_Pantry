@@ -7,6 +7,7 @@ import Swal from "sweetalert2";
 export default function HeaderNav() {
   const [initial, setInitial] = useState("");
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [unread, setUnread] = useState(0);           
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -24,13 +25,35 @@ export default function HeaderNav() {
       } else {
         setInitial("");
       }
+
+      // fetch unread count if logged in
+      if (userID) fetchUnread(userID);
+      else setUnread(0);
     };
+
+    async function fetchUnread(uid) {
+      try {
+        const res = await fetch(`/api/notifications_count.php?user_id=${encodeURIComponent(uid)}`);
+        if (res.ok) {
+          const data = await res.json();               // { count: number }
+          setUnread(Number(data.count || 0));
+        }
+      } catch (e) {}
+    }
 
     // initial load
     refresh();
 
     // react to updates from login/verify/logout
     window.addEventListener("storage", refresh);
+
+    // light polling (every 30s)
+    const t = setInterval(() => {
+      const userID = localStorage.getItem("userID");
+      if (userID) fetchUnread(userID);
+    }, 30000);
+
+
     return () => window.removeEventListener("storage", refresh);
   }, []);
 
@@ -87,7 +110,12 @@ export default function HeaderNav() {
 
         {/* Right side icons */}
         <div className="icons">
-          {isLoggedIn && <IconButton title="Notifications">🔔</IconButton>}
+          {isLoggedIn && (
+            <Link to="/notification" className="icon" title="Notifications" aria-label="Notifications">
+              🔔
+              {unread > 0 && <span className="badge">{unread}</span>}
+            </Link>
+          )}
 
           <Link to={isLoggedIn ? "/settings" : "/account"}>
             {initial ? (
