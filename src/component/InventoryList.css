@@ -1,0 +1,33 @@
+.inventory-container {
+  background-color: #f8f9f4;
+  border-radius: 12px;
+  padding: 15px;
+}
+
+.inventory-title {
+  font-weight: 600;
+  margin-bottom: 10px;
+  color: #2e4b33;
+  background-color: #dfe9d4;
+  padding: 6px 10px;
+  border-radius: 8px;
+  display: inline-block;
+}
+
+.inventory-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.inventory-table th,
+.inventory-table td {
+  padding: 6px 8px;
+  text-align: left;
+  font-size: 14px;
+}
+
+.expiry-cell {
+  background-color: #e9efdd;
+  border-radius: 8px;
+  text-align: center;
+}

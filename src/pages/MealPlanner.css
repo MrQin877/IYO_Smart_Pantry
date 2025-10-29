@@ -1,0 +1,76 @@
+.mealplanner-container {
+  display: flex;
+  justify-content: center;
+  margin-top: 40px;
+  font-family: "Poppins", sans-serif;
+}
+
+.mealplanner-card {
+  display: flex;
+  background: #fafaf0;
+  border-radius: 16px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  padding: 20px;
+  width: 90%;
+  max-width: 900px;
+}
+
+.mealplanner-left {
+  flex: 2;
+}
+
+.meal-table {
+  width: 100%;
+  border-collapse: collapse;
+  border: 1px solid #ccc;
+}
+
+.meal-table th,
+.meal-table td {
+  border: 1px solid #ccc;
+  text-align: center;
+  padding: 10px;
+}
+
+.meal-table th {
+  background-color: #e9efdd;
+  color: #2e4b33;
+}
+
+.day-col {
+  background-color: #e9efdd;
+  font-weight: 600;
+  text-align: left;
+  padding-left: 10px;
+}
+
+.meal-cell {
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.meal-cell:hover {
+  background-color: #f1f5ec;
+}
+
+.meal-add {
+  color: #4a4a4a;
+  font-size: 18px;
+}
+
+.meal-filled {
+  background: #eaf3e0;
+  padding: 6px 10px;
+  border-radius: 8px;
+  display: inline-block;
+}
+
+.divider {
+  width: 1px;
+  background-color: #ddd;
+  margin: 0 20px;
+}
+
+.mealplanner-right {
+  flex: 1.2;
+}

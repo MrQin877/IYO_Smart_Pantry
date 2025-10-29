@@ -1,0 +1,290 @@
+.custom-meal-container {
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 40px 20px;
+  background-color: #f5f7fa;
+  min-height: 100vh;
+}
+
+.custom-meal-card {
+  background-color: #fff;
+  border-radius: 18px;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.08);
+  padding: 30px;
+  width: 100%;
+  max-width: 720px;
+}
+
+.custom-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 30px;
+}
+
+.back-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #333;
+  padding: 4px;
+  border-radius: 50%;
+  transition: background-color 0.2s;
+}
+
+.back-btn:hover {
+  background-color: #eee;
+}
+
+.form-section {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  margin-bottom: 30px;
+  width: 100%;
+}
+
+.form-row {
+  display: flex;
+  flex-direction: row; /* Ensures label and input are side-by-side */
+  align-items: center;
+  justify-content: flex-start;
+  gap: 15px;
+  width: 100%;
+}
+
+.form-row label {
+  flex-shrink: 0;          /* Prevents label from shrinking */
+  width: 130px;            /* Fixed width keeps alignment neat */
+  font-weight: 600;
+  font-size: 15px;
+  color: #333;
+  white-space: nowrap;     /* Prevents wrapping of text */
+}
+
+.form-row input {
+  flex: 1;                 /* Makes input take remaining space */
+  min-width: 0;            /* Fix for flexbox overflow issues */
+  padding: 8px 10px;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  font-size: 15px;
+  box-sizing: border-box;
+}
+
+.form-row input:focus {
+  border-color: #4caf50;
+  box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.2);
+  outline: none;
+}
+
+.ingredients-section {
+  margin-top: 25px;
+}
+
+.ingredients-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+}
+
+.ingredients-header h3 {
+  font-size: 17px;
+  font-weight: 600;
+  color: #333;
+}
+
+.add-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background-color: #43a047;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 14px;
+  cursor: pointer;
+  font-weight: 500;
+  font-size: 14px;
+  transition: background-color 0.2s;
+}
+
+.add-btn:hover {
+  background-color: #388e3c;
+}
+
+.ingredient-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.ingredient-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.ingredient-row input {
+  flex: 1;
+  padding: 9px 12px;
+  border-radius: 8px;
+  border: 1px solid #ccc;
+  font-size: 14px;
+}
+
+.remove-btn {
+  background: #fbeaea;
+  color: #c62828;
+  border: none;
+  border-radius: 8px;
+  padding: 6px 10px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: background-color 0.2s;
+}
+
+.remove-btn:hover {
+  background: #f5c6cb;
+}
+
+.no-ingredient {
+  color: #888;
+  font-size: 14px;
+  text-align: center;
+  margin-top: 5px;
+}
+
+.save-section {
+  margin-top: 35px;
+  text-align: center;
+}
+
+.save-btn {
+  background-color: #2e7d32;
+  color: #fff;
+  padding: 12px 26px;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  font-size: 16px;
+  font-weight: 600;
+  transition: background-color 0.2s;
+}
+
+.save-btn:hover {
+  background-color: #256b28;
+}
+
+/* === POPUP OVERLAY === */
+.popup-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: rgba(0, 0, 0, 0.6); /* darker transparent overlay */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999; /* ensure it’s above all */
+  backdrop-filter: blur(3px);
+}
+
+/* === POPUP BOX === */
+.popup {
+  position: relative;
+  background: #fff;
+  border-radius: 16px;
+  width: 420px;
+  max-width: 90%;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  padding: 20px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.25);
+  color: #333;
+  animation: popupFadeIn 0.25s ease;
+}
+
+/* === ANIMATION === */
+@keyframes popupFadeIn {
+  from {
+    transform: scale(0.95);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* === POPUP HEADER === */
+.popup-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid #e0e0e0;
+  padding-bottom: 8px;
+  margin-bottom: 10px;
+}
+
+.popup-header h3 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+/* === POPUP BODY === */
+.popup-body {
+  flex: 1;
+  overflow-y: auto;
+  margin-top: 10px;
+  padding-right: 4px;
+}
+
+/* === INVENTORY LIST === */
+.inventory-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.inventory-item {
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 10px;
+  margin-bottom: 8px;
+  cursor: pointer;
+  background-color: #f9f9f9;
+  transition: 0.2s ease;
+}
+
+.inventory-item:hover {
+  background-color: #e8f4ff;
+  transform: translateY(-1px);
+}
+
+/* === POPUP FOOTER === */
+.popup-footer {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 15px;
+}
+
+.close-btn {
+  background: #007bff;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 14px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background-color 0.2s ease;
+}
+
+.close-btn:hover {
+  background-color: #0056b3;
+}
