@@ -60,7 +60,6 @@ export default function MyFood() {
             expiry: f.expiryDate,
             remark: f.remark,
             userID: f.userID,
-            remark: f.remark,
             status: f.is_expiryStatus, // or f.status if you rename it
             reserved: f.reserved,      // optional, if available
             is_plan: f.is_plan,   // ✅ add this line

@@ -1,10 +1,12 @@
 import { useState } from "react";
 import { ArrowLeft, Plus, X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import IngredientPopup from "./IngredientPopup";
 import "./CustomMealPlan.css";
 
 export default function CustomMealPlan() {
   const navigate = useNavigate();
+
   const [mealName, setMealName] = useState("");
   const [notes, setNotes] = useState("");
   const [servings, setServings] = useState("");
@@ -15,22 +17,22 @@ export default function CustomMealPlan() {
 
   // sample inventory items
   const [inventoryItems] = useState([
-    { name: "Tomato" },
-    { name: "Egg" },
-    { name: "Garlic" },
-    { name: "Rice" },
-    { name: "Chicken Breast" },
-    { name: "Potato" },
+    { name: "Tomato", qty: 5, unit: "pcs" },
+    { name: "Egg", qty: 12, unit: "pcs" },
+    { name: "Garlic", qty: 100, unit: "g" },
+    { name: "Rice", qty: 1, unit: "kg" },
+    { name: "Chicken Breast", qty: 500, unit: "g" },
+    { name: "Milk", qty: 1, unit: "L" },
   ]);
 
-  const handleAddIngredient = () => {
-    setShowPopup(true); // show popup instead of adding blank input
-  };
-
-  const handleSelectIngredient = (item) => {
-    if (!ingredients.includes(item.name)) {
-      setIngredients([...ingredients, item.name]);
-    }
+  // handle ingredient selection from popup
+  const handleAddIngredients = (selectedIngredients) => {
+    setIngredients((prev) => [
+      ...prev,
+      ...selectedIngredients.filter(
+        (sel) => !prev.some((p) => p.name === sel.name)
+      ),
+    ]);
   };
 
   const handleRemoveIngredient = (index) => {
@@ -42,7 +44,7 @@ export default function CustomMealPlan() {
       mealName,
       notes,
       servings,
-      ingredients: ingredients.filter((i) => i.trim() !== ""),
+      ingredients: ingredients.filter((i) => i.name.trim() !== ""),
     };
 
     const existingMeals = JSON.parse(localStorage.getItem("customMeals")) || [];
@@ -78,7 +80,7 @@ export default function CustomMealPlan() {
             />
           </div>
 
-          <div className="form-row">
+          <div className="form-row notes-row">
             <label>Notes:</label>
             <input
               type="text"
@@ -88,7 +90,7 @@ export default function CustomMealPlan() {
             />
           </div>
 
-          <div className="form-row">
+          <div className="form-row servings-row">
             <label>Servings:</label>
             <input
               type="number"
@@ -104,7 +106,7 @@ export default function CustomMealPlan() {
         <div className="ingredients-section">
           <div className="ingredients-header">
             <h3>Ingredients</h3>
-            <button className="add-btn" onClick={handleAddIngredient}>
+            <button className="add-btn" onClick={() => setShowPopup(true)}>
               <Plus size={18} /> Add Ingredient
             </button>
           </div>
@@ -115,7 +117,11 @@ export default function CustomMealPlan() {
             )}
             {ingredients.map((ingredient, index) => (
               <div key={index} className="ingredient-row">
-                <input type="text" value={ingredient} readOnly />
+                <input
+                  type="text"
+                  value={`${ingredient.name} (${ingredient.qty}${ingredient.unit || ""})`}
+                  readOnly
+                />
                 <button
                   className="remove-btn"
                   onClick={() => handleRemoveIngredient(index)}
@@ -135,41 +141,13 @@ export default function CustomMealPlan() {
         </div>
       </div>
 
-      {/* Popup */}
+      {/* Ingredient Popup */}
       {showPopup && (
-        <div
-          className="popup-overlay"
-          onClick={(e) => {
-            if (e.target.classList.contains("popup-overlay")) {
-              setShowPopup(false);
-            }
-          }}
-        >
-          <div className="popup">
-            <div className="popup-header">
-              <h3>Select Ingredient from Inventory</h3>
-              <button className="close-btn" onClick={() => setShowPopup(false)}>
-                ✕
-              </button>
-            </div>
-            <div className="popup-body">
-              <ul className="inventory-list">
-                {inventoryItems.map((item, i) => (
-                  <li
-                    key={i}
-                    className="inventory-item"
-                    onClick={() => {
-                      handleSelectIngredient(item);
-                      setShowPopup(false);
-                    }}
-                  >
-                    {item.name}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </div>
-        </div>
+        <IngredientPopup
+          inventory={inventoryItems}
+          onClose={() => setShowPopup(false)}
+          onAdd={handleAddIngredients}
+        />
       )}
     </div>
   );

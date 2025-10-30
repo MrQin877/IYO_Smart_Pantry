@@ -91,78 +91,79 @@ export default function RecipeList() {
 
   return (
     <div className="recipe-page">
-      {/* Header */}
-      <div className="recipe-header">
-        <div className="header-left">
-          <button className="back-btn" onClick={() => navigate(-1)}>
-            <ArrowLeft size={22} />
-          </button>
-          <h2>Recipe Suggestions</h2>
-        </div>
+      <div className="recipe-container">
+        <div className="recipe-header">
+          <div className="header-left">
+            <button className="back-btn" onClick={() => navigate(-1)}>
+              <ArrowLeft size={22} />
+            </button>
+            <h2>Recipe Suggestions</h2>
+          </div>
           <button className="custom-btn" onClick={() => navigate("/custom-meal")}>
             <Plus size={18} />
             Custom
           </button>
-      </div>
-
-      {/* Suggested Recipes */}
-      <div className="recipe-section">
-        <h3 className="section-title">Suggested Recipes</h3>
-        <div className="recipe-grid">
-          {suggestedRecipes.map((r, i) => (
-            <div key={i} className="recipe-card">
-              <img src={r.image} alt={r.name} className="recipe-img" />
-              <div className="recipe-info">
-                <h3>{r.name}</h3>
-                <p className="ingredients">
-                  {r.ingredients.map((ing) => ing.name).join(", ")}
-                </p>
-                <div className="details">
-                  <span className="time">{r.time}</span>
-                  <span className="calories">{r.calories}</span>
-                </div>
-                <button className="cook-btn" onClick={() => handleCook(r)}>
-                  Cook
-                </button>
-              </div>
-            </div>
-          ))}
         </div>
-      </div>
 
-      {/* Generic Recipes */}
-      <div className="recipe-section">
-        <h3 className="section-title">Generic Recipes</h3>
-        <div className="recipe-grid">
-          {genericRecipes.map((r, i) => (
-            <div key={i} className="recipe-card">
-              <img src={r.image} alt={r.name} className="recipe-img" />
-              <div className="recipe-info">
-                <h3>{r.name}</h3>
-                <p className="ingredients">
-                  {r.ingredients.map((ing) => ing.name).join(", ")}
-                </p>
-                <div className="details">
-                  <span className="time">{r.time}</span>
-                  <span className="calories">{r.calories}</span>
+        {/* Suggested Recipes */}
+        <div className="recipe-section">
+          <h3 className="section-title">Suggested Recipes</h3>
+          <div className="recipe-grid">
+            {suggestedRecipes.map((r, i) => (
+              <div key={i} className="recipe-card">
+                <img src={r.image} alt={r.name} className="recipe-img" />
+                <div className="recipe-info">
+                  <h3>{r.name}</h3>
+                  <p className="ingredients">
+                    {r.ingredients.map((ing) => ing.name).join(", ")}
+                  </p>
+                  <div className="details">
+                    <span className="time">{r.time}</span>
+                    <span className="calories">{r.calories}</span>
+                  </div>
+                  <button className="cook-btn" onClick={() => handleCook(r)}>
+                    Cook
+                  </button>
                 </div>
-                <button className="cook-btn" onClick={() => handleCook(r)}>
-                  Cook
-                </button>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
-      </div>
 
-      {/* Cook Popup */}
-      {selectedRecipe && (
-        <CookPopup
-          recipe={selectedRecipe}
-          onClose={() => setSelectedRecipe(null)}
-          onConfirm={handleConfirm}
-        />
-      )}
+        {/* Generic Recipes */}
+        <div className="recipe-section">
+          <h3 className="section-title">Generic Recipes</h3>
+          <div className="recipe-grid">
+            {genericRecipes.map((r, i) => (
+              <div key={i} className="recipe-card">
+                <img src={r.image} alt={r.name} className="recipe-img" />
+                <div className="recipe-info">
+                  <h3>{r.name}</h3>
+                  <p className="ingredients">
+                    {r.ingredients.map((ing) => ing.name).join(", ")}
+                  </p>
+                  <div className="details">
+                    <span className="time">{r.time}</span>
+                    <span className="calories">{r.calories}</span>
+                  </div>
+                  <button className="cook-btn" onClick={() => handleCook(r)}>
+                    Cook
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {selectedRecipe && (
+          <CookPopup
+            recipe={selectedRecipe}
+            onClose={() => setSelectedRecipe(null)}
+            onConfirm={handleConfirm}
+          />
+        )}
+      </div>
     </div>
   );
+
 }

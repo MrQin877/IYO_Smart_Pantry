@@ -34,7 +34,7 @@ export default function Dashboard() {
 
           <div className="start-cards">
             <StartCard to="/food" icon="🧊" label="My food" />
-            <StartCard to="/plan" icon="🍽️" label="Meal Plan" />
+            <StartCard to="/meal-planner" icon="🍽️" label="Meal Plan" />
             <StartCard to="/analytics" icon="📈" label="Food Analytic" />
           </div>
         </section>
