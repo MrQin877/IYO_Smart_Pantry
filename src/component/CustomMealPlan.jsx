@@ -97,7 +97,7 @@ export default function CustomMealPlan() {
               min="1"
               value={servings}
               onChange={(e) => setServings(e.target.value)}
-              placeholder="Enter servings"
+              placeholder="e.g. 5"
             />
           </div>
         </div>
