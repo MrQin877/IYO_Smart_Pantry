@@ -15,6 +15,9 @@ import Settings from "./pages/Settings.jsx";
 import Verify from "./pages/Verify.jsx";
 import Notification from "./pages/Notification.jsx";
 import NotificationDetail from "./pages/NotificationDetail.jsx";
+import MealPlanner from "./pages/MealPlanner.jsx";
+import RecipeList from "./component/RecipeList.jsx";
+import CustomMealPlan from "./component/CustomMealPlan.jsx";
 import "./main.css";
 
 const router = createBrowserRouter([
@@ -47,6 +50,10 @@ const router = createBrowserRouter([
       { path: "settings", element: <Settings /> },
       { path: "notification", element: <Notification /> },
       { path: "notification/:id", element: <NotificationDetail /> },
+      { path: "meal-planner", element: <MealPlanner /> },
+      {path: "meal-planner/recipes", element: <RecipeList />,},
+      {path:"/custom-meal", element:<CustomMealPlan />,}
+
     ],
   },
 
