@@ -5,24 +5,32 @@ import "./CookPopup.css";
 export default function CookPopup({ recipe, onClose, onConfirm }) {
   if (!recipe) return null;
 
+  const recipeName = recipe.recipeName || recipe.name;
+  const ingredientList = recipe.ingredients || [];
+
   return (
     <div className="cook-overlay">
       <div className="cook-card">
         <button className="cook-close" onClick={onClose}>✕</button>
 
-        <div className="cook-thumb" aria-hidden />
         <h3 className="cook-title">Meal Plan</h3>
 
         <div className="cook-body">
-          <p><strong>Item name:</strong> {recipe.name}</p>
+          <p><strong>Item name:</strong> {recipeName}</p>
 
           <div className="cook-ingredients">
-            <p className="ing-title"><strong>Ingredient needed:</strong></p>
-            {recipe.ingredients.map((ing, i) => (
-              <p key={i} className="ing-row">
-                {ing.name} {ing.quantity ? ` ${ing.quantity}` : ""}
-              </p>
-            ))}
+            <p className="ing-title"><strong>Ingredients needed:</strong></p>
+
+            {ingredientList.length === 0 ? (
+              <p className="ing-row">No ingredients listed</p>
+            ) : (
+              ingredientList.map((ing, i) => (
+                <p key={i} className="ing-row">
+                  {ing.ingredientName || ing.name}{" "}
+                  {ing.ingredientQty ? `(${ing.ingredientQty})` : ""}
+                </p>
+              ))
+            )}
           </div>
         </div>
 
@@ -30,7 +38,6 @@ export default function CookPopup({ recipe, onClose, onConfirm }) {
           className="cook-ok"
           onClick={() => {
             onConfirm(recipe);
-            onClose();
           }}
         >
           OK
