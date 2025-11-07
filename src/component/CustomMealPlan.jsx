@@ -2,6 +2,7 @@ import { useState } from "react";
 import { ArrowLeft, Plus, X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import IngredientPopup from "./IngredientPopup";
+import { apiPost } from "../lib/api"; // adjust relative path if needed
 import "./CustomMealPlan.css";
 
 export default function CustomMealPlan() {
@@ -11,21 +12,13 @@ export default function CustomMealPlan() {
   const [notes, setNotes] = useState("");
   const [servings, setServings] = useState("");
   const [ingredients, setIngredients] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState("");
 
-  // popup control
+  // Popup control
   const [showPopup, setShowPopup] = useState(false);
 
-  // sample inventory items
-  const [inventoryItems] = useState([
-    { name: "Tomato", qty: 5, unit: "pcs" },
-    { name: "Egg", qty: 12, unit: "pcs" },
-    { name: "Garlic", qty: 100, unit: "g" },
-    { name: "Rice", qty: 1, unit: "kg" },
-    { name: "Chicken Breast", qty: 500, unit: "g" },
-    { name: "Milk", qty: 1, unit: "L" },
-  ]);
-
-  // handle ingredient selection from popup
+  // Add selected ingredients from popup
   const handleAddIngredients = (selectedIngredients) => {
     setIngredients((prev) => [
       ...prev,
@@ -35,27 +28,32 @@ export default function CustomMealPlan() {
     ]);
   };
 
+  // Remove ingredient from list
   const handleRemoveIngredient = (index) => {
     setIngredients(ingredients.filter((_, i) => i !== index));
   };
 
-  const handleSave = () => {
-    const customMeal = {
-      mealName,
-      notes,
-      servings,
-      ingredients: ingredients.filter((i) => i.name.trim() !== ""),
-    };
+  // Save custom meal plan to backend
+  const handleSave = async () => {
+    if (!mealName.trim()) return alert("Meal name is required!");
 
-    const existingMeals = JSON.parse(localStorage.getItem("customMeals")) || [];
-    localStorage.setItem(
-      "customMeals",
-      JSON.stringify([...existingMeals, customMeal])
-    );
+    try {
+      const response = await apiPost("/save_custom_meal.php", {
+        mealName,
+        notes,
+        servings,
+        ingredients,
+        userID: "U2", // use session later if available
+      });
 
-    alert("Custom meal saved!");
-    navigate(-1);
+      alert("Custom meal saved successfully!");
+      navigate(-1);
+    } catch (err) {
+      console.error("Error saving meal:", err);
+      alert("Failed to save custom meal: " + err.message);
+    }
   };
+
 
   return (
     <div className="custom-meal-container">
@@ -86,7 +84,7 @@ export default function CustomMealPlan() {
               type="text"
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              placeholder="Enter notes"
+              placeholder="Enter notes or instructions"
             />
           </div>
 
@@ -97,7 +95,7 @@ export default function CustomMealPlan() {
               min="1"
               value={servings}
               onChange={(e) => setServings(e.target.value)}
-              placeholder="e.g. 5"
+              placeholder="e.g. 2"
             />
           </div>
         </div>
@@ -133,18 +131,22 @@ export default function CustomMealPlan() {
           </div>
         </div>
 
-        {/* Save Button */}
+        {/* Save Section */}
         <div className="save-section">
-          <button className="save-btn" onClick={handleSave}>
-            Save Meal
+          <button
+            className="save-btn"
+            onClick={handleSave}
+            disabled={loading || !mealName.trim()}
+          >
+            {loading ? "Saving..." : "Save Meal"}
           </button>
+          {message && <p className="error-text">{message}</p>}
         </div>
       </div>
 
       {/* Ingredient Popup */}
       {showPopup && (
         <IngredientPopup
-          inventory={inventoryItems}
           onClose={() => setShowPopup(false)}
           onAdd={handleAddIngredients}
         />

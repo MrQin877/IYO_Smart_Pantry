@@ -260,3 +260,44 @@
   padding-right: 25px; /* keep same for perfect alignment */
 }
 
+/* ⚠ Warning text style beside name */
+.expiry-warning-row {
+  font-size: 11px;
+  color: #d9534f;
+  font-weight: 600;
+  margin-left: 6px;
+  transform: translateY(-3px); /* move text slightly up */
+}
+
+/* 🔄 Smooth Pulse animation */
+.pulse {
+  animation: pulseAnim 2.4s ease-in-out infinite;
+}
+
+@keyframes pulseAnim {
+  0% {
+    opacity: 1;
+    transform: scale(1);
+    text-shadow: 0 0 0px rgba(217, 83, 79, 0.4);
+  }
+  50% {
+    opacity: 0.75;
+    transform: scale(1.05);
+    text-shadow: 0 0 6px rgba(217, 83, 79, 0.7);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+    text-shadow: 0 0 0px rgba(217, 83, 79, 0.4);
+  }
+}
+
+/* Align item name + warning neatly */
+.ingredient-name-wrapper {
+  display: flex;
+  align-items: baseline; /* keep warning text aligned nicely */
+  gap: 6px;
+}
+
+
+

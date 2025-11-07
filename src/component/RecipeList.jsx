@@ -15,7 +15,9 @@ export default function RecipeList() {
   const [loading, setLoading] = useState(true);
   const [suggestedRecipes, setSuggestedRecipes] = useState([]);
   const [genericRecipes, setGenericRecipes] = useState([]);
+  const [savedCustomMeals, setSavedCustomMeals] = useState([]); // ✅ New
   const [selectedRecipe, setSelectedRecipe] = useState(null);
+
   // ✅ Map meal types: breakfast → MT1, lunch → MT2, dinner → MT3, snack → MT4
   const mealTypeMap = {
     breakfast: "MT1",
@@ -23,7 +25,6 @@ export default function RecipeList() {
     dinner: "MT3",
     snack: "MT4",
   };
-
 
   useEffect(() => {
     async function fetchRecipes() {
@@ -37,6 +38,11 @@ export default function RecipeList() {
 
         setSuggestedRecipes(data.recipes.filter(r => Number(r.isGeneric) === 0));
         setGenericRecipes(data.recipes.filter(r => Number(r.isGeneric) === 1));
+
+        // ✅ Saved custom meals (user-created non-generic)
+        setSavedCustomMeals(
+          data.recipes.filter(r => Number(r.isGeneric) === 0 && r.recipeID.startsWith("R"))
+        );
       } catch (err) {
         console.error("❌ Error loading recipes:", err);
       }
@@ -120,11 +126,10 @@ export default function RecipeList() {
     console.log("✅ Save result:", res);
     navigate("/meal-planner", {
       state: {
-        refreshDate: mealDate   // ✅ send to planner
-      }
+        refreshDate: mealDate, // ✅ send to planner
+      },
     });
   };
-
 
   // ✅ Compute YYYY-MM-DD Monday again
   function getStartOfWeek(offset) {
@@ -209,6 +214,32 @@ export default function RecipeList() {
                         {r.ingredientNames || "Ingredients Loaded on Cook"}
                       </p>
 
+                      <button className="cook-btn" onClick={() => handleCook(r)}>
+                        Cook
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* ✅ Saved Custom Meals */}
+            <div className="recipe-section">
+              <h3 className="section-title">My Saved Custom Meals</h3>
+              <div className="recipe-grid">
+                {savedCustomMeals.map((r) => (
+                  <div key={r.recipeID} className="recipe-card">
+                    <img
+                      src={r.image || "/default-food.png"}
+                      alt={r.recipeName}
+                      className="recipe-img"
+                    />
+
+                    <div className="recipe-info">
+                      <h3>{r.recipeName}</h3>
+                      <p className="ingredients">
+                        {r.ingredientNames || "Ingredients Loaded on Cook"}
+                      </p>
                       <button className="cook-btn" onClick={() => handleCook(r)}>
                         Cook
                       </button>
