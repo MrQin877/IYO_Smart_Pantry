@@ -1,21 +1,39 @@
-// src/pages/MealPlanner.jsx
+// ✅ src/pages/MealPlanner.jsx
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import InventoryList from "../component/InventoryList";
 import { motion, AnimatePresence } from "framer-motion";
-import { loadWeek } from "../../api/services/MealPlanService"; // ✅ Ensure same name
+import { loadWeek } from "../../api/services/MealPlanService";
+import { loadInventory } from "../../api/services/InventoryService";
 import "./MealPlanner.css";
 
 export default function MealPlanner() {
   const navigate = useNavigate();
+  const location = useLocation();
 
-  // ✅ Store meal plans PER WEEK
   const [mealPlanByWeek, setMealPlanByWeek] = useState({});
-
-  // ✅ Current week offset (0 = this week)
   const [weekOffset, setWeekOffset] = useState(0);
+  const [inventory, setInventory] = useState([]);
 
-  // ✅ Create empty meal plan template
+  useEffect(() => {
+    async function fetchInv() {
+      const res = await loadInventory("U2");
+      console.log("✅ Inventory response:", res);
+      setInventory(res.inventory || []);
+    }
+    fetchInv();
+  }, []);
+
+
+  // ✅ Meal type map → database ID → UI field
+  const mealTypeMap = {
+    MT1: "breakfast",
+    MT2: "lunch",
+    MT3: "dinner",
+    MT4: "snack"
+  };
+
+  // ✅ Empty week template
   function createEmptyWeekPlan() {
     return {
       MON: { breakfast: "", lunch: "", dinner: "", snack: "" },
@@ -24,51 +42,26 @@ export default function MealPlanner() {
       THU: { breakfast: "", lunch: "", dinner: "", snack: "" },
       FRI: { breakfast: "", lunch: "", dinner: "", snack: "" },
       SAT: { breakfast: "", lunch: "", dinner: "", snack: "" },
-      SUN: { breakfast: "", lunch: "", dinner: "", snack: "" },
+      SUN: { breakfast: "", lunch: "", dinner: "", snack: "" }
     };
   }
 
-  // ✅ Retrieve meal plan for current week
+  // ✅ Get or initialize week
   function getMealPlanForWeek(offset) {
     if (!mealPlanByWeek[offset]) {
-      setMealPlanByWeek(prev => ({
-        ...prev,
-        [offset]: createEmptyWeekPlan(),
-      }));
-      return createEmptyWeekPlan();
+      const empty = createEmptyWeekPlan();
+      setMealPlanByWeek(prev => ({ ...prev, [offset]: empty }));
+      return empty;
     }
     return mealPlanByWeek[offset];
   }
 
   const mealPlan = getMealPlanForWeek(weekOffset);
 
-  // ✅ Update meal ONLY for the selected week
-  function updateMeal(day, type, value) {
-    setMealPlanByWeek(prev => ({
-      ...prev,
-      [weekOffset]: {
-        ...prev[weekOffset],
-        [day]: {
-          ...prev[weekOffset][day],
-          [type]: value,
-        },
-      },
-    }));
-  }
-
-  // ✅ Inventory list (unchanged)
-  const [inventory] = useState([
-    { name: "Egg", qty: 1, expiry: "20/10/2025" },
-    { name: "Rice", qty: 1, expiry: "03/10/2025" },
-    { name: "Tomato", qty: 1, expiry: "06/11/2025" },
-    { name: "Potato", qty: 1, expiry: "20/09/2025" },
-    { name: "Elain Liow", qty: 1, expiry: "13/14/8520" },
-  ]);
-
-  // ✅ Calculate Monday of the selected week
+  // ✅ Compute Monday of week
   function getStartOfWeek(offset) {
     const now = new Date();
-    const day = now.getDay(); // 0 = Sun, 1 = Mon...
+    const day = now.getDay(); // 0 = Sun
     const diff = now.getDate() - day + (day === 0 ? -6 : 1);
     const monday = new Date(now.setDate(diff));
     monday.setDate(monday.getDate() + offset * 7);
@@ -79,14 +72,30 @@ export default function MealPlanner() {
     return getStartOfWeek(offset).toISOString().split("T")[0];
   }
 
-  // ✅ Load meals from backend
+  // ✅ When returning from RecipeList → jump to correct saved week
+  useEffect(() => {
+    if (location.state?.refreshDate) {
+      const target = new Date(location.state.refreshDate);
+
+      const todayWeekStart = getStartOfWeek(0);
+      const diff = Math.floor((target - todayWeekStart) / 86400000);
+      const offset = Math.floor(diff / 7);
+
+      setWeekOffset(offset);
+
+      // clear state so no infinite loop
+      navigate(location.pathname, { replace: true });
+    }
+  }, []);
+
+  // ✅ Fetch week’s meals
   async function fetchWeek() {
     try {
       const weekStart = getWeekStartString(weekOffset);
 
       const res = await loadWeek({
         userID: "U2",
-        weekStart,
+        weekStart
       });
 
       if (!res.ok) {
@@ -94,61 +103,64 @@ export default function MealPlanner() {
         return;
       }
 
+      console.log("✅ Loaded entries from backend:", res.entries);
+
       const entries = res.entries || [];
-      const newWeekPlan = createEmptyWeekPlan();
+      const newWeek = createEmptyWeekPlan();
 
-      entries.forEach(item => {
-        const date = new Date(item.mealDate);
+      entries.forEach(entry => {
+        const dateObj = new Date(entry.mealDate);
 
-        const day = date
-          .toLocaleDateString("en-GB", { weekday: "short" })
-          .toUpperCase();
+        // ✅ Convert JS weekday → our UI order (MON first)
+        const jsDay = dateObj.getDay(); // 0=Sun
+        const uiDay = ["MON","TUE","WED","THU","FRI","SAT","SUN"][(jsDay + 6) % 7];
 
-        const type = item.mealTypeName.toLowerCase();
+        const type = mealTypeMap[entry.mealTypeID];
 
-        newWeekPlan[day][type] = item.mealTitle || "";
+        if (uiDay && type) {
+          newWeek[uiDay][type] =
+            entry.mealName ||
+            entry.recipeName ||
+            "";
+        }
       });
 
       setMealPlanByWeek(prev => ({
         ...prev,
-        [weekOffset]: newWeekPlan,
+        [weekOffset]: newWeek
       }));
-    } catch (err) {
-      console.error("❌ Meal load error:", err);
+
+    } catch (e) {
+      console.error("❌ Meal load error:", e);
     }
   }
 
-  // ✅ Auto-load when switching week
+  // ✅ Load on week change
   useEffect(() => {
     fetchWeek();
   }, [weekOffset]);
 
-  // ✅ Create full week date list
-  function getWeekDates(offset) {
-    const start = getStartOfWeek(offset);
-    const list = [];
+  const meals = ["breakfast", "lunch", "dinner", "snack"];
 
+  const weekDays = (() => {
+    const start = getStartOfWeek(weekOffset);
+    const days = [];
     for (let i = 0; i < 7; i++) {
       const d = new Date(start);
       d.setDate(start.getDate() + i);
-
-      list.push({
-        day: ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"][i],
-        date: d.toLocaleDateString("en-GB"),
+      days.push({
+        day: ["MON","TUE","WED","THU","FRI","SAT","SUN"][i],
+        date: d.toLocaleDateString("en-GB")
       });
     }
+    return days;
+  })();
 
-    return list;
-  }
-
-  const weekDays = getWeekDates(weekOffset);
-
-  // ✅ Build week range label e.g. "27 Jan – 02 Feb"
+  // ✅ Week label
   const weekRangeText = (() => {
     const start = getStartOfWeek(weekOffset);
     const end = new Date(start);
     end.setDate(start.getDate() + 6);
-
     return (
       start.toLocaleDateString("en-GB", { day: "2-digit", month: "short" }) +
       " – " +
@@ -156,23 +168,20 @@ export default function MealPlanner() {
     );
   })();
 
-  // ✅ Navigate to recipe page
   function handleAddMeal(day, type) {
     navigate("/meal-planner/recipes", {
-      state: { day, type, weekOffset },
+      state: { day, type, weekOffset }
     });
   }
-
-  const meals = ["breakfast", "lunch", "dinner", "snack"];
 
   return (
     <div className="mealplanner-container">
       <div className="mealplanner-card">
         <div className="mealplanner-content">
 
+          {/* LEFT */}
           <div className="mealplanner-left">
 
-            {/* ✅ Week Navigation */}
             <div className="week-nav">
               <button onClick={() => setWeekOffset(weekOffset - 1)}>⬅ Previous</button>
               <span className="week-label">{weekRangeText}</span>
@@ -225,11 +234,14 @@ export default function MealPlanner() {
 
           </div>
 
+          {/* Divider */}
           <div className="divider"></div>
 
+          {/* RIGHT */}
           <div className="mealplanner-right">
             <InventoryList inventory={inventory} />
           </div>
+
         </div>
       </div>
     </div>

@@ -1,5 +1,4 @@
 /* --- Inventory Section --- */
-
 /* --- Title --- */
 .inventory-title {
   font-weight: 700;
@@ -67,3 +66,45 @@
   background: #6e925e;
   transform: translateY(-2px);
 }
+
+.highlight-plan {
+  background-color: #fff3cd; /* light yellow */
+  font-weight: 600;
+  border-left: 4px solid #f0ad4e;
+}
+
+/* Warning text style */
+.expiry-warning-row {
+  font-size: 11px;
+  color: #d9534f;
+  margin-top: 3px;
+  display: inline-block;
+  font-weight: 600;
+}
+
+/* Smooth Pulse */
+.pulse {
+  animation: pulseAnim 2.4s ease-in-out infinite;
+}
+
+@keyframes pulseAnim {
+  0% {
+    opacity: 1;
+    transform: scale(1);
+    text-shadow: 0 0 0px rgba(217, 83, 79, 0.4);
+  }
+  50% {
+    opacity: 0.75;
+    transform: scale(1.05);
+    text-shadow: 0 0 6px rgba(217, 83, 79, 0.7);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+    text-shadow: 0 0 0px rgba(217, 83, 79, 0.4);
+  }
+}
+
+
+
+

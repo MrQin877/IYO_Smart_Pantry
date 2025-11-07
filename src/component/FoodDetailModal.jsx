@@ -118,17 +118,12 @@ export default function FoodDetailModal({
         is_plan: newPlanStatus,
       });
 
+      console.log("✅ FULL backend response:", res); // <-- ADD THIS
+
       if (res.ok) {
         alert(newPlanStatus ? "Planned for meal!" : "Removed from meal plan.");
-
-        // ✅ Instantly reflect in modal
         setFood({ ...food, is_plan: newPlanStatus });
-
-        // ✅ Instantly reflect in list table
         onPlanUpdate?.(food.foodID, newPlanStatus);
-
-        // ✅ Optional backend refresh (if needed)
-        // onUpdate?.();
       } else {
         console.error("❌ Backend error:", res.error);
         alert(res.error || "Failed to update meal plan.");
@@ -138,6 +133,7 @@ export default function FoodDetailModal({
       alert("Error updating meal plan.");
     }
   };
+
 
   return (
     <div className="modal" onClick={onClose}>

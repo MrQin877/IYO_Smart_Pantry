@@ -1,18 +1,29 @@
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { ArrowLeft, Plus } from "lucide-react";
 import { useEffect, useState } from "react";
 import CookPopup from "../component/CookPopup";
+import { saveMealEntry } from "../../api/services/MealPlanService"; // ✅ added
 import "./RecipeList.css";
 
 export default function RecipeList() {
   const navigate = useNavigate();
+  const location = useLocation();
+
+  // ✅ Get day/type/weekOffset sent from MealPlanner.jsx
+  const { day, type, weekOffset } = location.state || {};
 
   const [loading, setLoading] = useState(true);
-
   const [suggestedRecipes, setSuggestedRecipes] = useState([]);
   const [genericRecipes, setGenericRecipes] = useState([]);
-
   const [selectedRecipe, setSelectedRecipe] = useState(null);
+  // ✅ Map meal types: breakfast → MT1, lunch → MT2, dinner → MT3, snack → MT4
+  const mealTypeMap = {
+    breakfast: "MT1",
+    lunch: "MT2",
+    dinner: "MT3",
+    snack: "MT4",
+  };
+
 
   useEffect(() => {
     async function fetchRecipes() {
@@ -26,7 +37,6 @@ export default function RecipeList() {
 
         setSuggestedRecipes(data.recipes.filter(r => Number(r.isGeneric) === 0));
         setGenericRecipes(data.recipes.filter(r => Number(r.isGeneric) === 1));
-
       } catch (err) {
         console.error("❌ Error loading recipes:", err);
       }
@@ -56,20 +66,79 @@ export default function RecipeList() {
         return;
       }
 
-      // ✅ FIXED
       setSelectedRecipe({
         ...recipe,
         ingredients: data.recipe.ingredients || [],
-
       });
     } catch (err) {
       console.error("❌ Error loading recipe details:", err);
     }
   };
 
-  const handleConfirm = (recipe) => {
-    console.log("✅ Add to Meal Planner:", recipe.recipeName);
+  // ✅ Convert MON/TUE/WED... to actual YYYY-MM-DD
+  function getDateForDay(weekOffset, day) {
+    const dayIndex = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"].indexOf(day);
+    if (dayIndex < 0) return null;
+
+    const now = new Date();
+    const currentDay = now.getDay(); // 0 = Sun
+    const diffToMonday = currentDay === 0 ? -6 : 1 - currentDay;
+
+    // Monday of current week
+    const monday = new Date(now);
+    monday.setDate(now.getDate() + diffToMonday + weekOffset * 7);
+
+    const result = new Date(monday);
+    result.setDate(monday.getDate() + dayIndex);
+
+    return result.toISOString().substring(0, 10); // YYYY-MM-DD
+  }
+
+  // ✅ Load details on Cook
+  const handleConfirm = async (recipe) => {
+    const { day, type, weekOffset } = location.state; // ✅ get from router
+    const mealTypeID = mealTypeMap[type];
+
+    if (!mealTypeID) {
+      console.error("❌ Invalid meal type:", type);
+      return;
+    }
+
+    const mealDate = getDateForDay(weekOffset, day);
+
+    const payload = {
+      userID: "U2",
+      recipeID: recipe.recipeID,
+      mealName: recipe.recipeName,
+      mealTypeID,
+      mealDate,
+    };
+
+    console.log("📤 Sending to backend:", payload);
+
+    const res = await saveMealEntry(payload);
+    console.log("✅ Save result:", res);
+    navigate("/meal-planner", {
+      state: {
+        refreshDate: mealDate   // ✅ send to planner
+      }
+    });
   };
+
+
+  // ✅ Compute YYYY-MM-DD Monday again
+  function getStartOfWeek(offset) {
+    const now = new Date();
+    const day = now.getDay();
+    const diff = now.getDate() - day + (day === 0 ? -6 : 1);
+    const monday = new Date(now.setDate(diff));
+    monday.setDate(monday.getDate() + offset * 7);
+    return monday;
+  }
+
+  function getWeekStartString(offset) {
+    return getStartOfWeek(offset).toISOString().split("T")[0];
+  }
 
   return (
     <div className="recipe-page">
@@ -121,7 +190,7 @@ export default function RecipeList() {
               </div>
             </div>
 
-            {/* ✅ Generic Recipes */}
+            {/* ✅ Generic */}
             <div className="recipe-section">
               <h3 className="section-title">Generic Recipes</h3>
               <div className="recipe-grid">
@@ -139,6 +208,7 @@ export default function RecipeList() {
                       <p className="ingredients">
                         {r.ingredientNames || "Ingredients Loaded on Cook"}
                       </p>
+
                       <button className="cook-btn" onClick={() => handleCook(r)}>
                         Cook
                       </button>

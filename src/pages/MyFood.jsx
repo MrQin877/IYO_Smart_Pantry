@@ -35,6 +35,8 @@ export default function MyFood() {
   const [loading, setLoading] = useState(false);
   const [allFoods, setAllFoods] = useState([]);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [foods, setFoods] = useState([]);
+
 
 
   // ...inside your useEffect for fetching foods
@@ -433,7 +435,7 @@ export default function MyFood() {
         onDonate={handleDonateRequest}
         onUpdate={handleRefresh}
         onPlanUpdate={(foodID, newPlan) => {
-          setView(prev =>
+          setFoods(prev =>
             prev.map(f =>
               f.foodID === foodID ? { ...f, is_plan: newPlan } : f
             )

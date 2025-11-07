@@ -26,7 +26,7 @@ try {
   $row = $stmt->fetch();
 
   if (!$row) {
-    respond(['ok' => true, 'items' => []]); // ✅ FIXED
+    respond(['ok' => true, 'entries' => []]); // ✅ FIXED
   }
 
   $mealPlanID = $row['mealPlanID'];
@@ -42,7 +42,7 @@ try {
   $stmt2->execute([$mealPlanID]);
   $entries = $stmt2->fetchAll();
 
-  respond(['ok' => true, 'items' => $entries, 'mealPlanID' => $mealPlanID]); // ✅ FIXED
+  respond(['ok' => true, 'entries' => $entries, 'mealPlanID' => $mealPlanID]); // ✅ FIXED
 
 } catch (Throwable $e) {
   respond(['ok' => false, 'error' => $e->getMessage()], 500);
