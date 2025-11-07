@@ -103,7 +103,7 @@ export default function HeaderNav() {
           <nav className="main" aria-label="Primary">
             <NavItem to="/dashboard">Home</NavItem>
             <NavItem to="/food">Food Center</NavItem>
-            <NavItem to="/plan">Plan Meals</NavItem>
+            <NavItem to="/meal-planner">Plan Meals</NavItem>
             <NavItem to="/analytics">Food Analytics</NavItem>
           </nav>
         )}

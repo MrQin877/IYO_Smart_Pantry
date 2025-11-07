@@ -1,0 +1,153 @@
+/* Outer background area (same as Meal Planner page) */
+.recipe-page {
+  min-height: calc(100vh - 80px);
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 10px 20px;
+}
+
+/* White rounded container wrapping everything */
+.recipe-container {
+  background-color: #ffffff;
+  border-radius: 20px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
+  width: 95%;
+  max-width: 1150px;
+  padding: 30px 40px;
+}
+
+/* Header (keep your existing look, just centered in the container) */
+.recipe-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 25px;
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.back-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #2e4b33;
+}
+
+.custom-btn {
+  background-color: #7da27d;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 14px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.custom-btn:hover {
+  background-color: #6e936e;
+}
+
+/* Section titles and grids remain same */
+.recipe-section {
+  margin-top: 30px;
+}
+
+.section-title {
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: #2e4b33;
+  border-left: 4px solid #7da27d;
+  padding-left: 8px;
+  margin-bottom: 15px;
+}
+
+/* Recipe grid: fixed 3 columns per row */
+.recipe-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr); /* exactly 3 columns */
+  gap: 20px;
+  justify-items: center; /* optional: keeps cards centered if smaller */
+}
+
+.recipe-card {
+  width: 100%;
+  max-width: 320px; /* optional, keeps cards nicely sized */
+  background-color: #ffffff;
+  border-radius: 15px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  overflow: hidden;
+  transition: transform 0.2s;
+}
+
+.recipe-card:hover {
+  transform: translateY(-4px);
+}
+
+.recipe-img {
+  width: 100%;
+  height: 150px;
+  object-fit: cover;
+}
+
+.recipe-info {
+  padding: 12px 15px 18px;
+}
+
+.ingredients {
+  color: #777;
+  font-size: 0.9rem;
+  margin: 4px 0 8px;
+}
+
+.details {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.time,
+.calories {
+  background-color: #e6efde;
+  border-radius: 8px;
+  padding: 4px 8px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #2e4b33;
+}
+
+.cook-btn {
+  background-color: #7da27d;
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  padding: 8px;
+  width: 100%;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.cook-btn:hover {
+  background-color: #6e936e;
+}
+
+@media (max-width: 900px) {
+  .recipe-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 600px) {
+  .recipe-grid {
+    grid-template-columns: 1fr;
+  }
+}

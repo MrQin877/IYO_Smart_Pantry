@@ -1,0 +1,215 @@
+:root {
+  --green: #7ea36b;
+  --ink: #1f2a24;
+  --paper: #f6f5ea;
+  --shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
+  --radius-xl: 20px;
+  --radius-2xl: 28px;
+}
+
+/* --- Container --- */
+.mealplanner-container {
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  margin-top: 40px;
+  font-family: "Poppins", sans-serif;
+  min-height: calc(100vh - 80px);
+  padding: 20px;
+}
+
+/* --- Main Card --- */
+.mealplanner-card {
+  display: flex;
+  flex-direction: column;   /* ✅ Make card vertical */
+  align-items: stretch; /* ensures divider fills height */
+  background: #fff;
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow);
+  padding: 24px;
+  width: 100%;
+  max-width: 1150px;
+  min-height: 520px;
+  gap: 0; /* we'll control spacing via divider */
+}
+
+
+.mealplanner-content {
+  display: flex;
+  flex-direction: row;       /* ✅ Table + inventory side-by-side */
+  width: 100%;
+  margin-top: 15px;
+}
+
+/* --- Left Section: Table --- */
+.mealplanner-left {
+  flex: 1.9;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+/* Make the table evenly spaced and centered */
+.meal-table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed; /* ensures all columns are equal width */
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 0 0 1px #e0e0e0;
+}
+
+.meal-table th,
+.meal-table td {
+  border: 1px solid #e6e6e6;
+  text-align: center;
+  padding: 12px;
+  color: var(--ink);
+  font-size: 15px;
+  height: 50px;
+  width: 20%; /* 5 equal columns (100% / 5) */
+}
+
+
+.meal-table th {
+  background: #f0f2e8;
+  color: var(--ink);
+  font-weight: 700;
+}
+
+.day-col {
+  background-color: #e7efe0;
+  font-weight: 700;
+  text-align: left;
+  padding-left: 14px;
+  color: #2f3b2f;
+}
+
+/* --- Cells --- */
+.meal-cell {
+  cursor: pointer;
+  transition: background-color 0.25s ease, transform 0.15s ease;
+}
+
+.meal-cell:hover {
+  background-color: #f3f7ed;
+  transform: scale(1.02);
+}
+
+.meal-add {
+  color: #4a4a4a;
+  font-size: 18px;
+}
+
+.meal-filled {
+  background: #dfe7d3;
+  padding: 8px 12px;
+  border-radius: 10px;
+  display: inline-block;
+  color: var(--ink);
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+/* --- Divider --- */
+.divider {
+  width: 2px;
+  background-color: #e0e0e0;
+  margin: 0 28px;
+  align-self: stretch; /* full height */
+}
+
+/* --- Right Section --- */
+.mealplanner-right {
+  flex: 1.1;
+  background: #f8f9f5;
+  border: 1px solid #e4e9dc;
+  border-radius: 16px;
+  padding: 22px;
+  box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.04);
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+}
+
+.mealplanner-right h3 {
+  font-weight: 800;
+  color: var(--ink);
+  margin-bottom: 14px;
+  font-size: 1.1rem;
+}
+
+/* --- Buttons --- */
+.btn-green {
+  background: var(--green);
+  color: #fff;
+  border: 1px solid var(--green);
+  padding: 8px 14px;
+  border-radius: 10px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.25s ease;
+}
+
+.btn-green:hover {
+  background: #6e925e;
+  transform: translateY(-2px);
+}
+
+.btn-outline {
+  background: #fff;
+  color: var(--ink);
+  border: 1px solid #dcdcdc;
+  padding: 8px 14px;
+  border-radius: 10px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.25s ease;
+}
+
+.btn-outline:hover {
+  background: #f7f7f7;
+}
+
+/* --- Responsive --- */
+@media (max-width: 900px) {
+  .mealplanner-card {
+    flex-direction: column;
+    width: 100%;
+  }
+
+  .divider {
+    display: none;
+  }
+}
+
+.week-nav {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 40px;
+  margin-bottom: 15px;
+  width: 100%;
+}
+
+.week-nav button {
+  padding: 6px 14px;
+  background: #4b6737;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.week-nav button:hover {
+  background: #3e5741;
+}
+
+.week-label {
+  color: #2e4b33;
+}
+
+.date-text {
+  font-size: 12px;
+  color: #5e6b57;
+}
