@@ -5,19 +5,19 @@ require_once __DIR__ . '/config.php';
 header("Access-Control-Allow-Origin: *");
 header("Content-Type: application/json; charset=utf-8");
 
-$input = json_input();
-$mealName    = trim($input['mealName'] ?? '');
-$notes       = trim($input['notes'] ?? '');
-$servings    = (int)($input['servings'] ?? 1);
-$ingredients = $input['ingredients'] ?? [];
-$userID      = $input['userID'] ?? 'U2'; // fallback user
+ $input = json_input();
+ $mealName    = trim($input['mealName'] ?? '');
+ $notes       = trim($input['notes'] ?? '');
+ $servings    = (int)($input['servings'] ?? 1);
+ $ingredients = $input['ingredients'] ?? [];
+ $userID      = $input['userID'] ?? 'U2'; // fallback user
 
 if ($mealName === '' || empty($ingredients)) {
     respond(['success' => false, 'message' => 'Meal name and ingredients are required.'], 400);
 }
 
 // DEBUG LOG
-$debugLog = [];
+ $debugLog = [];
 
 try {
     $pdo->beginTransaction();
@@ -33,8 +33,9 @@ try {
         ':serving' => $servings
     ]);
     $recipeID = $pdo->lastInsertId();
+    // Fallback for triggers that don't populate lastInsertId correctly
     if (!$recipeID) {
-        $stmt = $pdo->query("SELECT recipeID FROM recipes ORDER BY recipeID DESC LIMIT 1");
+        $stmt = $pdo->query("SELECT recipeID FROM recipes ORDER BY CAST(SUBSTRING(recipeID, 2) AS UNSIGNED) DESC LIMIT 1");
         $recipeID = $stmt->fetchColumn();
     }
 
@@ -132,12 +133,14 @@ try {
             
             $debugLog[] = "  → Insert result: " . ($result ? 'SUCCESS' : 'FAILED');
 
-            // ✅ FIX: Get the new ingredientID using a more reliable method
+            // =================================================================
+            // ✅ FIX #1: Get the new ingredientID by sorting NUMERICALLY, not alphabetically.
+            // =================================================================
             $stmtNew = $pdo->prepare("
                 SELECT ingredientID 
                 FROM ingredients 
                 WHERE TRIM(UPPER(ingredientName)) = :name 
-                ORDER BY ingredientID DESC 
+                ORDER BY CAST(SUBSTRING(ingredientID, 2) AS UNSIGNED) DESC
                 LIMIT 1
             ");
             $stmtNew->execute([':name' => strtoupper(trim($foodName))]);
@@ -164,11 +167,19 @@ try {
             if (!$unitID) {
                 $stmt = $pdo->prepare("INSERT INTO units (unitName) VALUES (:unit)");
                 $stmt->execute([':unit' => $unitName]);
-                $unitID = $pdo->lastInsertId();
-                if (!$unitID) {
-                    $stmt2 = $pdo->query("SELECT unitID FROM units ORDER BY unitID DESC LIMIT 1");
-                    $unitID = $stmt2->fetchColumn();
-                }
+                
+                // =================================================================
+                // ✅ FIX #2: Use the same robust method to get the new unitID.
+                // =================================================================
+                $stmtUnit = $pdo->prepare("
+                    SELECT unitID 
+                    FROM units 
+                    WHERE TRIM(UPPER(unitName)) = :unit 
+                    ORDER BY CAST(SUBSTRING(unitID, 3) AS UNSIGNED) DESC
+                    LIMIT 1
+                ");
+                $stmtUnit->execute([':unit' => strtoupper(trim($unitName))]);
+                $unitID = $stmtUnit->fetchColumn();
             }
         } else {
             // Default to "Other" unit when no unit is provided
