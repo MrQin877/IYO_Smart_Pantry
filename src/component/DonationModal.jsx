@@ -261,7 +261,7 @@ export default function DonationModal({
 
   return (
     <div className="modal" onClick={onClose}>
-      <div className="panel panel-wide" onClick={(e) => e.stopPropagation()}>
+      <div className="panel panel-wide panel--uniform" onClick={(e) => e.stopPropagation()}>
         <button className="close" onClick={onClose}>✕</button>
         <h3 className="modal-title">Convert to Donation</h3>
 
@@ -273,23 +273,19 @@ export default function DonationModal({
 
         {/* Item / Qty / Contact */}
         <div className="form-grid grid-3">
+          {/* Item name */}
           <div className="form-row">
             <label>Item name</label>
             <input
-              className="input"
+              className="input is-readonly"
               value={f.name}
               readOnly
-              onChange={(e) => setF({ ...f, name: e.target.value })}
             />
           </div>
 
+          {/* Quantity */}
           <div className="form-row">
-            <label>
-              Quantity{" "}
-              <span className="subtle">
-                (available: {maxQty} {item.unit || ""})
-              </span>
-            </label>
+            <label>Quantity</label>
             <div className="qty-row">
               <button className="step" onClick={() => step(-1)} disabled={f.qty <= 1}>-</button>
               <input
@@ -299,7 +295,6 @@ export default function DonationModal({
                 max={maxQty}
                 value={f.qty}
                 onChange={(e) => setQty(e.target.value)}
-                style={{ width: 80, textAlign: "center" }}
               />
               <button className="step" onClick={() => step(1)} disabled={f.qty >= maxQty}>+</button>
               <select
@@ -310,9 +305,18 @@ export default function DonationModal({
                 <option value={item.unit || "UNIT"}>{item.unit || "UNIT"}</option>
               </select>
             </div>
-            {qtyError && <div className="text-xs text-red-600 mt-1">{qtyError}</div>}
+
+            {/* helper under the control, not in the label  */}
+            <div className="field-note">
+              Available: <b>{maxQty}</b> {item.unit || ""}
+            </div>
+
+            {qtyError && (
+              <div className="text-xs text-red-600 mt-1">{qtyError}</div>
+            )}
           </div>
 
+          {/* Contact */}
           <div className="form-row">
             <label>Contact Number</label>
             <input
@@ -328,6 +332,7 @@ export default function DonationModal({
             )}
           </div>
         </div>
+
 
         {/* Expiry info & guard */}
         <div className="mb-2 text-sm">
