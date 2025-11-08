@@ -132,11 +132,19 @@ try {
             
             $debugLog[] = "  → Insert result: " . ($result ? 'SUCCESS' : 'FAILED');
 
-            // Get the new ingredientID
-            $ingredientID = $pdo->lastInsertId();
+            // ✅ FIX: Get the new ingredientID using a more reliable method
+            $stmtNew = $pdo->prepare("
+                SELECT ingredientID 
+                FROM ingredients 
+                WHERE TRIM(UPPER(ingredientName)) = :name 
+                ORDER BY ingredientID DESC 
+                LIMIT 1
+            ");
+            $stmtNew->execute([':name' => strtoupper(trim($foodName))]);
+            $ingredientID = $stmtNew->fetchColumn();
+
             if (!$ingredientID) {
-                $stmt2 = $pdo->query("SELECT ingredientID FROM ingredients ORDER BY ingredientID DESC LIMIT 1");
-                $ingredientID = $stmt2->fetchColumn();
+                throw new Exception("Failed to retrieve newly created ingredient ID for: " . $foodName);
             }
             
             // VERIFY what was actually inserted
@@ -162,6 +170,9 @@ try {
                     $unitID = $stmt2->fetchColumn();
                 }
             }
+        } else {
+            // Default to "Other" unit when no unit is provided
+            $unitID = 'UN8'; 
         }
 
         // 3️⃣ Insert into recipe_ingredients

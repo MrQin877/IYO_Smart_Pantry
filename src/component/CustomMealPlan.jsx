@@ -34,24 +34,32 @@ export default function CustomMealPlan() {
   };
 
   // Save custom meal plan to backend
+// In CustomMealPlan.jsx
+
   const handleSave = async () => {
-    if (!mealName.trim()) return alert("Meal name is required!");
+      if (!mealName.trim()) return alert("Meal name is required!");
 
-    try {
-      const response = await apiPost("/save_custom_meal.php", {
-        mealName,
-        notes,
-        servings,
-        ingredients,
-        userID: "U2", // use session later if available
-      });
+      try {
+        const response = await apiPost("/save_custom_meal.php", {
+          mealName,
+          notes,
+          servings,
+          ingredients,
+          userID: "U2",
+        });
 
-      alert("Custom meal saved successfully!");
-      navigate(-1);
-    } catch (err) {
-      console.error("Error saving meal:", err);
-      alert("Failed to save custom meal: " + err.message);
-    }
+        // Check if the backend itself reported an error
+        if (response.success === false) {
+          throw new Error(response.message || "Unknown server error");
+        }
+
+        alert("Custom meal saved successfully!");
+        navigate(-1);
+      } catch (err) {
+        console.error("Error saving meal:", err);
+        // This will now show the specific message from your PHP script
+        alert("Failed to save custom meal: " + err.message); 
+      }
   };
 
 
