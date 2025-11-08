@@ -12,15 +12,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 
 require_once __DIR__ . '/../config.php'; // adjust path if needed
 
-$in = json_decode(file_get_contents('php://input'), true);
+ $in = json_decode(file_get_contents('php://input'), true);
 if (!is_array($in)) respond(['ok' => false, 'error' => 'Bad JSON'], 400);
 
 // Required fields: recipeID (opt), mealDate (YYYY-MM-DD), mealTypeID, mealName (opt), userID
-$recipeID   = $in['recipeID']   ?? null;
-$mealDate   = $in['mealDate']   ?? null;
-$mealTypeID = $in['mealTypeID'] ?? null;
-$mealName   = $in['mealName']   ?? null;
-$userID     = $in['userID']     ?? 'U2'; // fallback to U2 for dev/testing
+ $recipeID   = $in['recipeID']   ?? null;
+ $mealDate   = $in['mealDate']   ?? null;
+ $mealTypeID = $in['mealTypeID'] ?? null;
+ $mealName   = $in['mealName']   ?? null;
+ $userID     = $in['userID']     ?? 'U2'; // fallback to U2 for dev/testing
+
+// Add debug logging
+error_log("SAVE: userID=$userID, mealDate=$mealDate, mealTypeID=$mealTypeID, recipeID=$recipeID");
 
 if (!$mealDate || !$mealTypeID || !$userID) {
   respond(['ok' => false, 'error' => 'Missing mealDate / mealTypeID / userID'], 400);
@@ -32,11 +35,14 @@ try {
 } catch (Exception $e) {
   respond(['ok' => false, 'error' => 'Invalid mealDate'], 400);
 }
-$dayOfWeek = (int)$dt->format('N'); // 1 (Mon) .. 7 (Sun)
-$daysToMon = $dayOfWeek - 1;
-$weekStart = clone $dt;
-$weekStart->modify("-{$daysToMon} days");
-$weekStartStr = $weekStart->format('Y-m-d');
+ $dayOfWeek = (int)$dt->format('N'); // 1 (Mon) .. 7 (Sun)
+ $daysToMon = $dayOfWeek - 1;
+ $weekStart = clone $dt;
+ $weekStart->modify("-{$daysToMon} days");
+ $weekStartStr = $weekStart->format('Y-m-d');
+
+// Add debug logging
+error_log("SAVE: Calculated weekStart=$weekStartStr for mealDate=$mealDate (dayOfWeek=$dayOfWeek, daysToMon=$daysToMon)");
 
 try {
   $pdo->beginTransaction();
@@ -48,6 +54,7 @@ try {
 
   if ($row) {
     $mealPlanID = $row['mealPlanID'];
+    error_log("SAVE: Found existing mealPlanID=$mealPlanID");
   } else {
     $ins = $pdo->prepare("INSERT INTO meal_plan_calendars (weekStart, userID) VALUES (?, ?)");
     $ins->execute([$weekStartStr, $userID]);
@@ -59,6 +66,7 @@ try {
       respond(['ok' => false, 'error' => 'Failed to create meal plan calendar'], 500);
     }
     $mealPlanID = $row2['mealPlanID'];
+    error_log("SAVE: Created new mealPlanID=$mealPlanID");
   }
 
   // 2) insert into meal_entries
@@ -69,6 +77,8 @@ try {
   $stmt3 = $pdo->prepare("SELECT * FROM meal_entries WHERE mealPlanID = ? AND mealDate = ? AND mealTypeID = ? ORDER BY mealEntryID DESC LIMIT 1");
   $stmt3->execute([$mealPlanID, $mealDate, $mealTypeID]);
   $entry = $stmt3->fetch();
+
+  error_log("SAVE: Inserted entry with mealEntryID=" . ($entry ? $entry['mealEntryID'] : 'NULL'));
 
   $pdo->commit();
   respond(['ok' => true, 'entry' => $entry, 'mealPlanID' => $mealPlanID]);

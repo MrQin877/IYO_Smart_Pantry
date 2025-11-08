@@ -1,3 +1,4 @@
+// src/pages/RecipeList.jsx
 import { useNavigate, useLocation } from "react-router-dom";
 import { ArrowLeft, Plus } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -200,6 +201,16 @@ export default function RecipeList() {
     }
   };
 
+  // =================================================================
+  // ✅ FIX: Helper to get YYYY-MM-DD in LOCAL timezone
+  // =================================================================
+  function toLocalDateString(date) {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
+
   // Convert MON/TUE/WED... to actual YYYY-MM-DD
   function getDateForDay(weekOffset, day) {
     const dayIndex = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"].indexOf(day);
@@ -216,7 +227,8 @@ export default function RecipeList() {
     const result = new Date(monday);
     result.setDate(monday.getDate() + dayIndex);
 
-    return result.toISOString().substring(0, 10); // YYYY-MM-DD
+    // ✅ FIX: Use the local date string helper
+    return toLocalDateString(result);
   }
 
   // Load details on Cook

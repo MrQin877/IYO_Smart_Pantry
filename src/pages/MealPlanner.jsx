@@ -1,10 +1,12 @@
-// ✅ src/pages/MealPlanner.jsx
+// src/pages/MealPlanner.jsx
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import InventoryList from "../component/InventoryList";
+import MealActionModal from "../component/MealActionModal";
 import { motion, AnimatePresence } from "framer-motion";
 import { loadWeek } from "../../api/services/MealPlanService";
 import { loadInventory } from "../../api/services/InventoryService";
+import { getRecipeDetails } from "../../api/services/RecipeService"; // New import
 import "./MealPlanner.css";
 
 export default function MealPlanner() {
@@ -14,6 +16,23 @@ export default function MealPlanner() {
   const [mealPlanByWeek, setMealPlanByWeek] = useState({});
   const [weekOffset, setWeekOffset] = useState(0);
   const [inventory, setInventory] = useState([]);
+  const [mealDetails, setMealDetails] = useState({}); // New state for meal details
+  
+  // =================================================================
+  // ✅ FIX #2: Add a refreshKey to force data re-fetching
+  // =================================================================
+  const [refreshKey, setRefreshKey] = useState(0);
+  
+  // New state for modal
+  const [modalState, setModalState] = useState({
+    isOpen: false,
+    day: null,
+    type: null,
+    mealName: "",
+    recipeID: null, // Add recipeID
+    instructions: "", // Add instructions
+    ingredients: [] // Add ingredients
+  });
 
   useEffect(() => {
     async function fetchInv() {
@@ -24,8 +43,7 @@ export default function MealPlanner() {
     fetchInv();
   }, []);
 
-
-  // ✅ Meal type map → database ID → UI field
+  // Meal type map → database ID → UI field
   const mealTypeMap = {
     MT1: "breakfast",
     MT2: "lunch",
@@ -33,7 +51,7 @@ export default function MealPlanner() {
     MT4: "snack"
   };
 
-  // ✅ Empty week template
+  // Empty week template
   function createEmptyWeekPlan() {
     return {
       MON: { breakfast: "", lunch: "", dinner: "", snack: "" },
@@ -46,7 +64,7 @@ export default function MealPlanner() {
     };
   }
 
-  // ✅ Get or initialize week
+  // Get or initialize week
   function getMealPlanForWeek(offset) {
     if (!mealPlanByWeek[offset]) {
       const empty = createEmptyWeekPlan();
@@ -58,7 +76,7 @@ export default function MealPlanner() {
 
   const mealPlan = getMealPlanForWeek(weekOffset);
 
-  // ✅ Compute Monday of week
+  // Compute Monday of week
   function getStartOfWeek(offset) {
     const now = new Date();
     const day = now.getDay(); // 0 = Sun
@@ -68,11 +86,22 @@ export default function MealPlanner() {
     return monday;
   }
 
-  function getWeekStartString(offset) {
-    return getStartOfWeek(offset).toISOString().split("T")[0];
+  // =================================================================
+  // ✅ FIX #1: Helper to get YYYY-MM-DD in LOCAL timezone (not UTC)
+  // =================================================================
+  function toLocalDateString(date) {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
   }
 
-  // ✅ When returning from RecipeList → jump to correct saved week
+  function getWeekStartString(offset) {
+    const mondayDate = getStartOfWeek(offset);
+    return toLocalDateString(mondayDate); // Use the new helper function
+  }
+
+  // When returning from RecipeList → jump to correct saved week and refresh data
   useEffect(() => {
     if (location.state?.refreshDate) {
       const target = new Date(location.state.refreshDate);
@@ -83,12 +112,52 @@ export default function MealPlanner() {
 
       setWeekOffset(offset);
 
-      // clear state so no infinite loop
-      navigate(location.pathname, { replace: true });
-    }
-  }, []);
+      // =================================================================
+      // ✅ FIX #2: Increment the refreshKey to trigger a data re-fetch
+      // =================================================================
+      setRefreshKey(prev => prev + 1);
 
-  // ✅ Fetch week’s meals
+      // clear state so no infinite loop
+      navigate(location.pathname, { replace: true, state: null });
+    }
+  }, [location.state, navigate]); // Added dependencies
+
+  // Fetch recipe details for a meal
+  async function fetchRecipeDetails(recipeID) {
+    // Check if we already have the details
+    if (mealDetails[recipeID]) {
+      return mealDetails[recipeID];
+    }
+
+    try {
+      // You'll need to implement this API service
+      const res = await getRecipeDetails(recipeID);
+      
+      if (res.ok) {
+        const details = {
+          instructions: res.recipe.instruction,
+          ingredients: res.ingredients.map(ing => ({
+            name: ing.ingredientName,
+            quantity: ing.quantityNeeded,
+            unit: ing.unitName
+          }))
+        };
+        
+        // Cache the details
+        setMealDetails(prev => ({
+          ...prev,
+          [recipeID]: details
+        }));
+        
+        return details;
+      }
+    } catch (error) {
+      console.error("Error fetching recipe details:", error);
+      return null;
+    }
+  }
+
+  // Fetch week's meals
   async function fetchWeek() {
     try {
       const weekStart = getWeekStartString(weekOffset);
@@ -108,22 +177,68 @@ export default function MealPlanner() {
       const entries = res.entries || [];
       const newWeek = createEmptyWeekPlan();
 
-      entries.forEach(entry => {
+      // Process entries and fetch recipe details for each meal
+      const recipePromises = entries.map(async entry => {
         const dateObj = new Date(entry.mealDate);
 
-        // ✅ Convert JS weekday → our UI order (MON first)
+        // Convert JS weekday → our UI order (MON first)
         const jsDay = dateObj.getDay(); // 0=Sun
         const uiDay = ["MON","TUE","WED","THU","FRI","SAT","SUN"][(jsDay + 6) % 7];
 
         const type = mealTypeMap[entry.mealTypeID];
 
         if (uiDay && type) {
-          newWeek[uiDay][type] =
-            entry.mealName ||
-            entry.recipeName ||
-            "";
+          const mealName = entry.mealName || entry.recipeName || "";
+          
+          // Store basic meal info
+          newWeek[uiDay][type] = mealName;
+          
+          // If there's a recipe ID, fetch its details
+          if (entry.recipeID) {
+            return {
+              day: uiDay,
+              type,
+              recipeID: entry.recipeID,
+              mealName
+            };
+          }
+        }
+        return null;
+      });
+
+      // Filter out null values
+      const validMeals = recipePromises.filter(Boolean);
+      
+      // Fetch recipe details for all meals with recipes
+      const mealsWithRecipes = await Promise.all(
+        validMeals.map(async meal => {
+          if (meal && meal.recipeID) {
+            const details = await fetchRecipeDetails(meal.recipeID);
+            return {
+              ...meal,
+              ...details
+            };
+          }
+          return meal;
+        })
+      );
+
+      // Store meal details in state
+      const newMealDetails = {};
+      mealsWithRecipes.forEach(meal => {
+        if (meal && meal.recipeID) {
+          newMealDetails[`${meal.day}-${meal.type}`] = {
+            recipeID: meal.recipeID,
+            instructions: meal.instructions,
+            ingredients: meal.ingredients
+          };
         }
       });
+      
+      setMealDetails(prev => ({
+        ...prev,
+        ...newMealDetails
+      }));
 
       setMealPlanByWeek(prev => ({
         ...prev,
@@ -135,10 +250,12 @@ export default function MealPlanner() {
     }
   }
 
-  // ✅ Load on week change
+  // =================================================================
+  // ✅ FIX #2: Fetch data when weekOffset changes OR when refreshKey is incremented
+  // =================================================================
   useEffect(() => {
     fetchWeek();
-  }, [weekOffset]);
+  }, [weekOffset, refreshKey]);
 
   const meals = ["breakfast", "lunch", "dinner", "snack"];
 
@@ -156,7 +273,7 @@ export default function MealPlanner() {
     return days;
   })();
 
-  // ✅ Week label
+  // Week label
   const weekRangeText = (() => {
     const start = getStartOfWeek(weekOffset);
     const end = new Date(start);
@@ -168,11 +285,94 @@ export default function MealPlanner() {
     );
   })();
 
+  // Handle clicking on a meal cell
+  function handleMealClick(day, type) {
+    const mealName = mealPlan[day][type];
+    const mealKey = `${day}-${type}`;
+    const details = mealDetails[mealKey];
+    
+    if (mealName) {
+      // Open modal for existing meal with details
+      setModalState({
+        isOpen: true,
+        day,
+        type,
+        mealName,
+        recipeID: details?.recipeID || null,
+        instructions: details?.instructions || "",
+        ingredients: details?.ingredients || []
+      });
+    } else {
+      // Navigate to recipe selection for empty meal
+      handleAddMeal(day, type);
+    }
+  }
+
   function handleAddMeal(day, type) {
     navigate("/meal-planner/recipes", {
       state: { day, type, weekOffset }
     });
   }
+
+  // Modal action handlers
+  const handleMarkAsDone = () => {
+    // Update meal plan to mark as done
+    const updatedPlan = { ...mealPlan };
+    updatedPlan[modalState.day][modalState.type] = `${modalState.mealName} ✓`;
+    
+    setMealPlanByWeek(prev => ({
+      ...prev,
+      [weekOffset]: updatedPlan
+    }));
+    
+    // Close modal
+    setModalState({
+      isOpen: false,
+      day: null,
+      type: null,
+      mealName: "",
+      recipeID: null,
+      instructions: "",
+      ingredients: []
+    });
+    
+    // Here you would also update the backend
+    // updateMealStatus(modalState.day, modalState.type, 'completed');
+  };
+
+  const handleReplan = () => {
+    // Close modal and navigate to recipe selection
+    setModalState({
+      isOpen: false,
+      day: null,
+      type: null,
+      mealName: "",
+      recipeID: null,
+      instructions: "",
+      ingredients: []
+    });
+    
+    navigate("/meal-planner/recipes", {
+      state: { 
+        day: modalState.day, 
+        type: modalState.type, 
+        weekOffset,
+        isReplan: true
+      }
+    });
+  };
+
+  const handleCancelModal = () => {
+    setModalState({
+      isOpen: false,
+      day: null,
+      type: null,
+      mealName: "",
+      recipeID: null,
+      instructions: "",
+      ingredients: []
+    });
+  };
 
   return (
     <div className="mealplanner-container">
@@ -217,10 +417,15 @@ export default function MealPlanner() {
                         <td
                           key={m}
                           className="meal-cell"
-                          onClick={() => handleAddMeal(d.day, m)}
+                          onClick={() => handleMealClick(d.day, m)}
                         >
                           {mealPlan[d.day][m] ? (
-                            <span className="meal-filled">{mealPlan[d.day][m]}</span>
+                            <span className="meal-filled">
+                              {mealPlan[d.day][m].includes('✓') ? 
+                                <span className="completed-meal">{mealPlan[d.day][m]}</span> : 
+                                mealPlan[d.day][m]
+                              }
+                            </span>
                           ) : (
                             <span className="meal-add">+</span>
                           )}
@@ -244,6 +449,24 @@ export default function MealPlanner() {
 
         </div>
       </div>
+
+      {/* Meal Action Modal */}
+      <AnimatePresence>
+        {modalState.isOpen && (
+          <MealActionModal
+            isOpen={modalState.isOpen}
+            mealName={modalState.mealName}
+            day={modalState.day}
+            type={modalState.type}
+            recipeID={modalState.recipeID}
+            instructions={modalState.instructions}
+            ingredients={modalState.ingredients}
+            onMarkAsDone={handleMarkAsDone}
+            onReplan={handleReplan}
+            onCancel={handleCancelModal}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 }
