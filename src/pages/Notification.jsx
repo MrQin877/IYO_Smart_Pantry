@@ -2,6 +2,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Bell, CheckCheck, Clock, Settings2, HandHeart, CalendarClock, UtensilsCrossed } from "lucide-react";
+import { UnreadBus } from "../utils/unreadBus";
 import "./Notification.css";
 
 export default function Notification() {
@@ -36,21 +37,19 @@ export default function Notification() {
 
   const filtered = useMemo(() => items, [items]); // server already filtered by tab
 
-  const openDetail = async (id) => {
-    // optimistic UI: mark read locally
+  const openDetail = (id) => {
+    const item = items.find(i => i.id === id);
+    if (item && !item.isRead) UnreadBus.dec();         // instant
     setItems(list => list.map(i => i.id === id ? { ...i, isRead: true } : i));
-    navigate(`/notification/${id}`); // detail will mark read on server
+    navigate(`/notification/${id}`);
   };
 
   const markAllAsRead = async () => {
-    try {
-      const res = await fetch(`/api/notifications_mark_all.php`, { method: "POST", credentials: "include" });
-      const json = await res.json();
-      if (!json.ok) throw new Error(json.error || "Failed");
-      setItems(list => list.map(i => ({ ...i, isRead: true })));
-    } catch (e) {
-      console.error(e);
-    }
+    // optimistic UI
+    UnreadBus.clear();
+    setItems(list => list.map(i => ({ ...i, isRead: true })));
+    // server reconcile
+    await fetch('/api/notifications_mark_all.php', { method:'POST', credentials:'include' });
   };
 
   const activeIdx = tab === 'all' ? 0 : tab === 'unread' ? 1 : 2;

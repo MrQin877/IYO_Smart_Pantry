@@ -1,63 +1,72 @@
 // src/component/Header.jsx
 import React, { useEffect, useState } from "react";
-import { NavLink, Link, useNavigate } from "react-router-dom";
+import { NavLink, Link } from "react-router-dom";
 import "./header.css";
 import Swal from "sweetalert2";
+import { UnreadBus } from "../utils/unreadBus";
 
 export default function HeaderNav() {
   const [initial, setInitial] = useState("");
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [unread, setUnread] = useState(0);           
-  const navigate = useNavigate();
+  const [unread, setUnread] = useState(0);
 
   useEffect(() => {
-    const refresh = () => {
-      const name = localStorage.getItem("userName");
-      const email = localStorage.getItem("userEmail");
+    // show an immediate value without network
+    setUnread(UnreadBus.get());
+
+    const refreshShell = () => {
+      const name   = localStorage.getItem("userName");
+      const email  = localStorage.getItem("userEmail");
       const userID = localStorage.getItem("userID");
 
       setIsLoggedIn(!!userID);
+      setInitial(
+        name?.trim()?.charAt(0)?.toUpperCase() ||
+        email?.trim()?.charAt(0)?.toUpperCase() || ""
+      );
 
-      if (name && name.trim() !== "") {
-        setInitial(name.trim().charAt(0).toUpperCase());
-      } else if (email) {
-        setInitial(email.trim().charAt(0).toUpperCase());
-      } else {
-        setInitial("");
-      }
-
-      // fetch unread count if logged in
-      if (userID) fetchUnread(userID);
+      if (userID) fetchUnread();
       else setUnread(0);
     };
 
-    async function fetchUnread(uid) {
+    async function fetchUnread() {
       try {
-        const res = await fetch(`/api/notifications_count.php?user_id=${encodeURIComponent(uid)}`);
-        if (res.ok) {
-          const data = await res.json();               // { count: number }
-          setUnread(Number(data.count || 0));
+        const res  = await fetch('/api/notifications_count.php', { credentials: 'include' });
+        const data = await res.json();
+        if (data?.ok) {
+          const n = Number(data.count || 0);
+          setUnread(n);       // reconcile UI
+          UnreadBus.set(n);   // keep hint fresh for other views/tabs
         }
-      } catch (e) {}
+      } catch {}
     }
 
-    // initial load
-    refresh();
+    // initial
+    refreshShell();
 
-    // react to updates from login/verify/logout
-    window.addEventListener("storage", refresh);
+    // app-wide instant updates (open detail, mark all, create new)
+    const onBus = (e) => setUnread(Number(e.detail?.value ?? UnreadBus.get()));
+    window.addEventListener('unread:set', onBus);
 
-    // light polling (every 30s)
+    // cross-tab updates
+    window.addEventListener("storage", refreshShell);
+
+    // refresh on focus + light polling to stay correct
+    const onVis = () => { if (!document.hidden && localStorage.getItem("userID")) fetchUnread(); };
+    document.addEventListener("visibilitychange", onVis);
     const t = setInterval(() => {
-      const userID = localStorage.getItem("userID");
-      if (userID) fetchUnread(userID);
+      if (localStorage.getItem("userID")) fetchUnread();
     }, 30000);
 
-
-    return () => window.removeEventListener("storage", refresh);
+    return () => {
+      window.removeEventListener('unread:set', onBus);
+      window.removeEventListener("storage", refreshShell);
+      document.removeEventListener("visibilitychange", onVis);
+      clearInterval(t);
+    };
   }, []);
 
-  // Handle logout click (with confirmation)
+  // Logout with confirm
   async function handleLogout() {
     const result = await Swal.fire({
       title: "Logout?",
@@ -73,14 +82,14 @@ export default function HeaderNav() {
 
     if (result.isConfirmed) {
       Swal.fire({
-        icon:"success",
-        title:"Logged out",
-        text:"You have been logged out successfully.",
-        timer: 2000,
-        confirmButtonColor:"#C2D3AC",
+        icon: "success",
+        title: "Logged out",
+        text: "You have been logged out successfully.",
+        timer: 1600,
+        showConfirmButton: false
       });
       localStorage.clear();
-      // make sure other tabs / listeners know
+      UnreadBus.clear();
       window.dispatchEvent(new Event("storage"));
       window.location.href = "/";
     }
@@ -89,16 +98,12 @@ export default function HeaderNav() {
   return (
     <header className="nav-wrap">
       <div className="nav-pill">
-        {/* Brand logo */}
-        <Link
-          to={isLoggedIn ? "/dashboard" : "/"}
-          className="brand"
-          aria-label="IYO Smart Pantry – Home"
-        >
+        {/* Brand */}
+        <Link to={isLoggedIn ? "/dashboard" : "/"} className="brand" aria-label="IYO Smart Pantry – Home">
           <img className="logo" src="/logo.svg" alt="IYO Logo" />
         </Link>
 
-        {/* Nav menu (only show when logged in) */}
+        {/* Main nav when logged in */}
         {isLoggedIn && (
           <nav className="main" aria-label="Primary">
             <NavItem to="/dashboard">Home</NavItem>
@@ -108,10 +113,10 @@ export default function HeaderNav() {
           </nav>
         )}
 
-        {/* Right side icons */}
+        {/* Right icons */}
         <div className="icons">
           {isLoggedIn && (
-            <Link to="/notification" className="icon" title="Notifications" aria-label="Notifications">
+            <Link to="/notification" className="icon bell" title="Notifications" aria-label="Notifications">
               🔔
               {unread > 0 && <span className="badge">{unread}</span>}
             </Link>
@@ -127,25 +132,20 @@ export default function HeaderNav() {
             )}
           </Link>
 
-          {isLoggedIn ? (
+          {isLoggedIn && (
             <button className="icon" title="Logout" onClick={handleLogout}>
               🚪
             </button>
-          ) : null}
+          )}
         </div>
       </div>
     </header>
   );
 }
 
-// Reusable components
 function NavItem({ to, children }) {
   return (
-    <NavLink
-      to={to}
-      end={to === "/"}
-      className={({ isActive }) => "link" + (isActive ? " active" : "")}
-    >
+    <NavLink to={to} end={to === "/"} className={({ isActive }) => "link" + (isActive ? " active" : "")}>
       {children}
     </NavLink>
   );
