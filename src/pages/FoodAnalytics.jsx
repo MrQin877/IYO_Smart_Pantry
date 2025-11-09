@@ -31,23 +31,55 @@ const FoodAnalytics = () => {
   const [filters, setFilters] = useState({ dateRange: 'last30days', category: 'all' });
   const [analyticsData, setAnalyticsData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [rawResponse, setRawResponse] = useState(null); // To store raw response for debugging
 
   // Simulated data fetching - replace with actual API call
   useEffect(() => {
     const fetchAnalyticsData = async () => {
       setLoading(true);
+      setError(null);
+      setRawResponse(null);
       
       try {
         // Get userID from localStorage/session
         const userID = localStorage.getItem('userID');
+        console.log("Current userID:", userID); // Debug log
+        
         if (!userID) {
           throw new Error('User not logged in');
         }
 
         // Call your backend API
-        const res = await apiPost('/api/food_analytics.php', { userID });
+        console.log("Making API call to /api/food_analytics.php"); // Debug log
+        
+        // Let's try to fetch the raw response first to see what we're getting
+        const response = await fetch('/api/food_analytics.php', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ userID }),
+        });
+        
+        // Get the response as text first to check if it's valid JSON
+        const responseText = await response.text();
+        console.log("Raw response:", responseText); // Debug log
+        setRawResponse(responseText);
+        
+        // Try to parse it as JSON
+        let res;
+        try {
+          res = JSON.parse(responseText);
+        } catch (parseError) {
+          throw new Error(`Non-JSON response: ${responseText.substring(0, 200)}...`);
+        }
+        
+        console.log("Parsed API response:", res); // Debug log
 
         if (res.ok) {
+          console.log("Data received:", res); // Debug log
+          
           // Map response to state
           const analyticsData = {
             hasData: res.hasData,
@@ -68,10 +100,12 @@ const FoodAnalytics = () => {
 
           setAnalyticsData(analyticsData);
         } else {
+          console.error("API returned error:", res.error); // Debug log
           throw new Error(res.error || 'Failed to fetch analytics');
         }
       } catch (err) {
-        console.error('Failed to load analytics:', err);
+        console.error('Failed to load analytics:', err); // Debug log
+        setError(err.message);
         setAnalyticsData({ hasData: false }); // Show empty state
       } finally {
         setLoading(false);
@@ -98,6 +132,43 @@ const FoodAnalytics = () => {
           </motion.div>
           <p>Loading analytics...</p>
         </div>
+      </div>
+    );
+  }
+
+  // Error State
+  if (error) {
+    return (
+      <div className="analytics-container">
+        <motion.div 
+          className="page-header"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+        >
+          <h1>Track My Impact</h1>
+        </motion.div>
+        
+        <motion.div 
+          className="error-state"
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.5 }}
+        >
+          <AlertCircle size={64} color="#E85D75" strokeWidth={1.5} />
+          <h2>Error Loading Data</h2>
+          <p>{error}</p>
+          <p>Please check the console for more details.</p>
+          
+          {/* Show raw response for debugging */}
+          {rawResponse && (
+            <details style={{ marginTop: '20px', textAlign: 'left', maxWidth: '800px', margin: '20px auto' }}>
+              <summary>Raw Response (Click to expand)</summary>
+              <pre style={{ backgroundColor: '#f5f5f5', padding: '10px', overflow: 'auto', maxHeight: '200px' }}>
+                {rawResponse}
+              </pre>
+            </details>
+          )}
+        </motion.div>
       </div>
     );
   }

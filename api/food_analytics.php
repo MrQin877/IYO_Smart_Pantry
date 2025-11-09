@@ -1,6 +1,7 @@
 <?php
 // api/food_analytics.php - Backend API for Food Analytics Dashboard
 
+// Set headers
 header('Content-Type: application/json');
 header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
@@ -12,40 +13,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     exit();
 }
 
-// Enable error reporting for debugging
-error_reporting(E_ALL);
-ini_set('display_errors', 1);
-
-// Log function for debugging
-function logMessage($message) {
-    $logFile = __DIR__ . '/debug.log';
-    $timestamp = date('Y-m-d H:i:s');
-    file_put_contents($logFile, "[$timestamp] $message\n", FILE_APPEND);
-}
-
-logMessage("API request received: " . $_SERVER['REQUEST_METHOD']);
-
 require_once __DIR__ . '/config.php';
 
-// Get userID from request
- $userID = $_POST['userID'] ?? $_GET['userID'] ?? null;
+// ✅ FIX: Get the raw POST data and decode it from JSON
+ $json = file_get_contents('php://input');
+ $data = json_decode($json, true);
 
-logMessage("UserID received: " . ($userID ? $userID : 'NULL'));
+// Get userID from the decoded JSON data, with fallbacks
+ $userID = $data['userID'] ?? $_POST['userID'] ?? $_GET['userID'] ?? null;
 
 if (!$userID) {
-    logMessage("Error: Missing userID");
-    echo json_encode(['ok' => false, 'error' => 'Missing userID']);
+    // For debugging, let's see what we actually received
+    echo json_encode([
+        'ok' => false, 
+        'error' => 'Missing userID',
+        'debug_received_json' => $json,
+        'debug_decoded_data' => $data
+    ]);
     exit;
 }
 
 try {
     // Check database connection
-    if (!isset($pdo) || $pdo->errorInfo()[0] !== '00000') {
-        logMessage("Database connection error");
-        throw new Exception('Database connection failed');
+    if (!isset($pdo)) {
+        throw new Exception('Database connection not established');
     }
-    
-    logMessage("Database connection successful");
 
     // ========== QUERY 1: Summary Metrics ==========
     $stmt1 = $pdo->prepare("
@@ -72,8 +64,6 @@ try {
     
     $stmt1->execute(['userID' => $userID]);
     $summary = $stmt1->fetch(PDO::FETCH_ASSOC);
-    
-    logMessage("Summary query executed. Result: " . json_encode($summary));
 
     // ========== QUERY 2: Expiring Soon ==========
     $stmt2 = $pdo->prepare("
@@ -93,8 +83,6 @@ try {
     
     $stmt2->execute(['userID' => $userID]);
     $expiringSoon = $stmt2->fetchAll(PDO::FETCH_ASSOC);
-    
-    logMessage("Expiring soon query executed. Count: " . count($expiringSoon));
 
     // ========== QUERY 3: Monthly Trends ==========
     $stmt3 = $pdo->prepare("
@@ -120,11 +108,9 @@ try {
     
     $stmt3->execute(['userID' => $userID]);
     $usedVsWaste = $stmt3->fetchAll(PDO::FETCH_ASSOC);
-    
-    logMessage("Used vs waste query executed. Count: " . count($usedVsWaste));
 
     // ========== BUILD RESPONSE ==========
-    $response = [
+    echo json_encode([
         'ok' => true,
         'hasData' => (bool)($summary['hasData'] ?? 0),
         'summary' => [
@@ -134,22 +120,19 @@ try {
         ],
         'statusOverview' => [
             ['name' => 'Used', 'value' => (int)($summary['totalUsed'] ?? 0), 'color' => '#7FA34B'],
-            ['name' => 'Saved', 'value' => (int)($summary['totalSaved'] ?? 0) - (int)($summary['totalUsed'] ?? 0), 'color' => '#4A90E2'],
+            //['name' => 'Saved', 'value' => (int)($summary['totalSaved'] ?? 0) - (int)($summary['totalUsed'] ?? 0), 'color' => '#4A90E2'],
             ['name' => 'Donated', 'value' => (int)($summary['totalDonated'] ?? 0), 'color' => '#F5A962'],
             ['name' => 'Wasted', 'value' => (int)($summary['totalWasted'] ?? 0), 'color' => '#E85D75']
         ],
         'expiringSoon' => $expiringSoon,
         'usedVsWaste' => $usedVsWaste
-    ];
-    
-    logMessage("Final response: " . json_encode($response));
-    echo json_encode($response);
+    ]);
 
 } catch (PDOException $e) {
-    logMessage("PDO Error: " . $e->getMessage());
+    http_response_code(500);
     echo json_encode(['ok' => false, 'error' => 'Database error: ' . $e->getMessage()]);
 } catch (Exception $e) {
-    logMessage("General Error: " . $e->getMessage());
+    http_response_code(500);
     echo json_encode(['ok' => false, 'error' => $e->getMessage()]);
 }
 ?>
