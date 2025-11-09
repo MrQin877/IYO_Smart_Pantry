@@ -23,6 +23,7 @@ import {
   Legend, 
   ResponsiveContainer 
 } from 'recharts';
+import { apiPost } from "../lib/api";
 import FoodAnalyticsFilter from '../component/FoodAnalyticsFilter.jsx';
 import './FoodAnalytics.css';
 
@@ -36,45 +37,49 @@ const FoodAnalytics = () => {
     const fetchAnalyticsData = async () => {
       setLoading(true);
       
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 800));
+      try {
+        // Get userID from localStorage/session
+        const userID = localStorage.getItem('userID');
+        if (!userID) {
+          throw new Error('User not logged in');
+        }
 
-      // Mock data based on database schema
-      // Change hasData to false to see empty state
-      const mockData = {
-        hasData: true,
-        summary: {
-          totalSaved: 57,
-          totalDonated: 15,
-          totalUsed: 30
-        },
-        statusOverview: [
-          { name: 'Used', value: 30, color: '#7FA34B' },
-          { name: 'Saved', value: 27, color: '#4A90E2' },
-          { name: 'Donated', value: 15, color: '#F5A962' },
-          { name: 'Wasted', value: 5, color: '#E85D75' }
-        ],
-        expiringSoon: [
-          { id: 1, foodName: 'Noodle', expiryDate: '2025-11-10', quantity: '2 pcs' },
-          { id: 2, foodName: 'Milk', expiryDate: '2025-11-12', quantity: '1 l' },
-          { id: 3, foodName: 'Tomato Can Pod', expiryDate: '2025-11-15', quantity: '3 pack' }
-        ],
-        usedVsWaste: [
-          { month: 'Jun', used: 25, wasted: 8 },
-          { month: 'Jul', used: 32, wasted: 6 },
-          { month: 'Aug', used: 28, wasted: 4 },
-          { month: 'Sep', used: 35, wasted: 7 },
-          { month: 'Oct', used: 30, wasted: 5 },
-          { month: 'Nov', used: 27, wasted: 3 }
-        ]
-      };
+        // Call your backend API
+        const res = await apiPost('/api/food_analytics.php', { userID });
 
-      setAnalyticsData(mockData);
-      setLoading(false);
+        if (res.ok) {
+          // Map response to state
+          const analyticsData = {
+            hasData: res.hasData,
+            summary: {
+              totalSaved: res.summary.totalSaved,
+              totalDonated: res.summary.totalDonated,
+              totalUsed: res.summary.totalUsed
+            },
+            statusOverview: res.statusOverview,
+            expiringSoon: res.expiringSoon.map(item => ({
+              id: item.id,
+              foodName: item.foodName,
+              expiryDate: item.expiryDate,
+              quantity: item.quantity
+            })),
+            usedVsWaste: res.usedVsWaste
+          };
+
+          setAnalyticsData(analyticsData);
+        } else {
+          throw new Error(res.error || 'Failed to fetch analytics');
+        }
+      } catch (err) {
+        console.error('Failed to load analytics:', err);
+        setAnalyticsData({ hasData: false }); // Show empty state
+      } finally {
+        setLoading(false);
+      }
     };
 
     fetchAnalyticsData();
-  }, [filters]);
+  }, [filters]); // Re-fetch when filters change
 
   const handleFilterChange = (newFilters) => {
     setFilters(newFilters);
