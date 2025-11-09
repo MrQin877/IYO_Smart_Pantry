@@ -1,28 +1,43 @@
 // src/component/FoodAnalyticsFilter.jsx
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Calendar, Filter } from 'lucide-react';
+import { Filter } from 'lucide-react';
 
 const FoodAnalyticsFilter = ({ onFilterChange, hasData }) => {
-  const [dateRange, setDateRange] = useState('last30days');
   const [category, setCategory] = useState('all');
+  const [categories, setCategories] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  const handleDateChange = (e) => {
-    const value = e.target.value;
-    setDateRange(value);
-    onFilterChange({ dateRange: value, category });
-  };
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const response = await fetch('/api/categories_list.php');
+        const data = await response.json();
+        
+        if (data.ok && Array.isArray(data.data)) {
+          setCategories(data.data);
+        } else {
+          console.error('Failed to load categories:', data.error);
+        }
+      } catch (err) {
+        console.error('Error fetching categories:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchCategories();
+  }, []);
 
   const handleCategoryChange = (e) => {
     const value = e.target.value;
     setCategory(value);
-    onFilterChange({ dateRange, category: value });
+    onFilterChange({ category: value });
   };
 
   const handleReset = () => {
-    setDateRange('last30days');
     setCategory('all');
-    onFilterChange({ dateRange: 'last30days', category: 'all' });
+    onFilterChange({ category: 'all' });
   };
 
   return (
@@ -34,36 +49,19 @@ const FoodAnalyticsFilter = ({ onFilterChange, hasData }) => {
     >
       <div className="filter-group">
         <div className="filter-item">
-          <Calendar size={18} />
-          <select 
-            value={dateRange} 
-            onChange={handleDateChange}
-            className="filter-select"
-          >
-            <option value="last7days">Last 7 Days</option>
-            <option value="last30days">Last 30 Days</option>
-            <option value="last3months">Last 3 Months</option>
-            <option value="last6months">Last 6 Months</option>
-            <option value="lastyear">Last Year</option>
-            <option value="custom">Custom Range</option>
-          </select>
-        </div>
-
-        <div className="filter-item">
           <Filter size={18} />
           <select 
             value={category} 
             onChange={handleCategoryChange}
             className="filter-select"
+            disabled={loading}
           >
             <option value="all">All Categories</option>
-            <option value="protein">Protein</option>
-            <option value="grains">Grains</option>
-            <option value="fruits">Fruits</option>
-            <option value="vegetables">Vegetables</option>
-            <option value="dairy">Dairy</option>
-            <option value="canned">Canned Food</option>
-            <option value="other">Other</option>
+            {categories.map((cat) => (
+              <option key={cat.categoryID || cat.id} value={cat.categoryID || cat.id}>
+                {cat.categoryName || cat.name}
+              </option>
+            ))}
           </select>
         </div>
 

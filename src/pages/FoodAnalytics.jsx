@@ -23,18 +23,16 @@ import {
   Legend, 
   ResponsiveContainer 
 } from 'recharts';
-import { apiPost } from "../lib/api";
 import FoodAnalyticsFilter from '../component/FoodAnalyticsFilter.jsx';
 import './FoodAnalytics.css';
 
 const FoodAnalytics = () => {
-  const [filters, setFilters] = useState({ dateRange: 'last30days', category: 'all' });
+  const [filters, setFilters] = useState({ category: 'all' });
   const [analyticsData, setAnalyticsData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [rawResponse, setRawResponse] = useState(null); // To store raw response for debugging
+  const [rawResponse, setRawResponse] = useState(null);
 
-  // Simulated data fetching - replace with actual API call
   useEffect(() => {
     const fetchAnalyticsData = async () => {
       setLoading(true);
@@ -42,32 +40,31 @@ const FoodAnalytics = () => {
       setRawResponse(null);
       
       try {
-        // Get userID from localStorage/session
         const userID = localStorage.getItem('userID');
-        console.log("Current userID:", userID); // Debug log
+        console.log("Current userID:", userID);
+        console.log("Current filters:", filters);
         
         if (!userID) {
           throw new Error('User not logged in');
         }
 
-        // Call your backend API
-        console.log("Making API call to /api/food_analytics.php"); // Debug log
+        console.log("Making API call to /api/food_analytics.php");
         
-        // Let's try to fetch the raw response first to see what we're getting
         const response = await fetch('/api/food_analytics.php', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({ userID }),
+          body: JSON.stringify({ 
+            userID,
+            categoryID: filters.category
+          }),
         });
         
-        // Get the response as text first to check if it's valid JSON
         const responseText = await response.text();
-        console.log("Raw response:", responseText); // Debug log
+        console.log("Raw response:", responseText);
         setRawResponse(responseText);
         
-        // Try to parse it as JSON
         let res;
         try {
           res = JSON.parse(responseText);
@@ -75,12 +72,9 @@ const FoodAnalytics = () => {
           throw new Error(`Non-JSON response: ${responseText.substring(0, 200)}...`);
         }
         
-        console.log("Parsed API response:", res); // Debug log
+        console.log("Parsed API response:", res);
 
         if (res.ok) {
-          console.log("Data received:", res); // Debug log
-          
-          // Map response to state
           const analyticsData = {
             hasData: res.hasData,
             summary: {
@@ -93,29 +87,31 @@ const FoodAnalytics = () => {
               id: item.id,
               foodName: item.foodName,
               expiryDate: item.expiryDate,
-              quantity: item.quantity
+              quantity: item.quantity,
+              categoryName: item.categoryName
             })),
-            usedVsWaste: res.usedVsWaste
+            savedVsWaste: res.savedVsWaste || [] // ✅ Provide default empty array
           };
 
           setAnalyticsData(analyticsData);
         } else {
-          console.error("API returned error:", res.error); // Debug log
+          console.error("API returned error:", res.error);
           throw new Error(res.error || 'Failed to fetch analytics');
         }
       } catch (err) {
-        console.error('Failed to load analytics:', err); // Debug log
+        console.error('Failed to load analytics:', err);
         setError(err.message);
-        setAnalyticsData({ hasData: false }); // Show empty state
+        setAnalyticsData({ hasData: false, savedVsWaste: [] }); // ✅ Provide default
       } finally {
         setLoading(false);
       }
     };
 
     fetchAnalyticsData();
-  }, [filters]); // Re-fetch when filters change
+  }, [filters]);
 
   const handleFilterChange = (newFilters) => {
+    console.log("Filter changed:", newFilters);
     setFilters(newFilters);
   };
 
@@ -159,7 +155,6 @@ const FoodAnalytics = () => {
           <p>{error}</p>
           <p>Please check the console for more details.</p>
           
-          {/* Show raw response for debugging */}
           {rawResponse && (
             <details style={{ marginTop: '20px', textAlign: 'left', maxWidth: '800px', margin: '20px auto' }}>
               <summary>Raw Response (Click to expand)</summary>
@@ -185,6 +180,8 @@ const FoodAnalytics = () => {
           <h1>Track My Impact</h1>
         </motion.div>
         
+        <FoodAnalyticsFilter onFilterChange={handleFilterChange} hasData={false} />
+        
         <motion.div 
           className="empty-state"
           initial={{ opacity: 0, scale: 0.9 }}
@@ -194,12 +191,23 @@ const FoodAnalytics = () => {
           <Package size={64} color="#7FA34B" strokeWidth={1.5} />
           <h2>No Food Saving Data Found</h2>
           <p>Begin logging and donating to view your progress!</p>
+          {filters.category !== 'all' && (
+            <p style={{ marginTop: '10px', fontSize: '14px', color: '#718096' }}>
+              Try selecting "All Categories" to see all data
+            </p>
+          )}
         </motion.div>
       </div>
     );
   }
 
-  const { summary, statusOverview, expiringSoon, usedVsWaste } = analyticsData;
+  // ✅ Safely destructure with defaults
+  const { 
+    summary = {}, 
+    statusOverview = [], 
+    expiringSoon = [], 
+    savedVsWaste = [] 
+  } = analyticsData || {};
 
   return (
     <div className="analytics-container">
@@ -223,7 +231,12 @@ const FoodAnalytics = () => {
         transition={{ delay: 0.2 }}
       >
         <h2 className="report-title">
-          Food Analytics Report (01-01-2025 to {new Date().toLocaleDateString('en-GB')})
+          Food Analytics Report 
+          {filters.category !== 'all' && ` (Filtered by Category)`}
+          <br />
+          <span style={{ fontSize: '16px', fontWeight: 'normal', color: '#718096' }}>
+            Past 6 Months
+          </span>
         </h2>
       </motion.div>
 
@@ -241,7 +254,7 @@ const FoodAnalytics = () => {
             </div>
             <div className="card-title">Total Saved</div>
           </div>
-          <div className="card-value">{summary.totalSaved}</div>
+          <div className="card-value">{summary.totalSaved || 0}</div>
           <div className="card-subtitle">items</div>
         </motion.div>
 
@@ -257,7 +270,7 @@ const FoodAnalytics = () => {
             </div>
             <div className="card-title">Total Donated</div>
           </div>
-          <div className="card-value">{summary.totalDonated}</div>
+          <div className="card-value">{summary.totalDonated || 0}</div>
           <div className="card-subtitle">items</div>
         </motion.div>
 
@@ -273,7 +286,7 @@ const FoodAnalytics = () => {
             </div>
             <div className="card-title">Total Used</div>
           </div>
-          <div className="card-value">{summary.totalUsed}</div>
+          <div className="card-value">{summary.totalUsed || 0}</div>
           <div className="card-subtitle">items</div>
         </motion.div>
       </div>
@@ -290,25 +303,31 @@ const FoodAnalytics = () => {
             <BarChart3 size={20} />
             <h3 className="chart-title">Food Status Overview</h3>
           </div>
-          <ResponsiveContainer width="100%" height={300}>
-            <PieChart>
-              <Pie
-                data={statusOverview}
-                cx="50%"
-                cy="50%"
-                labelLine={false}
-                label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                outerRadius={100}
-                fill="#8884d8"
-                dataKey="value"
-              >
-                {statusOverview.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={entry.color} />
-                ))}
-              </Pie>
-              <Tooltip />
-            </PieChart>
-          </ResponsiveContainer>
+          {statusOverview.length === 0 ? (
+            <div style={{ padding: '60px', textAlign: 'center', color: '#718096' }}>
+              No data available
+            </div>
+          ) : (
+            <ResponsiveContainer width="100%" height={300}>
+              <PieChart>
+                <Pie
+                  data={statusOverview}
+                  cx="50%"
+                  cy="50%"
+                  labelLine={false}
+                  label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                  outerRadius={100}
+                  fill="#8884d8"
+                  dataKey="value"
+                >
+                  {statusOverview.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.color} />
+                  ))}
+                </Pie>
+                <Tooltip />
+              </PieChart>
+            </ResponsiveContainer>
+          )}
         </motion.div>
 
         <motion.div 
@@ -321,34 +340,40 @@ const FoodAnalytics = () => {
             <AlertCircle size={20} />
             <h3 className="chart-title">Expiring Soon</h3>
           </div>
-          <table className="expiring-table">
-            <thead>
-              <tr>
-                <th>Food Name</th>
-                <th>Expiry Date</th>
-                <th>Quantity</th>
-              </tr>
-            </thead>
-            <tbody>
-              {expiringSoon.map((item) => (
-                <motion.tr
-                  key={item.id}
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ delay: 0.7 + item.id * 0.1 }}
-                >
-                  <td>{item.foodName}</td>
-                  <td>
-                    <span className="expiry-date">
-                      <Calendar size={14} />
-                      {new Date(item.expiryDate).toLocaleDateString('en-GB')}
-                    </span>
-                  </td>
-                  <td>{item.quantity}</td>
-                </motion.tr>
-              ))}
-            </tbody>
-          </table>
+          {expiringSoon.length === 0 ? (
+            <div style={{ padding: '40px', textAlign: 'center', color: '#718096' }}>
+              No items expiring in the next 7 days
+            </div>
+          ) : (
+            <table className="expiring-table">
+              <thead>
+                <tr>
+                  <th>Food Name</th>
+                  <th>Expiry Date</th>
+                  <th>Quantity</th>
+                </tr>
+              </thead>
+              <tbody>
+                {expiringSoon.map((item, idx) => (
+                  <motion.tr
+                    key={item.id}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: 0.7 + idx * 0.1 }}
+                  >
+                    <td>{item.foodName}</td>
+                    <td>
+                      <span className="expiry-date">
+                        <Calendar size={14} />
+                        {new Date(item.expiryDate).toLocaleDateString('en-GB')}
+                      </span>
+                    </td>
+                    <td>{item.quantity}</td>
+                  </motion.tr>
+                ))}
+              </tbody>
+            </table>
+          )}
         </motion.div>
       </div>
 
@@ -361,35 +386,41 @@ const FoodAnalytics = () => {
       >
         <div className="chart-header">
           <TrendingUp size={20} />
-          <h3 className="chart-title">Monthly Food Used and Food Waste Overview</h3>
+          <h3 className="chart-title">Monthly Food Saved and Food Waste Overview</h3>
         </div>
-        <ResponsiveContainer width="100%" height={350}>
-          <LineChart data={usedVsWaste}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" />
-            <XAxis dataKey="month" stroke="#718096" />
-            <YAxis stroke="#718096" />
-            <Tooltip />
-            <Legend />
-            <Line 
-              type="monotone" 
-              dataKey="used" 
-              stroke="#7FA34B" 
-              strokeWidth={3}
-              name="Food Used"
-              dot={{ r: 5 }}
-              activeDot={{ r: 7 }}
-            />
-            <Line 
-              type="monotone" 
-              dataKey="wasted" 
-              stroke="#E85D75" 
-              strokeWidth={3}
-              name="Food Wasted"
-              dot={{ r: 5 }}
-              activeDot={{ r: 7 }}
-            />
-          </LineChart>
-        </ResponsiveContainer>
+        {savedVsWaste.length === 0 ? (
+          <div style={{ padding: '60px', textAlign: 'center', color: '#718096' }}>
+            No data available for the past 6 months
+          </div>
+        ) : (
+          <ResponsiveContainer width="100%" height={350}>
+            <LineChart data={savedVsWaste}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" />
+              <XAxis dataKey="month" stroke="#718096" />
+              <YAxis stroke="#718096" />
+              <Tooltip />
+              <Legend />
+              <Line 
+                type="monotone" 
+                dataKey="saved" 
+                stroke="#7FA34B" 
+                strokeWidth={3}
+                name="Food Saved"
+                dot={{ r: 5 }}
+                activeDot={{ r: 7 }}
+              />
+              <Line 
+                type="monotone" 
+                dataKey="wasted" 
+                stroke="#E85D75" 
+                strokeWidth={3}
+                name="Food Wasted"
+                dot={{ r: 5 }}
+                activeDot={{ r: 7 }}
+              />
+            </LineChart>
+          </ResponsiveContainer>
+        )}
       </motion.div>
     </div>
   );
