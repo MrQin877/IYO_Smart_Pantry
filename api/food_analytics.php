@@ -14,11 +14,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 require_once __DIR__ . '/config.php';
 
 // Get JSON input
-$json = file_get_contents('php://input');
-$data = json_decode($json, true);
+ $json = file_get_contents('php://input');
+ $data = json_decode($json, true);
 
-$userID = $data['userID'] ?? $_POST['userID'] ?? $_GET['userID'] ?? null;
-$categoryID = $data['categoryID'] ?? $_POST['categoryID'] ?? $_GET['categoryID'] ?? 'all';
+ $userID = $data['userID'] ?? $_POST['userID'] ?? $_GET['userID'] ?? null;
+ $categoryID = $data['categoryID'] ?? $_POST['categoryID'] ?? $_GET['categoryID'] ?? 'all';
 
 if (!$userID) {
     echo json_encode([
@@ -55,6 +55,7 @@ try {
                         WHERE d2.userID = u.userID
                           AND (:categoryID3 = 'all' OR f2.categoryID = :categoryID4)), 0) AS totalSaved,
             
+            -- This calculates ALL expired food (correct)
             SUM(CASE 
                 WHEN f.expiryDate < CURDATE() AND f.quantity > 0 THEN f.quantity 
                 ELSE 0 
@@ -120,12 +121,12 @@ try {
                 ), 0),
             2) AS saved,
             
+            -- Fixed: Calculate ALL expired food (same as pie chart)
             ROUND(
                 SUM(
                     CASE 
-                        WHEN f.expiryDate < CURDATE() 
-                             AND (f.quantity - f.usedQty) > 0
-                        THEN (f.quantity - f.usedQty)
+                        WHEN f.expiryDate < CURDATE() AND f.quantity > 0 
+                        THEN f.quantity
                         ELSE 0 
                     END
                 ),
