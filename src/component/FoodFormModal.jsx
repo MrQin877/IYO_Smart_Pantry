@@ -262,7 +262,7 @@ export default function FoodFormModal({
 
   return (
     <div className="modal" onClick={onClose}>
-      <div className="panel" onClick={(e) => e.stopPropagation()}>
+      <div className="panel panel--uniform" onClick={(e) => e.stopPropagation()}>
         <button className="close" onClick={onClose}>✕</button>
         <h3 className="modal-title">{mode === "edit" ? "Edit" : "Add Food"}</h3>
 

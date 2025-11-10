@@ -266,7 +266,7 @@ export default function EditDonationModal({ open, onClose, onUpdate, item }) {
 
   return (
     <div className="modal" onClick={onClose}>
-      <div className="panel panel-wide" onClick={(e) => e.stopPropagation()}>
+      <div className="panel panel-wide panel--uniform" onClick={(e) => e.stopPropagation()}>
         <button className="close" onClick={onClose}>✕</button>
         <h3 className="modal-title">Edit Donation</h3>
 
