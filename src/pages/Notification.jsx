@@ -1,99 +1,124 @@
-import { useMemo, useState } from "react";
+// src/pages/Notification.jsx
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import {
-  Bell, CheckCheck, Clock, Settings2, HandHeart, CalendarClock, UtensilsCrossed
-} from "lucide-react";
-import { demoNotifications, getNotificationById } from "./demoNotifications.js";
+import { Bell, CheckCheck, Clock, Settings2, HandHeart, CalendarClock, UtensilsCrossed } from "lucide-react";
+import { UnreadBus } from "../utils/unreadBus";
 import "./Notification.css";
 
 export default function Notification() {
   const navigate = useNavigate();
-
-  const [items, setItems] = useState(
-    demoNotifications.map(n => ({
-      id: n.id,
-      title: n.title,
-      message: n.message,
-      createdAt: n.createdAt,   // ISO
-      isRead: n.isRead,
-      category: n.category,     // "Expiry" | "Inventory" | "MealPlan" | "Donation" | "System" | "Account"
-    }))
-  );
-
+  const [items, setItems] = useState([]);
   const [tab, setTab] = useState("all");
-  const filtered = useMemo(() => {
-    if (tab === "unread") return items.filter(i => !i.isRead);
-    if (tab === "read")   return items.filter(i =>  i.isRead);
-    return items;
-  }, [items, tab]);
+  const [loading, setLoading] = useState(true);
+  const [err, setErr] = useState("");
+
+  async function loadList({ cursor, cursor_id } = {}) {
+    setLoading(true);
+    setErr("");
+    const qs = new URLSearchParams({
+      tab, limit: 50,
+      ...(cursor ? { cursor } : {}),
+      ...(cursor_id ? { cursor_id } : {}),
+    });
+    try {
+      const res = await fetch(`/api/notifications_list.php?${qs.toString()}`, { credentials: "include" });
+      const json = await res.json();
+      if (!json.ok) throw new Error(json.error || "Failed");
+      setItems(json.items || []);
+      // if you want infinite scroll later, keep next_cursor values from json
+    } catch (e) {
+      setErr(e.message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => { loadList(); }, [tab]);
+
+  const filtered = useMemo(() => items, [items]); // server already filtered by tab
 
   const openDetail = (id) => {
-    // Optimistically mark as read in list
+    const item = items.find(i => i.id === id);
+    if (item && !item.isRead) UnreadBus.dec();         // instant
     setItems(list => list.map(i => i.id === id ? { ...i, isRead: true } : i));
-    // Pass full object via route state
-    const detail = getNotificationById(id);
-    navigate(`/notification/${id}`, { state: { detail } });
+    navigate(`/notification/${id}`);
   };
 
-  const markAllAsRead = () =>
+  const markAllAsRead = async () => {
+    // optimistic UI
+    UnreadBus.clear();
     setItems(list => list.map(i => ({ ...i, isRead: true })));
+    // server reconcile
+    await fetch('/api/notifications_mark_all.php', { method:'POST', credentials:'include' });
+  };
 
+  const activeIdx = tab === 'all' ? 0 : tab === 'unread' ? 1 : 2;
+  
   return (
     <section className="noti-wrap">
       <h1 className="noti-title">Notification</h1>
 
+      {/* Toolbar */}
       <div className="noti-toolbar">
-        <div className="noti-tabs">
-          <button className={`noti-tab ${tab==='all'?'is-active':''}`} onClick={()=>setTab('all')}>All</button>
-          <button className={`noti-tab ${tab==='unread'?'is-active':''}`} onClick={()=>setTab('unread')}>Unread</button>
-          <button className={`noti-tab ${tab==='read'?'is-active':''}`} onClick={()=>setTab('read')}>Read</button>
+        {/* Tabs with sliding highlight */}
+        <div className="noti-tabs" data-active={activeIdx}>
+          <button
+            className={`noti-tab ${tab === "all" ? "is-active" : ""}`}
+            onClick={() => setTab("all")}
+            type="button"
+          >
+            All
+          </button>
+          <button
+            className={`noti-tab ${tab === "unread" ? "is-active" : ""}`}
+            onClick={() => setTab("unread")}
+            type="button"
+          >
+            Unread
+          </button>
+          <button
+            className={`noti-tab ${tab === "read" ? "is-active" : ""}`}
+            onClick={() => setTab("read")}
+            type="button"
+          >
+            Read
+          </button>
         </div>
-        <button className="noti-ghost" onClick={markAllAsRead}>
+
+        <button className="noti-ghost" onClick={markAllAsRead} type="button">
           <CheckCheck size={16} /> Mark All As Read
         </button>
       </div>
 
+      {err && <div className="noti-error">{err}</div>}
+      {loading && <div className="noti-skel">Loading…</div>}
+
       <div className="noti-list">
         {filtered.map(n => (
-          <article
-            key={n.id}
-            className="noti-card"
-            role="button"
-            onClick={() => openDetail(n.id)}
-            style={{ cursor: "pointer" }}
-          >
+          <article key={n.id} className="noti-card" role="button" onClick={()=>openDetail(n.id)} style={{cursor:"pointer"}}>
             <div className="noti-card-inner">
               <div className="noti-icon">{pickIcon(n.category)}</div>
-
               <div className="noti-body">
                 <div className="noti-row-top">
                   <h3 className="noti-item-title">
-                    {n.title}
-                    {!n.isRead && <span className="noti-pill">NEW</span>}
+                    {n.title}{!n.isRead && <span className="noti-pill">NEW</span>}
                   </h3>
-                  <span className="noti-time">
-                    <Clock size={14}/> {timeAgo(n.createdAt)}
-                  </span>
+                  <span className="noti-time"><Clock size={14}/> {timeAgo(n.createdAt)}</span>
                 </div>
-
                 <p className="noti-desc">{n.message}</p>
-
                 <div className="noti-row-bottom">
-                  <span className="noti-stamp">
-                    <CalendarClock size={14}/> {new Date(n.createdAt).toLocaleString()}
-                  </span>
-                  {/* removed per-item read/unread button */}
+                  <span className="noti-stamp"><CalendarClock size={14}/> {new Date(n.createdAt).toLocaleString()}</span>
                 </div>
               </div>
             </div>
           </article>
         ))}
+        {!loading && filtered.length===0 && <div className="noti-empty">No notifications.</div>}
       </div>
     </section>
   );
 }
 
-/* Category → icon */
 function pickIcon(category) {
   switch (category) {
     case "Inventory": return <CalendarClock size={22}/>;
@@ -105,13 +130,11 @@ function pickIcon(category) {
     default:          return <Bell size={22}/>;
   }
 }
-
-/* Robust time-ago for ISO or numbers */
 function timeAgo(ts) {
   const ms = typeof ts === "number" ? ts : new Date(ts).getTime();
   const s = Math.floor((Date.now() - ms) / 1000);
   if (s < 60) return `${s}s ago`;
-  const m = Math.floor(s / 60); if (m < 60) return `${m}m ago`;
-  const h = Math.floor(m / 60); if (h < 24) return `${h}h ago`;
-  const d = Math.floor(h / 24); return d === 1 ? "1 day ago" : `${d} days ago`;
+  const m = Math.floor(s/60); if (m < 60) return `${m}m ago`;
+  const h = Math.floor(m/60); if (h < 24) return `${h}h ago`;
+  const d = Math.floor(h/24); return d===1 ? "1 day ago" : `${d} days ago`;
 }
