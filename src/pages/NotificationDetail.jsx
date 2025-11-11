@@ -29,23 +29,19 @@ export default function NotificationDetail() {
   const [detail, setDetail] = useState(null);
 
   useEffect(() => {
-    // If list passed a preloaded object via route state, use it.
-    const preload = loc.state?.detail;
-    if (preload && String(preload.id) === String(id)) {
-      setDetail(preload);
-      return;
-    }
-    const local = getNotificationById(id);
-    if (local) {
-        setDetail(local);
-        return;
-    }
-    // Otherwise fetch from backend
-    /*(async () => {
-      const res = await fetch(`/api/notification_detail.php?id=${id}`);
-      const json = await res.json();
-      if (json?.ok) setDetail(json.data);
-    })();*/
+    let abort = false;
+    (async () => {
+      try {
+        const res = await fetch(`/api/notification_detail.php?id=${encodeURIComponent(id)}`, {
+          credentials: "include"
+        });
+        const json = await res.json();
+        if (!abort && json?.ok) setDetail(json.data);
+      } catch (e) {
+        console.error(e);
+      }
+    })();
+    return () => { abort = true; };
   }, [id]);
 
   const back = () => navigate(-1);
@@ -104,9 +100,19 @@ export default function NotificationDetail() {
       <button className="nd-back" onClick={back}><ArrowLeft size={20}/><span>Back</span></button>
 
       <article className="nd-card">
-        <header className="nd-header">
-          <h1 className="nd-title">{detail.title}</h1>
+        <header className="nd-header nd-hero nd-hero--row">
+          <div className={`nd-hero-icon nd-hero-icon-xl nd-hero-${category.toLowerCase()}`}>
+            {pickDetailIcon(category)}
+          </div>
+          <div className="nd-hero-col">
+            <h1 className="nd-title">{detail.title}</h1>
+            <div className="nd-below-title">
+              <span className={`nd-cat nd-cat-${category.toLowerCase()}`}>{category}</span>
+            </div>
+          </div>
         </header>
+
+
 
         <p className="nd-message">{detail.message}</p>
 
@@ -265,3 +271,16 @@ function formatDateTime(ts) {
     return String(ts || "");
   }
 }
+
+function pickDetailIcon(category){
+  switch (category) {
+    case "Inventory": return <CalendarClock size={22}/>;
+    case "Expiry":    return <CalendarClock size={22}/>;
+    case "MealPlan":  return <UtensilsCrossed size={22}/>;
+    case "Donation":  return <HandHeart size={22}/>;
+    case "System":    return <Settings2 size={22}/>;
+    case "Account":   return <Settings2 size={22}/>;
+    default:          return <Bell size={22}/>;
+  }
+}
+
