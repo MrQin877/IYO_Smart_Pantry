@@ -1,0 +1,266 @@
+/* src/pages/FoodAnalytics.css */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
+  background: #F5F5F0;
+  color: #2D3748;
+}
+
+.analytics-container {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 32px;
+}
+
+.page-header {
+  margin-bottom: 24px;
+}
+
+.page-header h1 {
+  font-size: 32px;
+  font-weight: 700;
+  color: #2D3748;
+  margin-bottom: 8px;
+}
+
+.filter-container {
+  background: white;
+  padding: 20px 24px;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  margin-bottom: 24px;
+}
+
+.filter-group {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.filter-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #F7FAFC;
+  padding: 10px 16px;
+  border-radius: 8px;
+  border: 1px solid #E2E8F0;
+}
+
+.filter-item svg {
+  color: #7FA34B;
+}
+
+.filter-select {
+  border: none;
+  background: transparent;
+  font-size: 14px;
+  color: #2D3748;
+  cursor: pointer;
+  outline: none;
+  font-weight: 500;
+}
+
+.reset-button {
+  padding: 10px 20px;
+  background: white;
+  border: 1px solid #E2E8F0;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #718096;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.reset-button:hover {
+  background: #F7FAFC;
+  border-color: #CBD5E0;
+}
+
+.report-header {
+  text-align: center;
+  margin-bottom: 32px;
+}
+
+.report-title {
+  font-size: 24px;
+  font-weight: 600;
+  color: #7FA34B;
+  margin-bottom: 8px;
+}
+
+.summary-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 24px;
+  margin-bottom: 32px;
+}
+
+.summary-card {
+  background: white;
+  padding: 28px;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  transition: all 0.3s;
+  border-left: 4px solid transparent;
+}
+
+.summary-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+}
+
+.summary-card.saved {
+  border-left-color: #7FA34B;
+}
+
+.summary-card.donated {
+  border-left-color: #F5A962;
+}
+
+.summary-card.used {
+  border-left-color: #4A90E2;
+}
+
+.card-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.card-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.card-icon.saved {
+  background: rgba(127, 163, 75, 0.1);
+  color: #7FA34B;
+}
+
+.card-icon.donated {
+  background: rgba(245, 169, 98, 0.1);
+  color: #F5A962;
+}
+
+.card-icon.used {
+  background: rgba(74, 144, 226, 0.1);
+  color: #4A90E2;
+}
+
+.card-title {
+  font-size: 14px;
+  font-weight: 500;
+  color: #718096;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.card-value {
+  font-size: 36px;
+  font-weight: 700;
+  color: #2D3748;
+}
+
+.card-subtitle {
+  font-size: 13px;
+  color: #A0AEC0;
+  margin-top: 4px;
+}
+
+.visualization-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  margin-bottom: 32px;
+}
+
+.chart-card {
+  background: white;
+  padding: 28px;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.chart-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 24px;
+}
+
+.chart-header svg {
+  color: #7FA34B;
+}
+
+.chart-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: #2D3748;
+}
+
+.expiring-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0 8px;
+}
+
+.expiring-table thead th {
+  text-align: left;
+  font-size: 12px;
+  font-weight: 600;
+  color: #718096;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 12px;
+  background: #F7FAFC;
+}
+
+.expiring-table tbody tr {
+  background: #FAFAFA;
+  transition: all 0.2s;
+}
+
+.expiring-table tbody tr:hover {
+  background: #F7FAFC;
+  transform: translateX(4px);
+}
+
+.expiring-table tbody td {
+  padding: 16px 12px;
+  font-size: 14px;
+  color: #2D3748;
+}
+
+.expiring-table tbody td:first-child {
+  border-top-left-radius: 8px;
+  border-bottom-left-radius: 8px;
+  font-weight: 500;
+}
+
+.expiring-table tbody td:last-child {
+  border-top-right-radius: 8px;
+  border-bottom-right-radius: 8px;
+}
+
+.expiry-date {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #F5A962;
+  font-weight: 500;
+}
+
+.full

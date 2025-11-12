@@ -18,6 +18,7 @@ import NotificationDetail from "./pages/NotificationDetail.jsx";
 import MealPlanner from "./pages/MealPlanner.jsx";
 import RecipeList from "./component/RecipeList.jsx";
 import CustomMealPlan from "./component/CustomMealPlan.jsx";
+import FoodAnalytics from "./pages/FoodAnalytics.jsx";
 import "./main.css";
 
 const router = createBrowserRouter([
@@ -47,6 +48,7 @@ const router = createBrowserRouter([
         ],
       },
       { path: "dashboard", element: <Dashboard /> },
+      { path: "analytics", element: <FoodAnalytics /> },
       { path: "settings", element: <Settings /> },
       { path: "notification", element: <Notification /> },
       { path: "notification/:id", element: <NotificationDetail /> },

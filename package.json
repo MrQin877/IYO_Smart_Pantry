@@ -26,6 +26,7 @@
   "devDependencies": {
     "@eslint/js": "^9.33.0",
     "@playwright/test": "^1.56.1",
+    "@rollup/rollup-darwin-x64": "^4.53.0",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.0",
     "@types/node": "^24.8.1",
