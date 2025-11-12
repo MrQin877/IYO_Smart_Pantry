@@ -307,3 +307,9 @@
   border-radius: 12px;
   font-size: 0.8rem;
 }
+
+.center-actions {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+}

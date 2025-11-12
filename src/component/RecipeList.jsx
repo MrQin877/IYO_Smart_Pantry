@@ -1,17 +1,22 @@
 // src/pages/RecipeList.jsx
 import { useNavigate, useLocation } from "react-router-dom";
 import { ArrowLeft, Plus } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import CookPopup from "../component/CookPopup";
-import { saveMealEntry } from "../../api/services/MealPlanService";
+import { saveMealEntry, assignRecipeToMeal, replanMeal } from "../../api/services/MealPlanService";
 import "./RecipeList.css";
 
 export default function RecipeList() {
   const navigate = useNavigate();
   const location = useLocation();
 
+  // Get user ID from localStorage or use default for development
+  const [userID] = useState(() => {
+    return localStorage.getItem('userID') || 'U2';
+  });
+
   // Get day/type/weekOffset sent from MealPlanner.jsx
-  const { day, type, weekOffset } = location.state || {};
+  const { day, type, weekOffset, isReplan, mealEntryID } = location.state || {};
 
   const [loading, setLoading] = useState(true);
   const [inventory, setInventory] = useState([]);
@@ -29,62 +34,49 @@ export default function RecipeList() {
     snack: "MT4",
   };
 
-  useEffect(() => {
-    async function fetchData() {
-      try {
-        // Fetch user's inventory
-        const inventoryRes = await fetch(
-          "http://localhost/IYO_Smart_Pantry/api/inventory/list.php",
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ userID: "U2" }) // Using hardcoded user ID for now
-          }
-        );
-        const inventoryData = await inventoryRes.json();
-        
-        if (inventoryData.ok) {
-          // Log inventory items for debugging
-          console.log("Inventory items:");
-          inventoryData.inventory.forEach(item => {
-            console.log(`${item.foodName}: ${item.quantity} ${item.unit}`);
-          });
-          
-          // Prioritize inventory items (already sorted by is_plan and expiryDate in the query)
-          setInventory(inventoryData.inventory);
+  // Fetch inventory data
+  const fetchInventory = useCallback(async () => {
+    try {
+      const inventoryRes = await fetch(
+        "http://localhost/IYO_Smart_Pantry/api/inventory/list.php",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ userID })
         }
-
-        // Fetch recipes
-        const recipesRes = await fetch(
-          "http://localhost/IYO_Smart_Pantry/api/recipes/list.php"
-        );
-        const recipesData = await recipesRes.json();
-
-        if (!recipesData.ok) throw new Error("API failed.");
-
-        // Process recipes based on inventory
-        if (inventoryData.ok) {
-          processRecipes(recipesData.recipes, inventoryData.inventory);
-        } else {
-          // If no inventory, just categorize recipes
-          setSuggestedRecipes([]);
-          setGenericRecipes(recipesData.recipes.filter(r => Number(r.isGeneric) === 1));
-          setSavedCustomMeals(
-            recipesData.recipes.filter(r => Number(r.isGeneric) === 0 && r.recipeID.startsWith("R"))
-          );
-        }
-      } catch (err) {
-        console.error("❌ Error loading data:", err);
+      );
+      const inventoryData = await inventoryRes.json();
+      
+      if (inventoryData.ok) {
+        setInventory(inventoryData.inventory || []);
+        return inventoryData.inventory || [];
       }
-
-      setLoading(false);
+      return [];
+    } catch (err) {
+      console.error("❌ Error fetching inventory:", err);
+      return [];
     }
+  }, [userID]);
 
-    fetchData();
+  // Fetch recipes data
+  const fetchRecipes = useCallback(async () => {
+    try {
+      const recipesRes = await fetch(
+        "http://localhost/IYO_Smart_Pantry/api/recipes/list.php"
+      );
+      const recipesData = await recipesRes.json();
+
+      if (!recipesData.ok) throw new Error("API failed.");
+
+      return recipesData.recipes || [];
+    } catch (err) {
+      console.error("❌ Error fetching recipes:", err);
+      return [];
+    }
   }, []);
 
   // Function to process recipes based on inventory
-  const processRecipes = async (recipes, inventory) => {
+  const processRecipes = useCallback(async (recipes, inventory) => {
     // Get detailed ingredient information for all recipes
     const recipesWithIngredients = await Promise.all(
       recipes.map(async (recipe) => {
@@ -114,46 +106,28 @@ export default function RecipeList() {
       })
     );
 
-    // Filter suggested recipes based on inventory
+    // Filter suggested recipes based on available inventory (not reserved)
     const suggested = recipesWithIngredients.filter(r => {
-      // Check if all ingredients for this recipe are in the inventory
       if (!r.ingredients || r.ingredients.length === 0) {
-        console.log(`Recipe ${r.recipeName} has no ingredients`);
         return false;
       }
       
       const hasAllIngredients = r.ingredients.every(ingredient => {
-        // Match by ingredient name instead of ID
-        const hasIngredient = inventory.some(item => 
-          item.foodName.toLowerCase() === ingredient.ingredientName.toLowerCase() && 
-          Number(item.quantity) >= Number(ingredient.quantityNeeded)
+        // Match by ingredient name
+        const inventoryItem = inventory.find(item => 
+          item.foodName.toLowerCase() === ingredient.ingredientName.toLowerCase()
         );
         
-        if (!hasIngredient) {
-          console.log(`Missing ingredient for ${r.recipeName}: ${ingredient.ingredientName}, needed: ${ingredient.quantityNeeded}`);
-          // Check if we have the ingredient but not enough quantity
-          const hasIngredientButNotEnough = inventory.some(item => 
-            item.foodName.toLowerCase() === ingredient.ingredientName.toLowerCase()
-          );
-          if (hasIngredientButNotEnough) {
-            const inventoryItem = inventory.find(item => 
-              item.foodName.toLowerCase() === ingredient.ingredientName.toLowerCase()
-            );
-            console.log(`Have ${inventoryItem.quantity} of ${ingredient.ingredientName}, but need ${ingredient.quantityNeeded}`);
-          }
-        }
+        if (!inventoryItem) return false;
         
-        return hasIngredient;
+        // Check if we have enough available quantity (total - reserved)
+        const availableQuantity = Number(inventoryItem.quantity) ;
+        return availableQuantity >= Number(ingredient.quantityNeeded);
       });
-      
-      if (hasAllIngredients) {
-        console.log(`Recipe ${r.recipeName} can be made with available ingredients`);
-      }
       
       return hasAllIngredients;
     });
     
-    console.log("Suggested recipes:", suggested);
     setSuggestedRecipes(suggested);
     setShowSuggestedSection(suggested.length > 0);
     
@@ -164,10 +138,41 @@ export default function RecipeList() {
     setSavedCustomMeals(
       recipesWithIngredients.filter(r => Number(r.isGeneric) === 0 && r.recipeID.startsWith("R"))
     );
-  };
+  }, []);
+
+  // Initialize data
+  useEffect(() => {
+    async function fetchData() {
+      setLoading(true);
+      try {
+        const [inventoryData, recipesData] = await Promise.all([
+          fetchInventory(),
+          fetchRecipes()
+        ]);
+        
+        if (inventoryData.length > 0) {
+          processRecipes(recipesData, inventoryData);
+        } else {
+          // If no inventory, just categorize recipes
+          setSuggestedRecipes([]);
+          setShowSuggestedSection(false);
+          setGenericRecipes(recipesData.filter(r => Number(r.isGeneric) === 1));
+          setSavedCustomMeals(
+            recipesData.filter(r => Number(r.isGeneric) === 0 && r.recipeID.startsWith("R"))
+          );
+        }
+      } catch (err) {
+        console.error("❌ Error loading data:", err);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchData();
+  }, [fetchInventory, fetchRecipes, processRecipes]);
 
   // Load details on Cook
-  const handleCook = async (recipe) => {
+  const handleCook = useCallback(async (recipe) => {
     try {
       // If recipe already has ingredients, use them
       if (recipe.ingredients && recipe.ingredients.length > 0) {
@@ -199,20 +204,18 @@ export default function RecipeList() {
     } catch (err) {
       console.error("❌ Error loading recipe details:", err);
     }
-  };
+  }, []);
 
-  // =================================================================
-  // ✅ FIX: Helper to get YYYY-MM-DD in LOCAL timezone
-  // =================================================================
-  function toLocalDateString(date) {
+  // Helper to get YYYY-MM-DD in LOCAL timezone
+  const toLocalDateString = useCallback((date) => {
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, '0');
     const day = String(date.getDate()).padStart(2, '0');
     return `${year}-${month}-${day}`;
-  }
+  }, []);
 
   // Convert MON/TUE/WED... to actual YYYY-MM-DD
-  function getDateForDay(weekOffset, day) {
+  const getDateForDay = useCallback((weekOffset, day) => {
     const dayIndex = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"].indexOf(day);
     if (dayIndex < 0) return null;
 
@@ -227,13 +230,12 @@ export default function RecipeList() {
     const result = new Date(monday);
     result.setDate(monday.getDate() + dayIndex);
 
-    // ✅ FIX: Use the local date string helper
     return toLocalDateString(result);
-  }
+  }, [toLocalDateString]);
 
-  // Load details on Cook
-  const handleConfirm = async (recipe) => {
-    const { day, type, weekOffset } = location.state;
+  // Updated handleConfirm function with better error handling
+  const handleConfirm = useCallback(async (recipe) => {
+    const { day, type, weekOffset, isReplan, mealEntryID } = location.state || {};
     const mealTypeID = mealTypeMap[type];
 
     if (!mealTypeID) {
@@ -243,25 +245,71 @@ export default function RecipeList() {
 
     const mealDate = getDateForDay(weekOffset, day);
 
-    const payload = {
-      userID: "U2",
-      recipeID: recipe.recipeID,
-      mealName: recipe.recipeName,
-      mealTypeID,
-      mealDate,
-    };
+    try {
+      let result;
+      
+      if (isReplan && mealEntryID) {
+        // For replanning, use the replanMeal function
+        result = await replanMeal(mealEntryID, recipe.recipeID, userID);
+        
+        if (result.ok) {
+          alert('Meal replanned successfully!');
+          
+          // Navigate back to meal planner with refresh
+          navigate("/meal-planner", {
+            state: {
+              refreshDate: mealDate,
+            },
+          });
+        } else {
+          alert(result.error || 'Failed to replan meal');
+        }
+      } else {
+        // For new meals, save the entry first
+        const payload = {
+          userID,
+          recipeID: recipe.recipeID,
+          mealName: recipe.recipeName,
+          mealTypeID,
+          mealDate,
+        };
 
-    console.log("📤 Sending to backend:", payload);
+        console.log("📤 Sending to backend:", payload);
 
-    const res = await saveMealEntry(payload);
-    console.log("✅ Save result:", res);
-    navigate("/meal-planner", {
-      state: {
-        refreshDate: mealDate,
-      },
-    });
-  };
-
+        const saveResult = await saveMealEntry(payload);
+        console.log("✅ Save result:", saveResult);
+        
+        if (!saveResult.ok || !saveResult.entry) {
+          throw new Error(saveResult.error || 'Failed to save meal');
+        }
+        
+        // Then assign the recipe
+        const assignResult = await assignRecipeToMeal(
+          saveResult.entry.mealEntryID,
+          recipe.recipeID,
+          userID
+        );
+        
+        console.log("✅ Recipe assignment result:", assignResult);
+        
+        if (!assignResult.ok) {
+          throw new Error(assignResult.error || 'Failed to assign recipe');
+        }
+        
+        alert('Meal saved and ingredients reserved successfully!');
+        
+        // Navigate back to meal planner with refresh
+        navigate("/meal-planner", {
+          state: {
+            refreshDate: mealDate,
+          },
+        });
+      }
+    } catch (error) {
+      console.error("❌ Error:", error);
+      alert(error.message || 'An error occurred while saving meal');
+    }
+  }, [location.state, navigate, getDateForDay]);
   return (
     <div className="recipe-page">
       <div className="recipe-container">
@@ -270,7 +318,7 @@ export default function RecipeList() {
             <button className="back-btn" onClick={() => navigate(-1)}>
               <ArrowLeft size={22} />
             </button>
-            <h2>Recipe Suggestions</h2>
+            <h2>{isReplan ? 'Replan Meal' : 'Recipe Suggestions'}</h2>
           </div>
 
           <button className="custom-btn" onClick={() => navigate("/custom-meal")}>
@@ -375,13 +423,11 @@ export default function RecipeList() {
           </>
         )}
 
-
-
         {selectedRecipe && (
           <CookPopup
             recipe={selectedRecipe}
             inventory={inventory}
-            isSuggested={suggestedRecipes.some(r => r.recipeID === selectedRecipe.recipeID)} // ✅ Check if recipe is in suggested list
+            isSuggested={suggestedRecipes.some(r => r.recipeID === selectedRecipe.recipeID)}
             onClose={() => setSelectedRecipe(null)}
             onConfirm={handleConfirm}
           />

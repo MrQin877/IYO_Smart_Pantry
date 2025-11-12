@@ -227,3 +227,24 @@
 .meal-cell:hover {
   background-color: #f9fafb;
 }
+
+/* Add to your MealPlanner.css */
+.meal-cell.completed-meal {
+  background-color: #e8f5e8;
+  border-left: 3px solid #4caf50;
+}
+
+.checkmark {
+  color: #4caf50;
+  font-weight: bold;
+  margin-right: 5px;
+}
+
+.btn-warning {
+  background-color: #ff9800;
+  color: white;
+}
+
+.btn-warning:hover {
+  background-color: #e68900;
+}

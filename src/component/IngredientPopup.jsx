@@ -112,9 +112,12 @@ export default function IngredientPopup({ onClose, onAdd }) {
         ) : (
           <>
             <div className="inventory-header">
-              <span className="header-name">Item Name</span>
-              <span className="header-qty">Quantity</span>
-              <span className="header-unit">Units</span>
+              <div className="header-name">Item Name</div>
+              <div className="header-qtyunit">
+                <div className="header-qty">Quantity</div>
+                <div className="header-unit">Unit</div>
+              </div>
+              <div className="header-bullet" />
             </div>
 
             <div className="inventory-list">
@@ -122,41 +125,43 @@ export default function IngredientPopup({ onClose, onAdd }) {
                 localInventory.map((item, i) => (
                   <div
                     key={i}
-                    className={`inventory-item ${
-                      item.selected ? "selected" : ""
-                    }`}
+                    className={`inventory-item ${item.selected ? "selected" : ""}`}
                     onClick={() => toggleSelect(item.name)}
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        toggleSelect(item.name);
+                      }
+                    }}
                   >
+                    {/* custom bullet */}
+                    
+
                     <div className="ingredient-name-wrapper">
                       <span className="ingredient-name">{item.name}</span>
 
                       {/* ⚠ Expiring soon text beside name */}
                       {item.daysLeft !== null && (
                         <span className="expiry-warning-row pulse">
-                          ⚠ {item.daysLeft} day
-                          {item.daysLeft !== 1 ? "s" : ""} left
+                          ⚠ {item.daysLeft} day{item.daysLeft !== 1 ? "s" : ""} left
                         </span>
                       )}
                     </div>
 
-                    <div
-                      className="qty-section"
-                      onClick={(e) => e.stopPropagation()}
-                    >
+                    <div className="qty-section" onClick={(e) => e.stopPropagation()}>
                       <input
                         type="number"
-                        min="0"
-                        max={item.totalQty}
                         className="qty-input"
                         value={item.currentQty}
-                        onChange={(e) =>
-                          handleQtyChange(item.name, e.target.value)
-                        }
+                        onChange={(e) => handleQtyChange(item.name, e.target.value)}
+                        onClick={(e) => e.stopPropagation()}
+                        aria-label={`${item.name} quantity`}
                       />
-                      <span className="fixed-unit">
-                        / {item.totalQty} {item.unit}
-                      </span>
+                      <span className="fixed-unit">/ {item.totalQty} {item.unit}</span>
                     </div>
+                    <span className="ingredient-bullet" aria-hidden="true" />
                   </div>
                 ))
               ) : (

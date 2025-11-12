@@ -71,6 +71,12 @@ export default function CookPopup({ recipe, onClose, onConfirm, inventory, isSug
                 const isExpiring = inventoryItem && isExpiringSoon(inventoryItem.expiryDate);
                 const daysUntilExpiry = inventoryItem ? getDaysUntilExpiry(inventoryItem.expiryDate) : null;
 
+                // compute required and available quantities to detect insufficiency
+                const requiredQty = Number(ing.quantityNeeded ?? ing.ingredientQty ?? 0);
+                // inventory records use different keys in different endpoints: prefer `quantity`, then `totalQty`, then `qty`, then `currentQty`
+                const availableQty = inventoryItem ? Number(inventoryItem.quantity ?? inventoryItem.totalQty ?? inventoryItem.qty ?? inventoryItem.currentQty ?? 0) : 0;
+                const isInsufficient = !!inventoryItem && requiredQty > 0 && availableQty < requiredQty;
+
                 return (
                   <div key={i} className="ingredient-row">
                     <div className="ingredient-info">
@@ -105,7 +111,13 @@ export default function CookPopup({ recipe, onClose, onConfirm, inventory, isSug
                           </span>
                         </div>
                       )}
-                      {inventoryItem && !isPlanned && !isExpiring && (
+                      {isInsufficient && (
+                        <div className="indicator-badge insufficient" title={`Insufficient: ${availableQty} available, ${requiredQty} required`}>
+                          <AlertCircle size={14} />
+                          <span>Insufficient</span>
+                        </div>
+                      )}
+                      {!isInsufficient && inventoryItem && !isPlanned && !isExpiring && (
                         <div className="indicator-badge available" title="Available in inventory">
                           <span className="indicator-dot"></span>
                           <span>Available</span>
@@ -161,7 +173,7 @@ export default function CookPopup({ recipe, onClose, onConfirm, inventory, isSug
             onConfirm(recipe);
           }}
         >
-          OK
+          Cook Now
         </button>
       </div>
     </div>
