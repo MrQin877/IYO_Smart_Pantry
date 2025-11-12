@@ -6,7 +6,7 @@ BEGIN
   INSERT INTO notifications
     (noticeID, title, message, is_read, created_at, targetID, targetType, userID, noticeCateID)
   SELECT
-    next_notice_id(),
+    CONCAT('N', LPAD(NEXTVAL(notif_seq), 9, '0')),  -- <- unique per row now
     'Inventory Reminder',
     CONCAT(
       'Item "', f.foodName, '" is expiring on ', DATE_FORMAT(f.expiryDate,'%Y-%m-%d'),
@@ -22,8 +22,9 @@ BEGIN
   WHERE f.userID IS NOT NULL
     AND f.expiryDate IS NOT NULL
     AND DATEDIFF(f.expiryDate, CURDATE()) BETWEEN 0 AND p_days_soon
-    AND NOT EXISTS (  -- one per food per 24h
-      SELECT 1 FROM notifications n
+    AND NOT EXISTS (
+      SELECT 1
+      FROM notifications n
       WHERE n.userID = f.userID
         AND n.targetType = 'Food'
         AND n.targetID = f.foodID
