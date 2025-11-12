@@ -2,7 +2,7 @@
 // C:\xampp\htdocs\IYO_Smart_Pantry\api\notification_detail.php
 require_once __DIR__ . '/config.php';
 
-$userID = $_SESSION['user_id'] ?? null;
+$userID = $_SESSION['userID'] ?? null;
 if (!$userID) respond(['ok'=>false,'error'=>'Unauthorized'], 401);
 
 $noticeID = $_GET['id'] ?? '';
