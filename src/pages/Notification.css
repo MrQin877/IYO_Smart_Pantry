@@ -126,6 +126,45 @@
 /* Optional: remove App main wrapper padding just for this page */
 .notification-page, .notification-page main { max-width:none; margin:0; padding:0; }
 
+/* =====================  BOTTON BUTTON  =====================*/
+.noti-pager{
+  margin:18px 0 6px;
+  display:flex; justify-content:center; align-items:center; gap:8px;
+}
+
+.pager-btn,.pager-num{
+  width:40px; height:40px; padding:0;
+  border-radius:14px;
+  border:1px solid var(--border);
+  background:#fff; color:var(--ink);
+  font-weight:800; line-height:40px;
+  box-shadow:0 1px 2px rgba(0,0,0,.04);
+  cursor:pointer;
+  transition:transform .15s ease, box-shadow .15s ease, background .15s ease;
+}
+.pager-btn:hover,.pager-num:hover{ transform:translateY(-1px); box-shadow:0 6px 14px rgba(0,0,0,.06); }
+.pager-btn:disabled{ opacity:.45; cursor:not-allowed; transform:none; box-shadow:none; }
+
+.pager-num.is-active{
+  background:var(--bg-pill);
+  box-shadow: inset 0 0 0 1px rgba(110,141,82,.18);
+}
+
+.pager-dots{
+  width:32px; text-align:center; color:var(--ink-mute); user-select:none;
+}
+
+.sr-only{
+  position:absolute; width:1px; height:1px; padding:0; margin:-1px;
+  overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0;
+}
+
+/* compact on small screens */
+@media (max-width:520px){
+  .pager-num{ width:36px; height:36px; line-height:36px; }
+  .pager-btn{ width:36px; height:36px; line-height:36px; }
+}
+
 /* =====================  DETAIL PAGE  ===================== */
 .nd-wrap{ background: var(--bg-page); padding: 12px 0 48px; }
 .nd-back{

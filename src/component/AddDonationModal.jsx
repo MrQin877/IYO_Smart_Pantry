@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { apiGet, apiPost } from "../lib/api";
+import { UnreadBus } from "../utils/unreadBus";
 
 // ---- caches (persist for page life) ----
 let CATS_CACHE = null;   // [{id,name}]
@@ -360,6 +361,9 @@ function overlapsAny(candidate, list = []) {
         slots: f.slots,
         contact: f.contact.trim(),
       });
+      
+      UnreadBus.inc(1);          // instant bump
+      window.refreshUnread?.();  // reconcile exact count
 
       alert("Donation created. ✅");
       onClose?.();

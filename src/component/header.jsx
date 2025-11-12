@@ -1,6 +1,6 @@
 // src/component/Header.jsx
-import React, { useEffect, useState } from "react";
-import { NavLink, Link } from "react-router-dom";
+import React, { useEffect, useState, useCallback } from "react";
+import { NavLink, Link, useNavigate } from "react-router-dom";
 import "./header.css";
 import Swal from "sweetalert2";
 import { UnreadBus } from "../utils/unreadBus";
@@ -8,11 +8,23 @@ import { UnreadBus } from "../utils/unreadBus";
 export default function HeaderNav() {
   const [initial, setInitial] = useState("");
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [unread, setUnread] = useState(0);
+  const [unread, setUnread] = useState(UnreadBus.get()); // immediate local value
+  const navigate = useNavigate();
+
+  // --- server reconcile ---
+  const refreshUnread = useCallback(async () => {
+    try {
+      const res  = await fetch('/api/notifications_count.php', { credentials: 'include' });
+      const data = await res.json();
+      if (data?.ok) {
+        UnreadBus.set(Number(data.count || 0)); // updates global + triggers event
+      }
+    } catch {}
+  }, []);
 
   useEffect(() => {
-    // show an immediate value without network
-    setUnread(UnreadBus.get());
+    // expose a global reconciler so any page can call it after creating/reading notifications
+    window.refreshUnread = refreshUnread;
 
     const refreshShell = () => {
       const name   = localStorage.getItem("userName");
@@ -25,37 +37,27 @@ export default function HeaderNav() {
         email?.trim()?.charAt(0)?.toUpperCase() || ""
       );
 
-      if (userID) fetchUnread();
+      if (userID) refreshUnread();
       else setUnread(0);
     };
 
-    async function fetchUnread() {
-      try {
-        const res  = await fetch('/api/notifications_count.php', { credentials: 'include' });
-        const data = await res.json();
-        if (data?.ok) {
-          const n = Number(data.count || 0);
-          setUnread(n);       // reconcile UI
-          UnreadBus.set(n);   // keep hint fresh for other views/tabs
-        }
-      } catch {}
-    }
-
-    // initial
+    // initial boot
     refreshShell();
 
-    // app-wide instant updates (open detail, mark all, create new)
+    // listen to global bus → instant UI updates
     const onBus = (e) => setUnread(Number(e.detail?.value ?? UnreadBus.get()));
     window.addEventListener('unread:set', onBus);
 
-    // cross-tab updates
+    // cross-tab session changes
     window.addEventListener("storage", refreshShell);
 
-    // refresh on focus + light polling to stay correct
-    const onVis = () => { if (!document.hidden && localStorage.getItem("userID")) fetchUnread(); };
+    // when tab becomes visible, reconcile with server
+    const onVis = () => { if (!document.hidden && localStorage.getItem("userID")) refreshUnread(); };
     document.addEventListener("visibilitychange", onVis);
+
+    // periodic reconcile (optional)
     const t = setInterval(() => {
-      if (localStorage.getItem("userID")) fetchUnread();
+      if (localStorage.getItem("userID")) refreshUnread();
     }, 30000);
 
     return () => {
@@ -63,8 +65,16 @@ export default function HeaderNav() {
       window.removeEventListener("storage", refreshShell);
       document.removeEventListener("visibilitychange", onVis);
       clearInterval(t);
+      delete window.refreshUnread;
     };
-  }, []);
+  }, [refreshUnread]);
+
+  // force refresh then go notification page
+  const handleBellClick = async (e) => {
+    e.preventDefault(); // refresh first, then navigate
+    await refreshUnread();
+    navigate("/notification");
+  };
 
   // Logout with confirm
   async function handleLogout() {
@@ -89,7 +99,7 @@ export default function HeaderNav() {
         showConfirmButton: false
       });
       localStorage.clear();
-      UnreadBus.clear();
+      UnreadBus.clear();                  // instant UI clear
       window.dispatchEvent(new Event("storage"));
       window.location.href = "/";
     }
@@ -98,12 +108,16 @@ export default function HeaderNav() {
   return (
     <header className="nav-wrap">
       <div className="nav-pill">
-        {/* Brand */}
-        <Link to={isLoggedIn ? "/dashboard" : "/"} className="brand" aria-label="IYO Smart Pantry – Home">
+        {/* Brand logo */}
+        <Link
+          to={isLoggedIn ? "/dashboard" : "/"}
+          className="brand"
+          aria-label="IYO Smart Pantry – Home"
+        >
           <img className="logo" src="/logo.svg" alt="IYO Logo" />
         </Link>
 
-        {/* Main nav when logged in */}
+        {/* Nav menu (only show when logged in) */}
         {isLoggedIn && (
           <nav className="main" aria-label="Primary">
             <NavItem to="/dashboard">Home</NavItem>
@@ -113,13 +127,19 @@ export default function HeaderNav() {
           </nav>
         )}
 
-        {/* Right icons */}
+        {/* Right side icons */}
         <div className="icons">
           {isLoggedIn && (
-            <Link to="/notification" className="icon bell" title="Notifications" aria-label="Notifications">
+            <a
+              href="/notification"
+              onClick={handleBellClick}
+              className="icon bell"
+              title="Notifications"
+              aria-label="Notifications"
+            >
               🔔
               {unread > 0 && <span className="badge">{unread}</span>}
-            </Link>
+            </a>
           )}
 
           <Link to={isLoggedIn ? "/settings" : "/account"}>
