@@ -1,6 +1,7 @@
 // src/components/FoodDetailModal.jsx
 import { useEffect, useState } from "react";
 import { apiPost } from "../lib/api";
+import { UnreadBus } from "../utils/unreadBus";
 
 export default function FoodDetailModal({
   open,
@@ -88,7 +89,8 @@ export default function FoodDetailModal({
       } else if (res.updated) {
         alert(res.message || "✅ Food quantity updated successfully.");
       }
-
+      UnreadBus.inc(1);          // instant bump
+      window.refreshUnread?.();  // reconcile exact count
       onUpdate?.();
       onClose();
     } catch (err) {

@@ -340,4 +340,19 @@ th.sortable:hover span{opacity:1;}
 .panel--uniform .slots-row .input{height:38px;}
 .panel--uniform .add-slot{height:38px;padding:0 12px;border-radius:10px;background:#7ea36b;color:#fff;border:1px solid #7ea36b;font-weight:700;white-space:nowrap;}
 
+.input.qty-num {
+  min-width: 52px;          /* a bit wider so 2–3 digits fit nicely */
+  text-align: center;
+  font-weight: 700;
+  font-size: 14px;
+  color: var(--ink);        /* 🔑 force visible text colour */
+  background: #fff;
+}
+
+/* remove ugly browser spinners but keep text */
+.input.qty-num::-webkit-outer-spin-button,
+.input.qty-num::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
 

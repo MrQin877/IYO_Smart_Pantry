@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from "react";
 import { apiGet, apiPost } from "../lib/api";
 import { clearAuth } from "../utils/auth.js";
+import { UnreadBus } from "../utils/unreadBus";
 import "./Setting.css";
 
 export default function Settings() {
@@ -39,6 +40,8 @@ export default function Settings() {
       if (resp.ok) {
         setShowPopup(true);
         setTimeout(() => setShowPopup(false), 2500);
+        UnreadBus.inc(1);          // instant bump
+        window.refreshUnread?.();  // reconcile exact count
       } else {
         alert(resp.error || "Save failed");
       }
