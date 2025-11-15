@@ -15,6 +15,7 @@ import {
 import { UnreadBus } from "../utils/unreadBus";
 import "./Notification.css";
 
+
 // type filter options
 const CATEGORY_FILTERS = [
   { value: "all",       label: "All" },
@@ -32,6 +33,7 @@ export default function Notification() {
   const [filterType, setFilterType] = useState("all"); // category filter (local)
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState("");
+  const [vanishUnread, setVanishUnread] = useState(false);   // 👈 NEW
 
   // pagination state
   const [page, setPage] = useState(1);
@@ -63,9 +65,23 @@ export default function Notification() {
 
   // server already applied tab; here we apply category filter
   const filtered = useMemo(() => {
-    if (filterType === "all") return items;
-    return items.filter((n) => n.category === filterType);
-  }, [items, filterType]);
+    let list = [...items];
+
+    // 1) tab filter
+    if (tab === "unread") {
+      list = list.filter(n => !n.isRead);
+    } else if (tab === "read") {
+      list = list.filter(n => n.isRead);
+    }
+
+    // 2) type/category filter
+    if (!filterType || filterType === "all") {
+      return list;
+    }
+
+    return list.filter(n => n.category === filterType);
+  }, [items, tab, filterType]);   // 👈 include typeFilter here
+
 
   // pagination slice
   const total = filtered.length;
@@ -83,13 +99,33 @@ export default function Notification() {
   };
 
   const markAllAsRead = async () => {
-    UnreadBus.clear();
-    setItems((list) => list.map((i) => ({ ...i, isRead: true })));
-    await fetch("/api/notifications_mark_all.php", {
-      method: "POST",
-      credentials: "include",
-    });
+    // if we're on Unread tab, play fade-out animation first
+    if (tab === "unread") {
+      setVanishUnread(true);          // add fade-out class
+
+      setTimeout(() => {
+        UnreadBus.clear();
+        setItems(list => list.map(i => ({ ...i, isRead: true })));
+        setVanishUnread(false);       // reset flag after update
+
+        // fire & forget server call
+        fetch('/api/notifications_mark_all.php', {
+          method: 'POST',
+          credentials: 'include'
+        }).catch(() => {});
+      }, 260); // duration must match CSS animation
+    } else {
+      // other tabs: no special animation needed
+      UnreadBus.clear();
+      setItems(list => list.map(i => ({ ...i, isRead: true })));
+      await fetch('/api/notifications_mark_all.php', {
+        method:'POST',
+        credentials:'include'
+      });
+    }
   };
+
+
 
   const activeIdx = tab === "all" ? 0 : tab === "unread" ? 1 : 2;
 
@@ -156,12 +192,17 @@ export default function Notification() {
       <div className="noti-list">
         {current.map((n) => (
           <article
-            key={n.id}
-            className="noti-card"
-            role="button"
-            onClick={() => openDetail(n.id)}
-            style={{ cursor: "pointer" }}
-          >
+                key={n.id}
+                className={
+                  "noti-card" +
+                  (vanishUnread && tab === "unread" && !n.isRead
+                    ? " noti-card--vanish"
+                    : "")
+                }
+                role="button"
+                onClick={() => openDetail(n.id)}
+                style={{ cursor: "pointer" }}
+              >
             <div className="noti-card-inner">
               <div className="noti-icon">{pickIcon(n.category)}</div>
               <div className="noti-body">
