@@ -23,6 +23,7 @@ const CATEGORY_FILTERS = [
   { value: "Expiry",    label: "Expiry" },
   { value: "MealPlan",  label: "Meal Plan" },
   { value: "Donation",  label: "Donation" },
+  { value: "System",  label: "System" },
   { value: "Account",   label: "Account" },
 ];
 
