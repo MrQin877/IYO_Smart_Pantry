@@ -31,7 +31,10 @@ export default function InventoryList({ inventory }) {
             </tr>
           </thead>
           <tbody>
-            {inventory.map((item, idx) => {
+            {(
+              (inventory || [])
+                .filter(item => Number(item.quantity ?? item.qty ?? item.availableQty ?? 0) > 0)
+                .map((item, idx) => {
               const daysLeft = getExpiryStatus(item.expiryDate);
               const isPlanned = item.is_plan === 1;
               const isExpiring = isExpiringSoon(item.expiryDate);
@@ -46,12 +49,6 @@ export default function InventoryList({ inventory }) {
                   <td>{item.quantity} {item.unit}</td>
                   <td className="expiry-cell">
                     <div>{item.expiryDate}</div>
-
-                    {daysLeft <= 7 && (
-                      <div className="expiry-warning-row pulse">
-                        ⚠ {daysLeft} day{daysLeft !== 1 ? "s" : ""} left
-                      </div>
-                    )}
                   </td>
                   <td className="status-cell">
                     {isPlanned && (
@@ -78,7 +75,8 @@ export default function InventoryList({ inventory }) {
                   </td>
                 </tr>
               );
-            })}
+                })
+            )}
           </tbody>
         </table>
       </div>

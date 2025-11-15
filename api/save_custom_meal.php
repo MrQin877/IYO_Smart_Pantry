@@ -10,7 +10,10 @@ header("Content-Type: application/json; charset=utf-8");
  $notes       = trim($input['notes'] ?? '');
  $servings    = (int)($input['servings'] ?? 1);
  $ingredients = $input['ingredients'] ?? [];
- $userID      = $input['userID'] ?? 'U2'; // fallback user
+ // Prefer session user ID, fall back to payload
+ $userID      = $_SESSION['user']['id'] ?? $_SESSION['userID'] ?? $input['userID'] ?? null;
+
+if (!$userID) respond(['success' => false, 'message' => 'Missing userID (not logged in)'], 401);
 
 if ($mealName === '' || empty($ingredients)) {
     respond(['success' => false, 'message' => 'Meal name and ingredients are required.'], 400);
@@ -22,15 +25,15 @@ if ($mealName === '' || empty($ingredients)) {
 try {
     $pdo->beginTransaction();
 
-    // 1️⃣ Insert into recipes
-    $stmt = $pdo->prepare("
-        INSERT INTO recipes (recipeName, instruction, serving, isGeneric)
-        VALUES (:name, :instruction, :serving, 0)
-    ");
+    // 1️⃣ Insert into recipes (set createdBy to the user saving the custom meal)
+    $stmt = $pdo->prepare(
+        "INSERT INTO recipes (recipeName, instruction, serving, isGeneric, createdBy) VALUES (:name, :instruction, :serving, 0, :createdBy)"
+    );
     $stmt->execute([
         ':name' => $mealName,
         ':instruction' => $notes,
-        ':serving' => $servings
+        ':serving' => $servings,
+        ':createdBy' => $userID
     ]);
     $recipeID = $pdo->lastInsertId();
     // Fallback for triggers that don't populate lastInsertId correctly

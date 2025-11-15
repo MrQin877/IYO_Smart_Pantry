@@ -78,12 +78,18 @@
   font-weight: 600;
   color: #374b3a;
   font-size: 13px;
+  min-width: 96px;  /* increased width */
 }
 
 /* --- Status Cell --- */
 .status-cell {
   width: 140px; /* Smaller width for compact layout */
   padding: 6px 8px;
+}
+
+.status-cell .status-badge + .status-badge {
+  margin-top: 6px;  /* gap between badges */
+  display: block;    /* ensure badges stack vertically */
 }
 
 .status-badge {
