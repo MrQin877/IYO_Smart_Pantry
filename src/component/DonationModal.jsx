@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { apiGet, apiPost } from "../lib/api";
+import { UnreadBus } from "../utils/unreadBus";
 
 export default function DonationModal({
   open,
@@ -244,6 +245,9 @@ export default function DonationModal({
         slots: f.slots,
         slotText,
       });
+
+      UnreadBus.inc(1);          // instant bump
+      window.refreshUnread?.();  // reconcile exact count
 
       alert("Donation created. ✅");
       onClose?.();

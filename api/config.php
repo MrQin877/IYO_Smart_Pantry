@@ -51,3 +51,5 @@ try {
 } catch (Throwable $e) {
   respond(['ok' => false, 'error' => 'DB connect failed'], 500);
 }
+
+date_default_timezone_set('Asia/Kuala_Lumpur');

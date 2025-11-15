@@ -6,7 +6,7 @@ BEGIN
   INSERT INTO notifications
     (noticeID, title, message, is_read, created_at, targetID, targetType, userID, noticeCateID)
   SELECT
-    next_notice_id(),
+    CONCAT('N', LPAD(NEXTVAL(notif_seq), 9, '0')),  -- unique per row
     'Inventory Reminder',
     CONCAT(
       'Item "', f.foodName, '" is expiring on ', DATE_FORMAT(f.expiryDate,'%Y-%m-%d'),
@@ -17,17 +17,29 @@ BEGIN
     f.foodID,
     'Food',
     f.userID,
-    (SELECT noticeCateID FROM notification_categories WHERE noticeCateName='Expiry' LIMIT 1)
+    (SELECT noticeCateID
+        FROM notification_categories
+      WHERE noticeCateName = 'Expiry'
+      LIMIT 1)
   FROM foods f
   WHERE f.userID IS NOT NULL
     AND f.expiryDate IS NOT NULL
+    -- 🔴 NEW: only if there is still some quantity left
+    AND f.quantity > 0 
+    -- (if you use totalQty instead, change this line to: AND f.totalQty > 0)
     AND DATEDIFF(f.expiryDate, CURDATE()) BETWEEN 0 AND p_days_soon
-    AND NOT EXISTS (  -- one per food per 24h
-      SELECT 1 FROM notifications n
-      WHERE n.userID = f.userID
-        AND n.targetType = 'Food'
-        AND n.targetID = f.foodID
-        AND n.noticeCateID = (SELECT noticeCateID FROM notification_categories WHERE noticeCateName='Expiry' LIMIT 1)
+    AND NOT EXISTS (
+      SELECT 1
+      FROM notifications n
+      WHERE n.userID      = f.userID
+        AND n.targetType  = 'Food'
+        AND n.targetID    = f.foodID
+        AND n.noticeCateID = (
+              SELECT noticeCateID
+              FROM notification_categories
+              WHERE noticeCateName='Expiry'
+              LIMIT 1
+            )
         AND n.created_at >= DATE_SUB(NOW(), INTERVAL 24 HOUR)
     );
 END$$

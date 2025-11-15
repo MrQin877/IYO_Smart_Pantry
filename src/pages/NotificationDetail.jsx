@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams, useLocation } from "react-router-dom";
 import {
-  ArrowLeft, CalendarClock, MapPin, Clock, Package, HandHeart, Settings2, ShieldCheck
+  ArrowLeft, CalendarClock, MapPin, Clock, Package, HandHeart, Settings2, ShieldCheck, Refrigerator
 } from "lucide-react";
 import "./Notification.css";
 import { getNotificationById } from "./demoNotifications.js";
@@ -274,7 +274,7 @@ function formatDateTime(ts) {
 
 function pickDetailIcon(category){
   switch (category) {
-    case "Inventory": return <CalendarClock size={22}/>;
+    case "Inventory": return <Refrigerator size={22}/>
     case "Expiry":    return <CalendarClock size={22}/>;
     case "MealPlan":  return <UtensilsCrossed size={22}/>;
     case "Donation":  return <HandHeart size={22}/>;

@@ -1,25 +1,7 @@
-DELIMITER $$
-DROP FUNCTION IF EXISTS next_notice_id $$
-CREATE FUNCTION next_notice_id()
-RETURNS CHAR(10)
-NOT DETERMINISTIC
-READS SQL DATA
-SQL SECURITY DEFINER
-BEGIN
-  DECLARE n BIGINT DEFAULT 0;
-  DECLARE got INT DEFAULT 0;
-
-  SET got = GET_LOCK('notif_id_lock', 5); -- wait up to 5s
-
-  IF got = 1 THEN
-    SELECT COALESCE(MAX(CAST(SUBSTRING(noticeID,2) AS UNSIGNED)),0) + 1
-      INTO n
-      FROM notifications;
-    DO RELEASE_LOCK('notif_id_lock');
-  ELSE
-    SET n = UNIX_TIMESTAMP(NOW());
-  END IF;
-
-  RETURN CONCAT('N', LPAD(n, 9, '0'));
-END$$
+DROP FUNCTION IF EXISTS next_notice_id;
+DELIMITER //
+CREATE FUNCTION next_notice_id() RETURNS VARCHAR(10)
+  NO SQL  -- (or READS SQL DATA) — MariaDB allows NEXTVAL() in functions
+RETURN CONCAT('N', LPAD(NEXTVAL(notif_seq), 9, '0'));
+//
 DELIMITER ;
