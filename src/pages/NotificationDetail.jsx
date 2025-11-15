@@ -4,6 +4,7 @@ import {
   ArrowLeft, CalendarClock, MapPin, Clock, Package, HandHeart, Settings2, ShieldCheck, Refrigerator
 } from "lucide-react";
 import "./Notification.css";
+import { apiPost } from "../lib/api";
 import { getNotificationById } from "./demoNotifications.js";
 
 /**
@@ -46,9 +47,29 @@ export default function NotificationDetail() {
 
   const back = () => navigate(-1);
 
-  const planForMeal = () => {
+  const planForMeal = async () => {
     if (!detail?.item) return;
-    navigate("/plan", {
+
+    const { foodID } = detail.item;
+    console.log("[planForMeal] detail.item =", detail.item);
+
+    // ✅ only check for empty / missing
+    if (!foodID || String(foodID).trim() === "") {
+      console.warn("[planForMeal] No foodID, skipping is_plan update");
+    } else {
+      try {
+        const res = await apiPost("/food_mark_planned.php", {
+          foodID,       // 🔥 send as string ("F86" etc)
+          is_plan: 1,
+        });
+        console.log("[planForMeal] API result:", res);
+      } catch (err) {
+        console.error("Failed to mark food as planned", err);
+      }
+    }
+
+    // then navigate to meal planner as before
+    navigate("/meal-planner", {
       state: {
         from: "notification",
         notificationId: id,
@@ -65,13 +86,15 @@ export default function NotificationDetail() {
     });
   };
 
-  const donate = () => {
+
+  const goDonate = () => {
     if (!detail?.item) return;
-    navigate("/food/donation", {
+
+    navigate("/food", {
       state: {
         from: "notification",
-        notificationId: id,
-        item: {
+        openDonationFor: {
+          foodID: detail.item.foodID,
           name: detail.item.name,
           quantity: Number(detail.item.quantity || 0),
           unit: detail.item.unit,
@@ -83,6 +106,7 @@ export default function NotificationDetail() {
       },
     });
   };
+
 
   if (!detail) {
     return (
@@ -122,7 +146,13 @@ export default function NotificationDetail() {
         </p>
 
         {/* Category-specific sections */}
-        {category === "Expiry" && <ExpirySection detail={detail} onPlan={planForMeal} onDonate={donate} />}
+        {category === "Expiry" && (
+          <ExpirySection
+            detail={detail}
+            onPlan={planForMeal}
+            onDonate={goDonate}
+          />
+        )}
         {category === "Inventory" && <InventorySection detail={detail} />}
         {category === "MealPlan" && <MealPlanSection detail={detail} onGoPlan={planForMeal} />}
         {category === "Donation" && <DonationSection detail={detail} />}
@@ -148,8 +178,27 @@ function ExpirySection({ detail, onPlan, onDonate }) {
       ]} />
       <p className="nd-note">Use it or donate before expired!</p>
       <div className="nd-cta">
-        <button className="nd-btn" onClick={onPlan}><Package size={16}/> Plan for Meal</button>
-        <button className="nd-btn" onClick={onDonate}><HandHeart size={16}/> Donate</button>
+        <button
+          type="button"
+          className="nd-btn"
+          onClick={() => {
+            console.log("🟢 Plan button clicked, detail.item =", detail.item);
+            onPlan();
+          }}
+        >
+          <Package size={16}/> Plan for Meal
+        </button>
+
+        <button
+          type="button"
+          className="nd-btn"
+          onClick={() => {
+            console.log("🟡 Donate button clicked, detail.item =", detail.item);
+            onDonate();
+          }}
+        >
+          <HandHeart size={16}/> Donate
+        </button>
       </div>
     </>
   );
