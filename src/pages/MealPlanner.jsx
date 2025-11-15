@@ -1,5 +1,5 @@
 // src/pages/MealPlanner.jsx
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import InventoryList from "../component/InventoryList";
 import MealActionModal from "../component/MealActionModal";
@@ -13,10 +13,32 @@ export default function MealPlanner() {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // Get user ID from localStorage or use default for development
-  const [userID] = useState(() => {
-    return localStorage.getItem('userID') || 'U2';
+  // Get user ID from session (preferred) or localStorage fallback
+  const [userID, setUserID] = useState(() => {
+    return localStorage.getItem('userID') || null;
   });
+
+  // Try to resolve session user on mount and update userID
+  useEffect(() => {
+    let mounted = true;
+    async function resolveSession() {
+      try {
+        const resp = await fetch('/api/session.php', { credentials: 'include' });
+        const data = await resp.json();
+        if (!mounted) return;
+        if (data.ok && data.user) {
+          const id = data.user.id || data.user.userID || data.userID || null;
+          if (id) setUserID(id);
+        }
+      } catch (err) {
+        // ignore — we'll use localStorage fallback if present
+        console.debug('Session fetch failed, using localStorage if available');
+      }
+    }
+
+    resolveSession();
+    return () => { mounted = false; };
+  }, []);
 
   const [mealPlanByWeek, setMealPlanByWeek] = useState({});
   const [weekOffset, setWeekOffset] = useState(0);
@@ -114,6 +136,15 @@ export default function MealPlanner() {
 
   // Fetch week's meals
   const fetchWeek = useCallback(async () => {
+    // start loading indicator and record timestamp so we can ensure
+    // the loading UI stays visible for a short minimum duration to
+    // avoid a flicker when the request completes very quickly.
+    const MIN_LOADING_MS = 300;
+    if (loadingTimeoutRef.current) {
+      clearTimeout(loadingTimeoutRef.current);
+      loadingTimeoutRef.current = null;
+    }
+    loadingStartRef.current = Date.now();
     setIsLoading(true);
     try {
       const weekStart = getWeekStartString(weekOffset);
@@ -155,9 +186,19 @@ export default function MealPlanner() {
     } catch (e) {
       console.error("❌ Meal load error:", e);
     } finally {
-      setIsLoading(false);
+      const elapsed = Date.now() - (loadingStartRef.current || 0);
+      const remaining = Math.max(0, MIN_LOADING_MS - elapsed);
+      // ensure we don't clear an earlier timeout
+      loadingTimeoutRef.current = setTimeout(() => {
+        setIsLoading(false);
+        loadingTimeoutRef.current = null;
+      }, remaining);
     }
   }, [userID, weekOffset, getWeekStartString, createEmptyWeekPlan]);
+
+  // refs for managing the loading minimum duration timer
+  const loadingStartRef = useRef(null);
+  const loadingTimeoutRef = useRef(null);
 
   // Handle clicking on a meal cell
   const handleMealClick = useCallback((day, type) => {
@@ -367,8 +408,14 @@ export default function MealPlanner() {
   // When returning from RecipeList → jump to correct saved week and refresh data
   useEffect(() => {
     if (location.state?.refreshDate) {
-      const target = new Date(location.state.refreshDate);
+      // Parse YYYY-MM-DD as LOCAL date to avoid UTC parsing issues
+      const parts = String(location.state.refreshDate).split('-').map(Number);
+      // parts = [year, month, day]
+      const target = parts.length === 3 ? new Date(parts[0], parts[1] - 1, parts[2]) : new Date(location.state.refreshDate);
       const todayWeekStart = getStartOfWeek(0);
+      // Normalize both dates to local midnight to avoid timezone/time-of-day offsets
+      target.setHours(0,0,0,0);
+      todayWeekStart.setHours(0,0,0,0);
       const diff = Math.floor((target - todayWeekStart) / 86400000);
       const offset = Math.floor(diff / 7);
 
@@ -422,61 +469,68 @@ export default function MealPlanner() {
               <button onClick={() => setWeekOffset(weekOffset + 1)}>Next ➡</button>
             </div>
 
-            {isLoading ? (
-              <div className="loading-container">
-                <div className="spinner"></div>
-                <p>Loading meal plan...</p>
-              </div>
-            ) : (
-              <AnimatePresence mode="wait">
-                <motion.table
-                  key={weekOffset}
-                  className="meal-table"
-                  initial={{ opacity: 0, x: weekOffset > 0 ? 80 : -80 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: weekOffset > 0 ? -80 : 80 }}
-                  transition={{ duration: 0.25, ease: "easeOut" }}
+            <AnimatePresence mode="wait">
+              <motion.table
+                key={weekOffset}
+                className="meal-table"
+                initial={{ opacity: 1 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 1 }}
+              >
+                <thead>
+                  <tr>
+                    <th>MEAL</th>
+                    {meals.map(m => <th key={m}>{m.toUpperCase()}</th>)}
+                  </tr>
+                </thead>
+
+                <motion.tbody
+                  initial="hidden"
+                  animate="visible"
+                  exit="hidden"
+                  variants={{
+                    visible: { transition: { staggerChildren: 0.1, delayChildren: 0.1 } },
+                    hidden: { transition: { staggerChildren: 0.05, staggerDirection: -1 } }
+                  }}
                 >
-                  <thead>
-                    <tr>
-                      <th>MEAL</th>
-                      {meals.map(m => <th key={m}>{m.toUpperCase()}</th>)}
-                    </tr>
-                  </thead>
+                  {weekDays.map(d => (
+                    <motion.tr
+                      key={d.day}
+                      variants={{
+                        visible: { opacity: 1, x: 0 },
+                        hidden: { opacity: 0, x: weekOffset > 0 ? 50 : -50 }
+                      }}
+                      transition={{ duration: 0.3, ease: "easeOut" }}
+                    >
+                      <td className="day-col">
+                        {d.day}
+                        <br />
+                        <span className="date-text">{d.date}</span>
+                      </td>
 
-                  <tbody>
-                    {weekDays.map(d => (
-                      <tr key={d.day}>
-                        <td className="day-col">
-                          {d.day}
-                          <br />
-                          <span className="date-text">{d.date}</span>
+                      {meals.map(m => (
+                        <td
+                          key={m}
+                          className={`meal-cell ${mealPlan[d.day][m].status === 'completed' ? 'completed-meal' : ''}`}
+                          onClick={() => handleMealClick(d.day, m)}
+                        >
+                          {mealPlan[d.day][m].name ? (
+                            <span className="meal-filled">
+                              {mealPlan[d.day][m].status === 'completed' && (
+                                <span className="checkmark">✓</span>
+                              )}
+                              {mealPlan[d.day][m].name}
+                            </span>
+                          ) : (
+                            <span className="meal-add">+</span>
+                          )}
                         </td>
-
-                        {meals.map(m => (
-                          <td
-                            key={m}
-                            className={`meal-cell ${mealPlan[d.day][m].status === 'completed' ? 'completed-meal' : ''}`}
-                            onClick={() => handleMealClick(d.day, m)}
-                          >
-                            {mealPlan[d.day][m].name ? (
-                              <span className="meal-filled">
-                                {mealPlan[d.day][m].status === 'completed' && (
-                                  <span className="checkmark">✓</span>
-                                )}
-                                {mealPlan[d.day][m].name}
-                              </span>
-                            ) : (
-                              <span className="meal-add">+</span>
-                            )}
-                          </td>
-                        ))}
-                      </tr>
-                    ))}
-                  </tbody>
-                </motion.table>
-              </AnimatePresence>
-            )}
+                      ))}
+                    </motion.tr>
+                  ))}
+                </motion.tbody>
+              </motion.table>
+            </AnimatePresence>
 
           </div>
 

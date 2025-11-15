@@ -11,11 +11,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 
 require_once __DIR__ . '/../config.php';
 
- $in = json_decode(file_get_contents('php://input'), true);
-if (!is_array($in)) $in = $_POST;
+ $in = json_input();
 
- $userID = $in['userID'] ?? 'U2';
+// Prefer user ID from session if available, fall back to provided payload
+ $userID = $_SESSION['user']['id'] ?? $_SESSION['userID'] ?? $in['userID'] ?? null;
  $weekStart = $in['weekStart'] ?? null;
+
+if (!$userID) respond(['ok' => false, 'error' => 'Missing userID (not logged in)'], 401);
 
 // Add debug logging
 error_log("LOAD: userID=$userID, weekStart=$weekStart");

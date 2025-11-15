@@ -12,6 +12,7 @@ try {
             r.instruction,
             r.serving,
             r.isGeneric,
+            r.createdBy,
             (
                 SELECT GROUP_CONCAT(i.ingredientName SEPARATOR ', ')
                 FROM recipe_ingredients ri

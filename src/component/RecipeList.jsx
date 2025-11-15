@@ -10,10 +10,27 @@ export default function RecipeList() {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // Get user ID from localStorage or use default for development
-  const [userID] = useState(() => {
-    return localStorage.getItem('userID') || 'U2';
-  });
+  // Get user ID from session (preferred) or localStorage fallback
+  const [userID, setUserID] = useState(() => localStorage.getItem('userID') || null);
+
+  useEffect(() => {
+    let mounted = true;
+    async function resolveSession() {
+      try {
+        const resp = await fetch('/api/session.php', { credentials: 'include' });
+        const data = await resp.json();
+        if (!mounted) return;
+        if (data.ok && data.user) {
+          const id = data.user.id || data.user.userID || data.userID || null;
+          if (id) setUserID(id);
+        }
+      } catch (err) {
+        console.debug('Session fetch failed, using localStorage if available');
+      }
+    }
+    resolveSession();
+    return () => { mounted = false; };
+  }, []);
 
   // Get day/type/weekOffset sent from MealPlanner.jsx
   const { day, type, weekOffset, isReplan, mealEntryID } = location.state || {};
@@ -107,6 +124,7 @@ export default function RecipeList() {
     );
 
     // Filter suggested recipes based on available inventory (not reserved)
+    // Only include recipes that are either generic or created by the current user
     const suggested = recipesWithIngredients.filter(r => {
       if (!r.ingredients || r.ingredients.length === 0) {
         return false;
@@ -125,7 +143,11 @@ export default function RecipeList() {
         return availableQuantity >= Number(ingredient.quantityNeeded);
       });
       
-      return hasAllIngredients;
+      // Only consider this recipe if it's a generic recipe OR it was created by the current user
+      const isGeneric = Number(r.isGeneric) === 1;
+      const isUserCreated = r.createdBy && userID && String(r.createdBy) === String(userID);
+
+      return hasAllIngredients && (isGeneric || isUserCreated);
     });
     
     setSuggestedRecipes(suggested);
@@ -136,9 +158,9 @@ export default function RecipeList() {
     
     // Set saved custom meals (user-created non-generic)
     setSavedCustomMeals(
-      recipesWithIngredients.filter(r => Number(r.isGeneric) === 0 && r.recipeID.startsWith("R"))
+      recipesWithIngredients.filter(r => Number(r.isGeneric) === 0 && r.recipeID.startsWith("R") && r.createdBy === userID)
     );
-  }, []);
+  }, [userID]);
 
   // Initialize data
   useEffect(() => {
@@ -152,13 +174,13 @@ export default function RecipeList() {
         
         if (inventoryData.length > 0) {
           processRecipes(recipesData, inventoryData);
-        } else {
+          } else {
           // If no inventory, just categorize recipes
           setSuggestedRecipes([]);
           setShowSuggestedSection(false);
           setGenericRecipes(recipesData.filter(r => Number(r.isGeneric) === 1));
           setSavedCustomMeals(
-            recipesData.filter(r => Number(r.isGeneric) === 0 && r.recipeID.startsWith("R"))
+            recipesData.filter(r => Number(r.isGeneric) === 0 && r.recipeID.startsWith("R") && r.createdBy === userID)
           );
         }
       } catch (err) {
@@ -338,12 +360,6 @@ export default function RecipeList() {
                 <div className="recipe-grid">
                   {suggestedRecipes.map((r) => (
                     <div key={r.recipeID} className="recipe-card">
-                      <img
-                        src={r.image || "/default-food.png"}
-                        alt={r.recipeName}
-                        className="recipe-img"
-                      />
-
                       <div className="recipe-info">
                         <h3>{r.recipeName}</h3>
                         <p className="ingredients">
@@ -365,12 +381,6 @@ export default function RecipeList() {
               <div className="recipe-grid">
                 {genericRecipes.map((r) => (
                   <div key={r.recipeID} className="recipe-card">
-                    <img
-                      src={r.image || "/default-food.png"}
-                      alt={r.recipeName}
-                      className="recipe-img"
-                    />
-
                     <div className="recipe-info">
                       <h3>{r.recipeName}</h3>
                       <p className="ingredients">
@@ -400,12 +410,6 @@ export default function RecipeList() {
                 <div className="recipe-grid">
                   {savedCustomMeals.map((r) => (
                     <div key={r.recipeID} className="recipe-card">
-                      <img
-                        src={r.image || "/default-food.png"}
-                        alt={r.recipeName}
-                        className="recipe-img"
-                      />
-
                       <div className="recipe-info">
                         <h3>{r.recipeName}</h3>
                         <p className="ingredients">

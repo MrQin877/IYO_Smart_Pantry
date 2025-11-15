@@ -11,26 +11,24 @@
 .mealplanner-container {
   display: flex;
   justify-content: center;
-  align-items: flex-start;
-  margin-top: 40px;
+  width: 100%;
+  padding: 20px 0;
   font-family: "Poppins", sans-serif;
-  min-height: calc(100vh - 80px);
-  padding: 20px;
 }
 
 /* --- Main Card --- */
 .mealplanner-card {
-  display: flex;
-  flex-direction: column;   /* ✅ Make card vertical */
-  align-items: stretch; /* ensures divider fills height */
+  width: 90vw;
+  max-width: 1200px;
+  min-height: 600px;
+  margin: 0px auto;
   background: #fff;
   border-radius: var(--radius-xl);
   box-shadow: var(--shadow);
   padding: 24px;
-  width: 100%;
-  max-width: 1150px;
-  min-height: 520px;
-  gap: 0; /* we'll control spacing via divider */
+  display: flex;
+  flex-direction: column;
+  gap: 0;
 }
 
 
@@ -66,7 +64,7 @@
   padding: 12px;
   color: var(--ink);
   font-size: 13px;
-  height: 50px;
+  height: 70px;
   width: 20%; /* 5 equal columns (100% / 5) */
 }
 

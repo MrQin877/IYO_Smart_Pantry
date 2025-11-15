@@ -13,15 +13,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 require_once __DIR__ . '/../config.php';
 require_once __DIR__ . '/../services/MealPlanningService.php';
 
- $in = json_decode(file_get_contents('php://input'), true);
-if (!is_array($in)) respond(['ok' => false, 'error' => 'Bad JSON'], 400);
+ $in = json_input();
 
 // Required fields: recipeID (opt), mealDate (YYYY-MM-DD), mealTypeID, mealName (opt), userID
  $recipeID   = $in['recipeID']   ?? null;
  $mealDate   = $in['mealDate']   ?? null;
  $mealTypeID = $in['mealTypeID'] ?? null;
  $mealName   = $in['mealName']   ?? null;
- $userID     = $in['userID']     ?? 'U2'; // fallback to U2 for dev/testing
+ // Prefer session user ID, then payload
+ $userID     = $_SESSION['user']['id'] ?? $_SESSION['userID'] ?? $in['userID'] ?? null;
+
+if (!$userID) respond(['ok' => false, 'error' => 'Missing userID (not logged in)'], 401);
 
 error_log("SAVE: userID=$userID, mealDate=$mealDate, mealTypeID=$mealTypeID, recipeID=$recipeID");
 

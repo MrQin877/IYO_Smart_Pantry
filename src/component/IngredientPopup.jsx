@@ -8,7 +8,7 @@ export default function IngredientPopup({ onClose, onAdd }) {
 
   // 🧩 Fetch inventory
   useEffect(() => {
-    fetch("http://localhost/IYO_Smart_Pantry/api/get_inventory.php?userID=U2")
+    fetch("/api/get_inventory.php", { credentials: 'include' })
       .then((res) => res.json())
       .then((data) => {
         if (data.success && Array.isArray(data.data)) {

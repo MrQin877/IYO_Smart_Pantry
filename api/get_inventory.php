@@ -5,10 +5,10 @@ header("Content-Type: application/json");
 require_once __DIR__ . '/config.php';
 global $pdo;
 
-// Get userID from request
-$userID = $_GET['userID'] ?? null;
+// Get userID from request or session
+$userID = $_GET['userID'] ?? $_SESSION['user']['id'] ?? $_SESSION['userID'] ?? null;
 if (!$userID) {
-  respond(['success' => false, 'message' => 'Missing userID']);
+  respond(['success' => false, 'message' => 'Missing userID (not logged in)'], 401);
 }
 
 try {

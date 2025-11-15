@@ -7,7 +7,10 @@ try {
 
     $recipeID = $data['recipeID'] ?? null;
     $ingredients = $data['ingredients'] ?? [];
-    $userID = $data['userID'] ?? 'U2';
+    // prefer session user ID
+    $userID = $_SESSION['user']['id'] ?? $_SESSION['userID'] ?? $data['userID'] ?? null;
+
+    if (!$userID) respond(['success' => false, 'message' => 'Missing userID (not logged in)'], 401);
 
     if (empty($recipeID) || empty($ingredients)) {
         respond(['success' => false, 'message' => 'Missing recipe or ingredients.'], 400);
