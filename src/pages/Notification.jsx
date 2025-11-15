@@ -17,7 +17,7 @@ import "./Notification.css";
 
 // type filter options
 const CATEGORY_FILTERS = [
-  { value: "all",       label: "All types" },
+  { value: "all",       label: "All" },
   { value: "Inventory", label: "Inventory" },
   { value: "Expiry",    label: "Expiry" },
   { value: "MealPlan",  label: "Meal Plan" },
