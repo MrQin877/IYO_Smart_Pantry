@@ -487,6 +487,14 @@ const FoodAnalytics = () => {
     return labels[filters.timeRange] || 'Unknown Range';
   };
 
+  // Helper function to get chart subtitle
+  const getChartSubtitle = () => {
+    if (filters.timeRange === 'thismonth' || filters.timeRange === 'lastmonth') {
+      return dateRange.monthLabel || '';
+    }
+    return '';
+  };
+
   useEffect(() => {
     const fetchAnalyticsData = async () => {
       setLoading(true);
@@ -757,8 +765,20 @@ const FoodAnalytics = () => {
           transition={{ delay: 0.6 }}
         >
           <div className="chart-header">
-            <BarChart3 size={20} />
-            <h3 className="chart-title">Food Status Overview</h3>
+            <TrendingUp size={20} />
+            <div>
+              <h3 className="chart-title">Food Status Overview</h3>
+              {getChartSubtitle() && (
+                <p style={{ 
+                  fontSize: '13px', 
+                  color: '#718096', 
+                  margin: '4px 0 0 0',
+                  fontWeight: 'normal'
+                }}>
+                  {getChartSubtitle()}
+                </p>
+              )}
+            </div>
           </div>
           {statusOverview.length === 0 ? (
             <div style={{ padding: '60px', textAlign: 'center', color: '#718096' }}>
@@ -795,7 +815,19 @@ const FoodAnalytics = () => {
         >
           <div className="chart-header">
             <AlertCircle size={20} />
-            <h3 className="chart-title">Expiring Soon</h3>
+            <div>
+              <h3 className="chart-title">Expiring Soon</h3>
+              {getChartSubtitle() && (
+                <p style={{ 
+                  fontSize: '13px', 
+                  color: '#718096', 
+                  margin: '4px 0 0 0',
+                  fontWeight: 'normal'
+                }}>
+                  {getChartSubtitle()}
+                </p>
+              )}
+            </div>
           </div>
           {expiringSoon.length === 0 ? (
             <div style={{ padding: '40px', textAlign: 'center', color: '#718096' }}>
@@ -843,7 +875,19 @@ const FoodAnalytics = () => {
       >
         <div className="chart-header">
           <TrendingUp size={20} />
-          <h3 className="chart-title">Food Saved and Food Waste Overview</h3>
+          <div>
+            <h3 className="chart-title">Food Saved and Food Waste Overview</h3>
+            {getChartSubtitle() && (
+              <p style={{ 
+                fontSize: '13px', 
+                color: '#718096', 
+                margin: '4px 0 0 0',
+                fontWeight: 'normal'
+              }}>
+                {getChartSubtitle()}
+              </p>
+            )}
+          </div>
         </div>
         {savedVsWaste.length === 0 ? (
           <div style={{ padding: '60px', textAlign: 'center', color: '#718096' }}>

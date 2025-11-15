@@ -184,8 +184,9 @@ try {
                 // Generate all days in the range
                 while ($start <= $end) {
                     $labels[] = [
-                        'label' => $start->format('d M'),
+                        'label' => $start->format('d'),
                         'date' => $start->format('Y-m-d'),
+                        'fullLabel' => $start->format('d M'),
                         'saved' => 0,
                         'wasted' => 0
                     ];
@@ -514,7 +515,8 @@ try {
         'savedVsWaste' => $savedVsWaste,
         'dateRange' => [
             'startDate' => $startDate,
-            'endDate' => $endDate
+            'endDate' => $endDate,
+            'monthLabel' => (new DateTime($startDate))->format('F Y')
         ],
         'appliedFilters' => [
             'categoryID' => $categoryID,
