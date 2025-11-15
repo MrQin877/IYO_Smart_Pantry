@@ -503,11 +503,13 @@ try {
             'totalDonated' => round($totalDonated, 2),
             'totalUsed' => round($totalUsed, 2),
         ],
-        'statusOverview' => [
+        'statusOverview' => array_values(array_filter([
             ['name' => 'Used', 'value' => round($totalUsed, 2), 'color' => '#7FA34B'],
             ['name' => 'Donated', 'value' => round($totalDonated, 2), 'color' => '#F5A962'],
             ['name' => 'Wasted', 'value' => round($totalWasted, 2), 'color' => '#E85D75']
-        ],
+        ], function($item) {
+            return $item['value'] > 0; // Only include items with value > 0
+        })),
         'expiringSoon' => $expiringSoon,
         'savedVsWaste' => $savedVsWaste,
         'dateRange' => [
