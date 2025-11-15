@@ -1,4 +1,5 @@
 import "./InventoryList.css";
+import { Calendar, Clock } from "lucide-react";
 
 export default function InventoryList({ inventory }) {
 
@@ -10,43 +11,77 @@ export default function InventoryList({ inventory }) {
     return diff;
   }
 
+  // Function to check if an item is expiring soon (within 3 days)
+  const isExpiringSoon = (expiryDate) => {
+    const daysLeft = getExpiryStatus(expiryDate);
+    return daysLeft <= 3 && daysLeft >= 0;
+  };
+
   return (
     <div className="inventory-container">
       <h3 className="inventory-title">Current Inventory</h3>
-      <table className="inventory-table">
-        <thead>
-          <tr>
-            <th>Name</th>
-            <th>Quantity</th>
-            <th>Expiry date</th>
-          </tr>
-        </thead>
-        <tbody>
-          {inventory.map((item, idx) => {
-            const daysLeft = getExpiryStatus(item.expiryDate);
+      <div className="inventory-table-container">
+        <table className="inventory-table">
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Quantity</th>
+              <th>Expiry date</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {inventory.map((item, idx) => {
+              const daysLeft = getExpiryStatus(item.expiryDate);
+              const isPlanned = item.is_plan === 1;
+              const isExpiring = isExpiringSoon(item.expiryDate);
 
-            let rowClass = "";
-            if (item.is_plan == 1) rowClass = "highlight-plan";
-            if (daysLeft <= 3) rowClass = "highlight-expiring"; // red warning
+              let rowClass = "";
+              if (isPlanned) rowClass = "highlight-plan";
+              if (isExpiring) rowClass += " expiring-row";
 
-            return (
-              <tr key={idx} className={rowClass}>
-                <td>{item.foodName}</td>
-                <td>{item.quantity} {item.unit}</td>
-                <td className="expiry-cell">
-                  <div>{item.expiryDate}</div>
+              return (
+                <tr key={idx} className={rowClass}>
+                  <td>{item.foodName}</td>
+                  <td>{item.quantity} {item.unit}</td>
+                  <td className="expiry-cell">
+                    <div>{item.expiryDate}</div>
 
-                  {daysLeft <= 7 && (
-                    <div className="expiry-warning-row pulse">
-                      ⚠ {daysLeft} day{daysLeft !== 1 ? "s" : ""} left
-                    </div>
-                  )}
-                </td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
+                    {daysLeft <= 7 && (
+                      <div className="expiry-warning-row pulse">
+                        ⚠ {daysLeft} day{daysLeft !== 1 ? "s" : ""} left
+                      </div>
+                    )}
+                  </td>
+                  <td className="status-cell">
+                    {isPlanned && (
+                      <div className="status-badge planned">
+                        <Calendar size={12} />
+                        <span>Planned</span>
+                      </div>
+                    )}
+                    {isExpiring && (
+                      <div className="status-badge expiring">
+                        <Clock size={12} />
+                        <span>
+                          {daysLeft === 0 ? "Expires today" : 
+                           daysLeft === 1 ? "Expires tomorrow" : 
+                           `Expires in ${daysLeft} days`}
+                        </span>
+                      </div>
+                    )}
+                    {!isPlanned && !isExpiring && (
+                      <div className="status-badge available">
+                        <span>Available</span>
+                      </div>
+                    )}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }

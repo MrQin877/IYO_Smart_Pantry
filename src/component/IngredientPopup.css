@@ -58,21 +58,21 @@
   background: #b2c1ae;
 }
 
-/* Each item card */
+/* Each item card - grid so name, qty/unit and bullet align consistently */
 .inventory-item {
-  display: flex;
-  justify-content: space-between;
+  display: grid;
+  grid-template-columns: 1fr 160px 20px; /* name | qty+unit | bullet(right) */
   align-items: center;
   background: #ffffff;
   border-radius: 14px;
-  padding: 15px 16px;
+  padding: 12px 14px;
   cursor: pointer;
   border: 1.5px solid #dde8d2;
   transition: all 0.3s ease; /* smoother animation */
   font-size: 14.5px;
   color: #2e4b33;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
-  margin-top: 3px;
+  margin-top: 6px;
 }
 
 .inventory-item:hover {
@@ -84,12 +84,33 @@
   background: linear-gradient(135deg, #eaf3e0, #f5faf0);
   border-color: #7da27d;
   box-shadow: 0 0 10px rgba(125, 162, 125, 0.3);
-  transition: background 0.4s ease, box-shadow 0.4s ease, border-color 0.4s ease;
 }
 
 /* When hovering a selected one, gently increase glow */
 .inventory-item.selected:hover {
   box-shadow: 0 0 14px rgba(125, 162, 125, 0.4);
+}
+
+/* custom bullet positioned on the right */
+.ingredient-bullet {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #cfdacb;
+  margin-left: 22px;
+  justify-self: end;
+  transition: transform .12s ease, background-color .12s ease;
+}
+
+.inventory-item.selected .ingredient-bullet {
+  background: #2e7d32;
+  transform: scale(1.08);
+}
+
+/* when unavailable (zero total), dim and disable selection */
+.inventory-item.unavailable {
+  opacity: 0.55;
+  cursor: not-allowed;
 }
 
 /* Smooth animation between states */
@@ -105,6 +126,11 @@
   align-items: center;
   gap: 6px;
   flex-shrink: 0;
+}
+
+/* center qty+unit inside the middle grid column so header aligns with values */
+.qty-section {
+  justify-content: center;
 }
 
 .qty-input {
@@ -232,7 +258,7 @@
 /* Header row styling */
 .inventory-header {
   display: grid;
-  grid-template-columns: 2fr 2.7fr 1fr; /* slightly closer between qty and unit */
+  grid-template-columns: 1fr 160px 20px; /* name | qty+unit | bullet */
   align-items: center;
   background: #eef4e7;
   border-radius: 10px;
@@ -250,13 +276,75 @@
   padding-left: 6px;
 }
 
+.header-qtyunit {
+  display: flex;
+  justify-content: center; /* center the labels over the inputs */
+  gap: 10px;
+  align-items: center;
+}
+
 .header-qty {
-  text-align: right;
-  padding-right: 0px; /* reduced from 16px to move closer to unit */
+  text-align: center;
+  width: 60px; /* match .qty-input width */
 }
 
 .header-unit {
-  text-align: right;
-  padding-right: 25px; /* keep same for perfect alignment */
+  text-align: center;
+  min-width: 68px; /* match .fixed-unit min-width */
 }
+
+/* small responsive adjustments keep header aligned with inputs */
+@media (max-width: 10px) {
+  .header-qty {
+    width: 50px;
+  }
+  .header-unit {
+    min-width: 60px;
+  }
+}
+
+.header-bullet {
+  justify-self: end;
+}
+
+/* ⚠ Warning text style beside name */
+.expiry-warning-row {
+  font-size: 11px;
+  color: #d9534f;
+  font-weight: 600;
+  margin-left: 6px;
+  transform: translateY(-3px); /* move text slightly up */
+}
+
+/* 🔄 Smooth Pulse animation */
+.pulse {
+  animation: pulseAnim 2.4s ease-in-out infinite;
+}
+
+@keyframes pulseAnim {
+  0% {
+    opacity: 1;
+    transform: scale(1);
+    text-shadow: 0 0 0px rgba(217, 83, 79, 0.4);
+  }
+  50% {
+    opacity: 0.75;
+    transform: scale(1.05);
+    text-shadow: 0 0 6px rgba(217, 83, 79, 0.7);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+    text-shadow: 0 0 0px rgba(217, 83, 79, 0.4);
+  }
+}
+
+/* Align item name + warning neatly */
+.ingredient-name-wrapper {
+  display: flex;
+  align-items: baseline; /* keep warning text aligned nicely */
+  gap: 6px;
+}
+
+
 
