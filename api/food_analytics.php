@@ -420,50 +420,51 @@ try {
     $expiringSoon = $stmtExpiring->fetchAll(PDO::FETCH_ASSOC);
 
     // ========== QUERY 5: Wasted by Date/Month ==========
-    if (in_array($timeRange, ['thisweek', 'lastweek', 'thismonth', 'lastmonth'])) {
-        $stmtWastedTrend = $pdo->prepare("
-            SELECT 
-                DATE(f.expiryDate) AS date,
-                COALESCE(SUM(f.quantity), 0) AS wasted
-            FROM foods f
-            WHERE f.userID = :userID
-              AND f.expiryDate < CURDATE()
-              AND f.quantity > 0
-              AND f.expiryDate BETWEEN :startDate AND :endDate
-              AND (:categoryID1 = 'all' OR f.categoryID = :categoryID2)
-            GROUP BY DATE(f.expiryDate)
-        ");
-    } else {
-        $stmtWastedTrend = $pdo->prepare("
-            SELECT 
-                DATE_FORMAT(f.expiryDate, '%Y-%m') AS month,
-                COALESCE(SUM(f.quantity), 0) AS wasted
-            FROM foods f
-            WHERE f.userID = :userID
-              AND f.expiryDate < CURDATE()
-              AND f.quantity > 0
-              AND f.expiryDate BETWEEN :startDate AND :endDate
-              AND (:categoryID1 = 'all' OR f.categoryID = :categoryID2)
-            GROUP BY DATE_FORMAT(f.expiryDate, '%Y-%m')
-        ");
-    }
+    // ========== QUERY 5: Wasted by Date/Month ==========
+    // NEW APPROACH: Get all wasted items and distribute them across the date range
+    $stmtAllWasted = $pdo->prepare("
+        SELECT 
+            f.foodID,
+            f.quantity,
+            DATE(f.expiryDate) AS expiryDate
+        FROM foods f
+        WHERE f.userID = :userID
+          AND f.expiryDate < CURDATE()
+          AND f.quantity > 0
+          AND f.expiryDate <= :endDate
+          AND (:categoryID1 = 'all' OR f.categoryID = :categoryID2)
+    ");
     
-    $stmtWastedTrend->execute([
+    $stmtAllWasted->execute([
         'userID' => $userID,
-        'startDate' => $startDate,
         'endDate' => $endDate,
         'categoryID1' => $categoryID,
         'categoryID2' => $categoryID
     ]);
-    $wastedTrend = $stmtWastedTrend->fetchAll(PDO::FETCH_ASSOC);
+    $allWastedItems = $stmtAllWasted->fetchAll(PDO::FETCH_ASSOC);
 
     $wastedByDate = [];
     $wastedByMonth = [];
-    foreach ($wastedTrend as $row) {
-        if (isset($row['date'])) {
-            $wastedByDate[$row['date']] = floatval($row['wasted']);
-        } else if (isset($row['month'])) {
-            $wastedByMonth[$row['month']] = floatval($row['wasted']);
+    
+    // Distribute wasted items to their expiry dates
+    foreach ($allWastedItems as $item) {
+        $expiryDate = $item['expiryDate'];
+        $quantity = floatval($item['quantity']);
+        
+        // Check if expiry date falls within our date range
+        if ($expiryDate >= $startDate && $expiryDate <= $endDate) {
+            // Add to daily tracking
+            if (!isset($wastedByDate[$expiryDate])) {
+                $wastedByDate[$expiryDate] = 0;
+            }
+            $wastedByDate[$expiryDate] += $quantity;
+            
+            // Add to monthly tracking
+            $month = date('Y-m', strtotime($expiryDate));
+            if (!isset($wastedByMonth[$month])) {
+                $wastedByMonth[$month] = 0;
+            }
+            $wastedByMonth[$month] += $quantity;
         }
     }
 
