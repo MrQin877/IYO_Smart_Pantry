@@ -111,7 +111,23 @@
   margin-left:8px; font-size:10px; font-weight:800;
   background:var(--brand); color:#fff; padding:3px 8px; border-radius:999px;
 }
-.noti-desc{ margin:.6rem 0 0; color:var(--ink-dim); }
+
+/* Notification list: truncate long message line */
+.noti-desc {
+  margin: .6rem 0 0;
+  color: var(--ink-dim);
+  font-size: 14px;
+  line-height: 1.4;
+
+  /* force a readable width so long address will cut */
+  max-width: 60ch;           /* around 60 characters; adjust if you want */
+
+  white-space: nowrap;       /* single line only */
+  overflow: hidden;
+  text-overflow: ellipsis;   /* show "..." at the end */
+}
+
+
 .noti-row-top{ display:flex; align-items:flex-start; justify-content:space-between; gap:16px; }
 .noti-time{ color:var(--ink-mute); font-size:12px; display:inline-flex; align-items:center; gap:6px; }
 .noti-row-bottom{ margin-top:10px; display:flex; align-items:center; justify-content:space-between; }
