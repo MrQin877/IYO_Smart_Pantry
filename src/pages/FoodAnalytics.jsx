@@ -26,6 +26,424 @@ import {
 import FoodAnalyticsFilter from '../component/FoodAnalyticsFilter.jsx';
 import './FoodAnalytics.css';
 
+// Cute Empty State Component
+const CuteEmptyState = ({ filters }) => {
+  const [isHovered, setIsHovered] = useState(false);
+  const [isShaking, setIsShaking] = useState(false);
+
+  const handleClick = () => {
+    setIsShaking(true);
+    setTimeout(() => setIsShaking(false), 500);
+  };
+
+  // Falling leaves animation
+  const leaves = Array.from({ length: 5 }, (_, i) => ({
+    id: i,
+    delay: i * 1.5,
+    x: Math.random() * 100 - 50,
+  }));
+
+  return (
+    <div style={{
+      position: 'relative',
+      minHeight: '500px',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      overflow: 'hidden',
+      padding: '40px',
+      borderRadius: '24px',
+      margin: '20px 0'
+    }}>
+      {/* Falling Leaves */}
+      <AnimatePresence>
+        {leaves.map((leaf) => (
+          <motion.div
+            key={leaf.id}
+            initial={{ 
+              y: -100, 
+              x: leaf.x, 
+              opacity: 0,
+              rotate: 0 
+            }}
+            animate={{ 
+              y: 600,
+              x: leaf.x + Math.sin(leaf.delay) * 30,
+              opacity: [0, 0.5, 0.5, 0],
+              rotate: [0, 360, 720]
+            }}
+            transition={{
+              duration: 4,
+              delay: leaf.delay,
+              repeat: Infinity,
+              ease: "linear"
+            }}
+            style={{
+              position: 'absolute',
+              top: 0,
+              left: '50%',
+              fontSize: '24px',
+              pointerEvents: 'none',
+              zIndex: 1
+            }}
+          >
+            🍃
+          </motion.div>
+        ))}
+      </AnimatePresence>
+
+      {/* Main Content */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.6 }}
+        style={{
+          textAlign: 'center',
+          position: 'relative',
+          zIndex: 2
+        }}
+      >
+        {/* Cute Face with Color Change */}
+        <motion.div
+          onMouseEnter={() => setIsHovered(true)}
+          onMouseLeave={() => setIsHovered(false)}
+          onClick={handleClick}
+          animate={isShaking ? {
+            rotate: [0, -10, 10, -10, 10, 0],
+            transition: { duration: 0.5 }
+          } : {}}
+          whileHover={{ scale: 1.1 }}
+          whileTap={{ scale: 0.95 }}
+          style={{
+            cursor: 'pointer',
+            display: 'inline-block',
+            position: 'relative',
+            marginBottom: '30px'
+          }}
+        >
+          {/* Face Circle - Pink to Green */}
+          <motion.div
+            animate={{
+              background: isHovered 
+                ? 'linear-gradient(135deg, #b4d17d89 0%, #95b2709c 100%)'
+                : 'linear-gradient(135deg, #ffcccc 0%, #ffb3b3 100%)'
+            }}
+            transition={{ duration: 0.5 }}
+            style={{
+              width: '160px',
+              height: '160px',
+              borderRadius: '50%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              position: 'relative',
+              boxShadow: isHovered 
+                ? '0 10px 40px rgba(127, 163, 75, 0.3)'
+                : '0 10px 40px rgba(255, 179, 179, 0.3)',
+            }}
+          >
+            {/* Eyes - Blink on hover */}
+            <div style={{
+              display: 'flex',
+              gap: '30px',
+              marginBottom: '10px',
+              position: 'relative',
+              zIndex: 10
+            }}>
+              <motion.div
+                animate={{
+                  backgroundColor: isHovered ? '#4a7c3f' : '#cc6666',
+                  scaleY: isHovered ? [1, 0.2, 1] : 1
+                }}
+                transition={{ 
+                  backgroundColor: { duration: 0.3 },
+                  scaleY: { duration: 0.3, times: [0, 0.5, 1] }
+                }}
+                style={{
+                  width: '16px',
+                  height: '16px',
+                  borderRadius: '50%',
+                }}
+              />
+              <motion.div
+                animate={{
+                  backgroundColor: isHovered ? '#4a7c3f' : '#cc6666',
+                  scaleY: isHovered ? [1, 0.2, 1] : 1
+                }}
+                transition={{ 
+                  backgroundColor: { duration: 0.3 },
+                  scaleY: { duration: 0.3, times: [0, 0.5, 1] }
+                }}
+                style={{
+                  width: '16px',
+                  height: '16px',
+                  borderRadius: '50%',
+                }}
+              />
+            </div>
+
+            {/* Mouth - Sad to Happy */}
+            <motion.div
+              style={{
+                position: 'absolute',
+                bottom: '35px',
+                left: '50%',
+                transform: 'translateX(-50%)',
+              }}
+            >
+              <svg width="60" height="40" viewBox="0 0 80 40">
+                <motion.path
+                  animate={{
+                    d: isHovered ? 'M 20 20 Q 40 35 60 20' : 'M 20 20 Q 40 5 60 20',
+                    stroke: isHovered ? '#4a7c3f' : '#cc6666'
+                  }}
+                  transition={{ duration: 0.3 }}
+                  strokeWidth="4"
+                  fill="none"
+                  strokeLinecap="round"
+                />
+              </svg>
+            </motion.div>
+
+            {/* Tears - Only show when NOT hovered (sad) */}
+            {!isHovered && (
+              <>
+                {/* Left tear */}
+                <motion.div
+                  key="left-tear"
+                  initial={{ y: 0, opacity: 1 }}
+                  animate={{ y: [0, 80], opacity: [1, 0] }}
+                  transition={{
+                    duration: 1.5,
+                    repeat: Infinity,
+                    ease: "easeIn"
+                  }}
+                  style={{
+                    position: "absolute",
+                    left: "45px",
+                    top: "65px",
+                    width: "12px",
+                    height: "20px",
+                    background: "#97c0e6ff",
+                    borderRadius: "8px 8px 50% 50%",
+                    filter: "blur(0.5px)"
+                  }}
+                />
+
+                {/* Right tear */}
+                <motion.div
+                  key="right-tear"
+                  initial={{ y: 0, opacity: 1 }}
+                  animate={{ y: [0, 80], opacity: [1, 0] }}
+                  transition={{
+                    duration: 1.5,
+                    delay: 0.5,
+                    repeat: Infinity,
+                    ease: "easeIn"
+                  }}
+                  style={{
+                    position: "absolute",
+                    right: "45px",
+                    top: "65px",
+                    width: "12px",
+                    height: "20px",
+                    background: "#76B6F0",
+                    borderRadius: "8px 8px 50% 50%",
+                    filter: "blur(0.5px)"
+                  }}
+                />
+              </>
+            )}
+
+
+            {/* Blush - Pink cheeks that fade when hover */}
+            <motion.div
+              animate={{
+                opacity: isHovered ? 0 : 0.6
+              }}
+              transition={{ duration: 0.3 }}
+              style={{
+                position: 'absolute',
+                left: '15px',
+                top: '70px',
+                width: '20px',
+                height: '12px',
+                borderRadius: '50%',
+                backgroundColor: '#ff9999',
+                filter: 'blur(4px)'
+              }}
+            />
+            <motion.div
+              animate={{
+                opacity: isHovered ? 0 : 0.6
+              }}
+              transition={{ duration: 0.3 }}
+              style={{
+                position: 'absolute',
+                right: '15px',
+                top: '70px',
+                width: '20px',
+                height: '12px',
+                borderRadius: '50%',
+                backgroundColor: '#ff9999',
+                filter: 'blur(4px)'
+              }}
+            />
+
+            {/* Sparkles when hover */}
+            <AnimatePresence>
+              {isHovered && (
+                <>
+                  <motion.div
+                    initial={{ scale: 0, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    exit={{ scale: 0, opacity: 0 }}
+                    style={{
+                      position: 'absolute',
+                      top: '20px',
+                      left: '20px',
+                      fontSize: '20px'
+                    }}
+                  >
+                    ✨
+                  </motion.div>
+                  <motion.div
+                    initial={{ scale: 0, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    exit={{ scale: 0, opacity: 0 }}
+                    transition={{ delay: 0.1 }}
+                    style={{
+                      position: 'absolute',
+                      top: '20px',
+                      right: '20px',
+                      fontSize: '20px'
+                    }}
+                  >
+                    ✨
+                  </motion.div>
+                  <motion.div
+                    initial={{ scale: 0, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    exit={{ scale: 0, opacity: 0 }}
+                    transition={{ delay: 0.2 }}
+                    style={{
+                      position: 'absolute',
+                      bottom: '20px',
+                      left: '30px',
+                      fontSize: '16px'
+                    }}
+                  >
+                    ✨
+                  </motion.div>
+                </>
+              )}
+            </AnimatePresence>
+          </motion.div>
+
+          {/* Little leaf on top */}
+          <motion.div
+            animate={{
+              rotate: [0, -10, 10, -10, 0],
+            }}
+            transition={{
+              duration: 2,
+              repeat: Infinity,
+              ease: "easeInOut"
+            }}
+            style={{
+              position: 'absolute',
+              top: '-10px',
+              left: '50%',
+              transform: 'translateX(-50%)',
+              fontSize: '32px'
+            }}
+          >
+            🌿
+          </motion.div>
+        </motion.div>
+
+        {/* Text Content with Fade In */}
+        <motion.h2
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3, duration: 0.5 }}
+          style={{
+            fontSize: '28px',
+            fontWeight: '700',
+            color: '#5a5a5a',
+            marginBottom: '12px',
+            fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
+          }}
+        >
+          No Food Saving Data Found
+        </motion.h2>
+
+        <motion.p
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.5, duration: 0.5 }}
+          style={{
+            fontSize: '18px',
+            color: '#7a7a7a',
+            marginBottom: '16px',
+            fontWeight: '500'
+          }}
+        >
+          Start to use IYO Smart Pantry to view your progress!
+        </motion.p>
+
+        {filters?.category !== 'all' && (
+          <motion.p
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.7, duration: 0.5 }}
+            style={{
+              fontSize: '14px',
+              color: '#597334ff',
+              backgroundColor: 'rgba(127, 163, 75, 0.08)',
+              padding: '8px 16px',
+              borderRadius: '20px',
+              display: 'inline-block',
+              marginTop: '8px',
+              border: '1px solid #B4D17D'
+            }}
+          >
+             Try selecting "All Categories" to see all data
+          </motion.p>
+        )}
+
+        {/* Floating particles */}
+        {[...Array(3)].map((_, i) => (
+          <motion.div
+            key={i}
+            animate={{
+              y: [-20, -40, -20],
+              x: [0, 10, 0],
+              opacity: [0.2, 0.4, 0.2]
+            }}
+            transition={{
+              duration: 3,
+              delay: i * 0.5,
+              repeat: Infinity,
+              ease: "easeInOut"
+            }}
+            style={{
+              position: 'absolute',
+              left: `${30 + i * 20}%`,
+              bottom: '20%',
+              fontSize: '20px',
+              pointerEvents: 'none'
+            }}
+          >
+            ✨
+          </motion.div>
+        ))}
+      </motion.div>
+    </div>
+  );
+};
+
+// Main FoodAnalytics Component
 const FoodAnalytics = () => {
   const [filters, setFilters] = useState({ 
     category: 'all',
@@ -208,405 +626,25 @@ const FoodAnalytics = () => {
 
   // Empty State
   if (!analyticsData?.hasData) {
-    
-    const CuteEmptyState = ({ filters }) => {
-      const [isHovered, setIsHovered] = useState(false);
-      const [isShaking, setIsShaking] = useState(false);
-
-      const handleClick = () => {
-        setIsShaking(true);
-        setTimeout(() => setIsShaking(false), 500);
-      };
-
-      // Falling leaves animation
-      const leaves = Array.from({ length: 5 }, (_, i) => ({
-        id: i,
-        delay: i * 1.5,
-        x: Math.random() * 100 - 50,
-      }));
-
-      return (
-        <div style={{
-          position: 'relative',
-          minHeight: '500px',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          overflow: 'hidden',
-          padding: '40px',
-          background: 'linear-gradient(135deg, #fafafa 0%, #f0f9f0 100%)',
-          borderRadius: '24px'
-        }}>
-          {/* Falling Leaves */}
-          <AnimatePresence>
-            {leaves.map((leaf) => (
-              <motion.div
-                key={leaf.id}
-                initial={{ 
-                  y: -100, 
-                  x: leaf.x, 
-                  opacity: 0,
-                  rotate: 0 
-                }}
-                animate={{ 
-                  y: 600,
-                  x: leaf.x + Math.sin(leaf.delay) * 30,
-                  opacity: [0, 0.5, 0.5, 0],
-                  rotate: [0, 360, 720]
-                }}
-                transition={{
-                  duration: 4,
-                  delay: leaf.delay,
-                  repeat: Infinity,
-                  ease: "linear"
-                }}
-                style={{
-                  position: 'absolute',
-                  top: 0,
-                  left: '50%',
-                  fontSize: '24px',
-                  pointerEvents: 'none',
-                  zIndex: 1
-                }}
-              >
-                🍃
-              </motion.div>
-            ))}
-          </AnimatePresence>
-
-          {/* Main Content */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
-            style={{
-              textAlign: 'center',
-              position: 'relative',
-              zIndex: 2
-            }}
-          >
-            {/* Cute Face with Color Change */}
-            <motion.div
-              onMouseEnter={() => setIsHovered(true)}
-              onMouseLeave={() => setIsHovered(false)}
-              onClick={handleClick}
-              animate={isShaking ? {
-                rotate: [0, -10, 10, -10, 10, 0],
-                transition: { duration: 0.5 }
-              } : {}}
-              whileHover={{ scale: 1.1 }}
-              whileTap={{ scale: 0.95 }}
-              style={{
-                cursor: 'pointer',
-                display: 'inline-block',
-                position: 'relative',
-                marginBottom: '30px'
-              }}
-            >
-              {/* Face Circle - Pink to Green */}
-              <motion.div
-                animate={{
-                  background: isHovered 
-                    ? 'linear-gradient(135deg, #a8d5a8 0%, #7FA34B 100%)'
-                    : 'linear-gradient(135deg, #ffcccc 0%, #ffb3b3 100%)'
-                }}
-                transition={{ duration: 0.5 }}
-                style={{
-                  width: '160px',
-                  height: '160px',
-                  borderRadius: '50%',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  position: 'relative',
-                  boxShadow: isHovered 
-                    ? '0 10px 40px rgba(127, 163, 75, 0.3)'
-                    : '0 10px 40px rgba(255, 179, 179, 0.3)',
-                }}
-              >
-                {/* Eyes */}
-                <div style={{
-                  display: 'flex',
-                  gap: '30px',
-                  marginBottom: '10px'
-                }}>
-                  <motion.div
-                    animate={{
-                      backgroundColor: isHovered ? '#4a7c3f' : '#cc6666',
-                      scaleY: isHovered ? [1, 0.3, 1] : 1
-                    }}
-                    transition={{ duration: 0.3 }}
-                    style={{
-                      width: '16px',
-                      height: '16px',
-                      borderRadius: '50%',
-                    }}
-                  />
-                  <motion.div
-                    animate={{
-                      backgroundColor: isHovered ? '#4a7c3f' : '#cc6666',
-                      scaleY: isHovered ? [1, 0.3, 1] : 1
-                    }}
-                    transition={{ duration: 0.3 }}
-                    style={{
-                      width: '16px',
-                      height: '16px',
-                      borderRadius: '50%',
-                    }}
-                  />
-                </div>
-
-                {/* Mouth - Smile from start */}
-                <motion.div
-                  style={{
-                    position: 'absolute',
-                    bottom: '35px',
-                    left: '50%',
-                    transform: 'translateX(-50%)',
-                  }}
-                >
-                  <svg width="60" height="40" viewBox="0 0 80 40">
-                    <motion.path
-                      d="M 20 20 Q 40 5 60 20"
-                      animate={{
-                        stroke: isHovered ? '#4a7c3f' : '#cc6666'
-                      }}
-                      transition={{ duration: 0.3 }}
-                      strokeWidth="4"
-                      fill="none"
-                      strokeLinecap="round"
-                    />
-                  </svg>
-                </motion.div>
-
-                {/* Blush - Pink cheeks that fade when hover */}
-                <motion.div
-                  animate={{
-                    opacity: isHovered ? 0 : 0.6
-                  }}
-                  transition={{ duration: 0.3 }}
-                  style={{
-                    position: 'absolute',
-                    left: '15px',
-                    top: '70px',
-                    width: '20px',
-                    height: '12px',
-                    borderRadius: '50%',
-                    backgroundColor: '#ff9999',
-                    filter: 'blur(4px)'
-                  }}
-                />
-                <motion.div
-                  animate={{
-                    opacity: isHovered ? 0 : 0.6
-                  }}
-                  transition={{ duration: 0.3 }}
-                  style={{
-                    position: 'absolute',
-                    right: '15px',
-                    top: '70px',
-                    width: '20px',
-                    height: '12px',
-                    borderRadius: '50%',
-                    backgroundColor: '#ff9999',
-                    filter: 'blur(4px)'
-                  }}
-                />
-
-                {/* Sparkles when hover */}
-                <AnimatePresence>
-                  {isHovered && (
-                    <>
-                      <motion.div
-                        initial={{ scale: 0, opacity: 0 }}
-                        animate={{ scale: 1, opacity: 1 }}
-                        exit={{ scale: 0, opacity: 0 }}
-                        style={{
-                          position: 'absolute',
-                          top: '20px',
-                          left: '20px',
-                          fontSize: '20px'
-                        }}
-                      >
-                        ✨
-                      </motion.div>
-                      <motion.div
-                        initial={{ scale: 0, opacity: 0 }}
-                        animate={{ scale: 1, opacity: 1 }}
-                        exit={{ scale: 0, opacity: 0 }}
-                        transition={{ delay: 0.1 }}
-                        style={{
-                          position: 'absolute',
-                          top: '20px',
-                          right: '20px',
-                          fontSize: '20px'
-                        }}
-                      >
-                        ✨
-                      </motion.div>
-                      <motion.div
-                        initial={{ scale: 0, opacity: 0 }}
-                        animate={{ scale: 1, opacity: 1 }}
-                        exit={{ scale: 0, opacity: 0 }}
-                        transition={{ delay: 0.2 }}
-                        style={{
-                          position: 'absolute',
-                          bottom: '20px',
-                          left: '30px',
-                          fontSize: '16px'
-                        }}
-                      >
-                        ✨
-                      </motion.div>
-                    </>
-                  )}
-                </AnimatePresence>
-              </motion.div>
-
-              {/* Little leaf on top */}
-              <motion.div
-                animate={{
-                  rotate: [0, -10, 10, -10, 0],
-                }}
-                transition={{
-                  duration: 2,
-                  repeat: Infinity,
-                  ease: "easeInOut"
-                }}
-                style={{
-                  position: 'absolute',
-                  top: '-10px',
-                  left: '50%',
-                  transform: 'translateX(-50%)',
-                  fontSize: '32px'
-                }}
-              >
-                🌿
-              </motion.div>
-            </motion.div>
-
-            {/* Text Content with Fade In */}
-            <motion.h2
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.3, duration: 0.5 }}
-              style={{
-                fontSize: '28px',
-                fontWeight: '700',
-                color: '#5a5a5a',
-                marginBottom: '12px',
-                fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
-              }}
-            >
-              No Food Saving Data Found
-            </motion.h2>
-
-            <motion.p
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.5, duration: 0.5 }}
-              style={{
-                fontSize: '18px',
-                color: '#7a7a7a',
-                marginBottom: '16px',
-                fontWeight: '500'
-              }}
-            >
-              Start to use IYO Smart Pantry to view your progress!
-            </motion.p>
-
-            {filters?.category !== 'all' && (
-              <motion.p
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.7, duration: 0.5 }}
-                style={{
-                  fontSize: '14px',
-                  color: '#7FA34B',
-                  backgroundColor: 'rgba(127, 163, 75, 0.08)',
-                  padding: '8px 16px',
-                  borderRadius: '20px',
-                  display: 'inline-block',
-                  marginTop: '8px',
-                  border: '1px solid rgba(127, 163, 75, 0.15)'
-                }}
-              >
-                💡 Try selecting "All Categories" to see all data
-              </motion.p>
-            )}
-
-            {/* Bouncing Arrow */}
-            <motion.div
-              animate={{
-                y: [0, 10, 0],
-              }}
-              transition={{
-                duration: 1.5,
-                repeat: Infinity,
-                ease: "easeInOut"
-              }}
-              style={{
-                marginTop: '30px',
-                fontSize: '32px',
-                opacity: 0.4
-              }}
-            >
-              ⬇️
-            </motion.div>
-
-            {/* Floating particles */}
-            {[...Array(3)].map((_, i) => (
-              <motion.div
-                key={i}
-                animate={{
-                  y: [-20, -40, -20],
-                  x: [0, 10, 0],
-                  opacity: [0.2, 0.4, 0.2]
-                }}
-                transition={{
-                  duration: 3,
-                  delay: i * 0.5,
-                  repeat: Infinity,
-                  ease: "easeInOut"
-                }}
-                style={{
-                  position: 'absolute',
-                  left: `${30 + i * 20}%`,
-                  bottom: '20%',
-                  fontSize: '20px',
-                  pointerEvents: 'none'
-                }}
-              >
-                ✨
-              </motion.div>
-            ))}
-          </motion.div>
-
-          {/* Background decoration */}
-          <motion.div
-            animate={{
-              scale: [1, 1.1, 1],
-              opacity: [0.05, 0.1, 0.05]
-            }}
-            transition={{
-              duration: 4,
-              repeat: Infinity,
-              ease: "easeInOut"
-            }}
-            style={{
-              position: 'absolute',
-              width: '400px',
-              height: '400px',
-              borderRadius: '50%',
-              background: 'radial-gradient(circle, rgba(127, 163, 75, 0.15) 0%, transparent 70%)',
-              pointerEvents: 'none',
-              zIndex: 0
-            }}
-          />
-        </div>
-      );
-    };
-
+    return (
+      <div className="analytics-container">
+        <motion.div 
+          className="page-header"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+        >
+          <h1>Track My Impact</h1>
+        </motion.div>
+        
+        <FoodAnalyticsFilter 
+          onFilterChange={handleFilterChange} 
+          hasData={false}
+          currentFilters={filters}
+        />
+        
+        <CuteEmptyState filters={filters} />
+      </div>
+    );
   }
 
   const { 
