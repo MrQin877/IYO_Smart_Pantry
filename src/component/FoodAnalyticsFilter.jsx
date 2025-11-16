@@ -6,7 +6,7 @@ import { Filter, Calendar } from 'lucide-react';
 const FoodAnalyticsFilter = ({ onFilterChange, hasData, currentFilters }) => {
   // ✅ Sync with parent state
   const [category, setCategory] = useState(currentFilters?.category || 'all');
-  const [timeRange, setTimeRange] = useState(currentFilters?.timeRange || 'last6months');
+  const [timeRange, setTimeRange] = useState(currentFilters?.timeRange || 'alltime');
   const [customStartDate, setCustomStartDate] = useState(currentFilters?.customStartDate || '');
   const [customEndDate, setCustomEndDate] = useState(currentFilters?.customEndDate || '');
   const [showCustomDates, setShowCustomDates] = useState(false);
@@ -84,13 +84,13 @@ const FoodAnalyticsFilter = ({ onFilterChange, hasData, currentFilters }) => {
 
   const handleReset = () => {
     setCategory('all');
-    setTimeRange('last6months');
+    setTimeRange('alltime');
     setCustomStartDate('');
     setCustomEndDate('');
     setShowCustomDates(false);
     onFilterChange({ 
       category: 'all', 
-      timeRange: 'last6months',
+      timeRange: 'alltime',
       customStartDate: null,
       customEndDate: null
     });
@@ -130,11 +130,13 @@ const FoodAnalyticsFilter = ({ onFilterChange, hasData, currentFilters }) => {
             onChange={handleTimeRangeChange}
             className="filter-select"
           >
+            <option value="alltime">All Time</option>
             <option value="thisweek">This Week</option>
             <option value="lastweek">Last Week</option>
             <option value="thismonth">This Month</option>
             <option value="lastmonth">Last Month</option>
             <option value="last6months">Last 6 Months</option>
+            <option value="thisyear">This Year</option>
             <option value="custom">Custom Range</option>
           </select>
         </div>

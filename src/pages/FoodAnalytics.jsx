@@ -447,7 +447,7 @@ const CuteEmptyState = ({ filters }) => {
 const FoodAnalytics = () => {
   const [filters, setFilters] = useState({ 
     category: 'all',
-    timeRange: 'last6months',
+    timeRange: 'alltime',
     customStartDate: null,
     customEndDate: null
   });
@@ -473,11 +473,13 @@ const FoodAnalytics = () => {
   // ✅ Helper function to format date range for display
   const getDateRangeLabel = () => {
     const labels = {
+      'alltime': 'All Time',
       'thisweek': 'This Week',
       'lastweek': 'Last Week',
       'thismonth': 'This Month',
       'lastmonth': 'Last Month',
       'last6months': 'Past 6 Months',
+      'thisyear': 'This Year',
       'custom': filters.customStartDate && filters.customEndDate 
         ? `${new Date(filters.customStartDate).toLocaleDateString('en-GB')} - ${new Date(filters.customEndDate).toLocaleDateString('en-GB')}`
         : 'Custom Range'

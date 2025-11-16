@@ -46,24 +46,74 @@ try {
         switch ($timeRange) {
             case 'thisweek':
                 $startDate = (clone $today)->modify('monday this week')->format('Y-m-d');
-                $endDate = (clone $today)->format('Y-m-d'); // Up to today
+                $endDate = (clone $today)->format('Y-m-d');
                 break;
+                
             case 'lastweek':
                 $startDate = (clone $today)->modify('monday last week')->format('Y-m-d');
                 $endDate = (clone $today)->modify('sunday last week')->format('Y-m-d');
                 break;
+                
             case 'thismonth':
                 $startDate = (clone $today)->modify('first day of this month')->format('Y-m-d');
-                $endDate = (clone $today)->format('Y-m-d'); // Up to today
+                $endDate = (clone $today)->format('Y-m-d');
                 break;
+                
             case 'lastmonth':
                 $startDate = (clone $today)->modify('first day of last month')->format('Y-m-d');
                 $endDate = (clone $today)->modify('last day of last month')->format('Y-m-d');
                 break;
+                
+            case 'thisyear':
+                $startDate = (clone $today)->modify('first day of January this year')->format('Y-m-d');
+                $endDate = (clone $today)->format('Y-m-d');
+                break;
+                
             case 'last6months':
                 $startDate = (clone $today)->modify('-6 months')->format('Y-m-d');
                 $endDate = $today->format('Y-m-d');
                 break;
+                
+            case 'alltime':
+                // Get the earliest date from notifications or foods table
+                global $pdo, $userID;
+                
+                // Find earliest notification date
+                $stmtEarliest = $pdo->prepare("
+                    SELECT MIN(created_at) as earliest
+                    FROM notifications
+                    WHERE userID = :userID
+                ");
+                $stmtEarliest->execute(['userID' => $userID]);
+                $earliestNotif = $stmtEarliest->fetch(PDO::FETCH_ASSOC);
+                
+                // Find earliest food expiry date
+                $stmtEarliestFood = $pdo->prepare("
+                    SELECT MIN(expiryDate) as earliest
+                    FROM foods
+                    WHERE userID = :userID
+                ");
+                $stmtEarliestFood->execute(['userID' => $userID]);
+                $earliestFood = $stmtEarliestFood->fetch(PDO::FETCH_ASSOC);
+                
+                // Use the earliest date found, or default to 1 year ago
+                $notifDate = $earliestNotif['earliest'] ? new DateTime($earliestNotif['earliest']) : null;
+                $foodDate = $earliestFood['earliest'] ? new DateTime($earliestFood['earliest']) : null;
+                
+                if ($notifDate && $foodDate) {
+                    $startDate = ($notifDate < $foodDate ? $notifDate : $foodDate)->format('Y-m-d');
+                } else if ($notifDate) {
+                    $startDate = $notifDate->format('Y-m-d');
+                } else if ($foodDate) {
+                    $startDate = $foodDate->format('Y-m-d');
+                } else {
+                    // Default to 1 year ago if no data
+                    $startDate = (clone $today)->modify('-1 year')->format('Y-m-d');
+                }
+                
+                $endDate = $today->format('Y-m-d');
+                break;
+                
             case 'custom':
                 if ($customStartDate && $customEndDate) {
                     $startDate = $customStartDate;
@@ -73,6 +123,7 @@ try {
                     $endDate = $today->format('Y-m-d');
                 }
                 break;
+                
             default:
                 $startDate = (clone $today)->modify('-6 months')->format('Y-m-d');
                 $endDate = $today->format('Y-m-d');
@@ -105,6 +156,10 @@ try {
         $labels = [];
         $start = new DateTime($startDate);
         $end = new DateTime($endDate);
+        
+        // Calculate the difference in days
+        $interval = $start->diff($end);
+        $totalDays = $interval->days;
 
         switch ($timeRange) {
             case 'thisweek':
@@ -138,21 +193,37 @@ try {
                 }
                 break;
 
+            case 'thisyear':
             case 'last6months':
+            case 'alltime':
             case 'custom':
             default:
-                // Generate months
-                $current = clone $start;
-                $current->modify('first day of this month');
-                
-                while ($current <= $end) {
-                    $labels[] = [
-                        'label' => $current->format('M Y'),
-                        'month' => $current->format('Y-m'),
-                        'saved' => 0,
-                        'wasted' => 0
-                    ];
-                    $current->modify('first day of next month');
+                // Determine grouping based on total time span
+                if ($totalDays <= 60) {
+                    // Less than 2 months: show daily
+                    while ($start <= $end) {
+                        $labels[] = [
+                            'label' => $start->format('d M'),
+                            'date' => $start->format('Y-m-d'),
+                            'saved' => 0,
+                            'wasted' => 0
+                        ];
+                        $start->modify('+1 day');
+                    }
+                } else {
+                    // More than 2 months: show monthly
+                    $current = clone $start;
+                    $current->modify('first day of this month');
+                    
+                    while ($current <= $end) {
+                        $labels[] = [
+                            'label' => $current->format('M Y'),
+                            'month' => $current->format('Y-m'),
+                            'saved' => 0,
+                            'wasted' => 0
+                        ];
+                        $current->modify('first day of next month');
+                    }
                 }
                 break;
         }
