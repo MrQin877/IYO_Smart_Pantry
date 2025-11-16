@@ -7,6 +7,7 @@ import FoodFormModal from "../component/FoodFormModal.jsx"; // <-- new
 import FoodDetailModal from "../component/FoodDetailModal.jsx";
 import FilterModal from "../component/FilterModal.jsx";
 import FoodDeleteConfirm from "../component/FoodDeleteConfirm.jsx";
+import { useLocation, useNavigate } from "react-router-dom";
 
 
 
@@ -31,15 +32,48 @@ export default function MyFood() {
 
   const pageSize = 5;
 
+  const location = useLocation();
+  const navigate = useNavigate();
+
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(false);
   const [allFoods, setAllFoods] = useState([]);
   const [refreshKey, setRefreshKey] = useState(0);
   const [foods, setFoods] = useState([]);
 
+  // Open "Convert to Donation" when coming from notification
+  useEffect(() => {
+    const state = location.state;
+    if (!state?.openDonationFor) return;
+
+    const f = state.openDonationFor;
+
+    // optional: wait until foods loaded (if you rely on allFoods data)
+    const found = allFoods.find(r => r.foodID === f.foodID) || {};
+
+    setDonateItem({
+      id: found.id ?? null,
+      foodID: f.foodID,
+      name: f.name ?? found.name,
+      qty: found.qty ?? f.quantity ?? 0,
+      unit: found.unit ?? f.unit,
+      unitID: f.unitID ?? found.unitID,
+      expiry: found.expiry ?? f.expiryISO,
+      categoryID: f.categoryID ?? found.categoryID,
+      storage: found.storage ?? f.storageLocation,
+    });
+    setDonateOpen(true);
+
+    // ✅ Properly clear location.state so it doesn't fire again
+    navigate(location.pathname, {
+      replace: true,
+      state: { ...state, openDonationFor: undefined },
+    });
+  }, [location, allFoods, navigate]);
 
 
   // ...inside your useEffect for fetching foods
+  
   useEffect(() => {
     (async () => {
       setLoading(true);

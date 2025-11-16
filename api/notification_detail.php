@@ -46,18 +46,20 @@ switch ($cat) {
   case 'Expiry':
   case 'Inventory': {
     if ($tTp === 'Food' && $tID) {
-      // foods + units + storages
       $stmt = $pdo->prepare("
-        SELECT f.foodName, f.quantity, f.unitID, f.expiryDate, f.storageID, f.categoryID,
-               u.unitName, s.storageName
+        SELECT f.foodID, f.foodName, f.quantity, f.unitID, f.expiryDate, f.storageID, f.categoryID,
+              u.unitName, s.storageName
         FROM foods f
         LEFT JOIN units u    ON u.unitID    = f.unitID
         LEFT JOIN storages s ON s.storageID = f.storageID
         WHERE f.foodID = :fid AND f.userID = :uid
-        LIMIT 1");
+        LIMIT 1
+      ");
       $stmt->execute([':fid'=>$tID, ':uid'=>$userID]);
+
       if ($F = $stmt->fetch()) {
         $out['item'] = [
+          'foodID'          => $F['foodID'],   // 🔥 keep as string, no (int)
           'name'            => $F['foodName'],
           'quantity'        => (float)$F['quantity'],
           'unit'            => $F['unitName'],
@@ -70,6 +72,7 @@ switch ($cat) {
     }
     break;
   }
+
 
   case 'MealPlan': {
     // Your meal plan data lives in:
