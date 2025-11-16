@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams, useLocation } from "react-router-dom";
 import {
-  ArrowLeft, CalendarClock, MapPin, Clock, Package, HandHeart, Settings2, ShieldCheck, Refrigerator
+  ArrowLeft, CalendarClock, MapPin, Clock, Package, HandHeart, Settings2, ShieldCheck, Refrigerator, UtensilsCrossed
 } from "lucide-react";
 import "./Notification.css";
 import { apiPost } from "../lib/api";
@@ -48,18 +48,32 @@ export default function NotificationDetail() {
   const back = () => navigate(-1);
 
   const planForMeal = async () => {
-    if (!detail?.item) return;
+    if (!detail) return;
+
+    // 👉 Case 1: MealPlan notification – just open the planner
+    if (detail.category === "MealPlan") {
+      navigate("/meal-planner", {
+        state: {
+          from: "notification-mealplan",
+          notificationId: id,
+          mealPlanDate: detail.mealPlan?.dateISO || null,
+        },
+      });
+      return;
+    }
+
+    // 👉 Case 2: Expiry notification – mark food as planned, then go planner
+    if (!detail.item) return;
 
     const { foodID } = detail.item;
     console.log("[planForMeal] detail.item =", detail.item);
 
-    // ✅ only check for empty / missing
     if (!foodID || String(foodID).trim() === "") {
       console.warn("[planForMeal] No foodID, skipping is_plan update");
     } else {
       try {
         const res = await apiPost("/food_mark_planned.php", {
-          foodID,       // 🔥 send as string ("F86" etc)
+          foodID,
           is_plan: 1,
         });
         console.log("[planForMeal] API result:", res);
@@ -68,7 +82,6 @@ export default function NotificationDetail() {
       }
     }
 
-    // then navigate to meal planner as before
     navigate("/meal-planner", {
       state: {
         from: "notification",
