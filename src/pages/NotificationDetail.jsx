@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams, useLocation } from "react-router-dom";
 import {
-  ArrowLeft, CalendarClock, MapPin, Clock, Package, HandHeart, Settings2, ShieldCheck
+  ArrowLeft, CalendarClock, MapPin, Clock, Package, HandHeart, Settings2, ShieldCheck, Refrigerator, UtensilsCrossed
 } from "lucide-react";
 import "./Notification.css";
+import { apiPost } from "../lib/api";
 import { getNotificationById } from "./demoNotifications.js";
 
 /**
@@ -46,9 +47,42 @@ export default function NotificationDetail() {
 
   const back = () => navigate(-1);
 
-  const planForMeal = () => {
-    if (!detail?.item) return;
-    navigate("/plan", {
+  const planForMeal = async () => {
+    if (!detail) return;
+
+    // 👉 Case 1: MealPlan notification – just open the planner
+    if (detail.category === "MealPlan") {
+      navigate("/meal-planner", {
+        state: {
+          from: "notification-mealplan",
+          notificationId: id,
+          mealPlanDate: detail.mealPlan?.dateISO || null,
+        },
+      });
+      return;
+    }
+
+    // 👉 Case 2: Expiry notification – mark food as planned, then go planner
+    if (!detail.item) return;
+
+    const { foodID } = detail.item;
+    console.log("[planForMeal] detail.item =", detail.item);
+
+    if (!foodID || String(foodID).trim() === "") {
+      console.warn("[planForMeal] No foodID, skipping is_plan update");
+    } else {
+      try {
+        const res = await apiPost("/food_mark_planned.php", {
+          foodID,
+          is_plan: 1,
+        });
+        console.log("[planForMeal] API result:", res);
+      } catch (err) {
+        console.error("Failed to mark food as planned", err);
+      }
+    }
+
+    navigate("/meal-planner", {
       state: {
         from: "notification",
         notificationId: id,
@@ -65,13 +99,15 @@ export default function NotificationDetail() {
     });
   };
 
-  const donate = () => {
+
+  const goDonate = () => {
     if (!detail?.item) return;
-    navigate("/food/donation", {
+
+    navigate("/food", {
       state: {
         from: "notification",
-        notificationId: id,
-        item: {
+        openDonationFor: {
+          foodID: detail.item.foodID,
           name: detail.item.name,
           quantity: Number(detail.item.quantity || 0),
           unit: detail.item.unit,
@@ -83,6 +119,7 @@ export default function NotificationDetail() {
       },
     });
   };
+
 
   if (!detail) {
     return (
@@ -122,7 +159,13 @@ export default function NotificationDetail() {
         </p>
 
         {/* Category-specific sections */}
-        {category === "Expiry" && <ExpirySection detail={detail} onPlan={planForMeal} onDonate={donate} />}
+        {category === "Expiry" && (
+          <ExpirySection
+            detail={detail}
+            onPlan={planForMeal}
+            onDonate={goDonate}
+          />
+        )}
         {category === "Inventory" && <InventorySection detail={detail} />}
         {category === "MealPlan" && <MealPlanSection detail={detail} onGoPlan={planForMeal} />}
         {category === "Donation" && <DonationSection detail={detail} />}
@@ -148,8 +191,27 @@ function ExpirySection({ detail, onPlan, onDonate }) {
       ]} />
       <p className="nd-note">Use it or donate before expired!</p>
       <div className="nd-cta">
-        <button className="nd-btn" onClick={onPlan}><Package size={16}/> Plan for Meal</button>
-        <button className="nd-btn" onClick={onDonate}><HandHeart size={16}/> Donate</button>
+        <button
+          type="button"
+          className="nd-btn"
+          onClick={() => {
+            console.log("🟢 Plan button clicked, detail.item =", detail.item);
+            onPlan();
+          }}
+        >
+          <Package size={16}/> Plan for Meal
+        </button>
+
+        <button
+          type="button"
+          className="nd-btn"
+          onClick={() => {
+            console.log("🟡 Donate button clicked, detail.item =", detail.item);
+            onDonate();
+          }}
+        >
+          <HandHeart size={16}/> Donate
+        </button>
       </div>
     </>
   );
@@ -274,7 +336,7 @@ function formatDateTime(ts) {
 
 function pickDetailIcon(category){
   switch (category) {
-    case "Inventory": return <CalendarClock size={22}/>;
+    case "Inventory": return <Refrigerator size={22}/>
     case "Expiry":    return <CalendarClock size={22}/>;
     case "MealPlan":  return <UtensilsCrossed size={22}/>;
     case "Donation":  return <HandHeart size={22}/>;

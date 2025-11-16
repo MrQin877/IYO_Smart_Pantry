@@ -13,8 +13,8 @@ if ($_SERVER["REQUEST_METHOD"] === "OPTIONS") {
 
 require_once __DIR__ . '/../config.php';
 
-$data = json_input();
-$recipeID = $data["recipeID"] ?? "";
+ $data = json_input();
+ $recipeID = $data["recipeID"] ?? "";
 
 if (!$recipeID) {
     respond(["ok" => false, "error" => "Missing recipeID"], 400);
@@ -34,18 +34,20 @@ try {
         respond(["ok" => false, "error" => "Recipe not found"], 404);
     }
 
-    // ✅ Fetch ingredients
+    // ✅ Fetch ingredients with all needed fields
     $stmt2 = $pdo->prepare("
         SELECT 
+            ri.ingredientID,
             i.ingredientName,
-            CONCAT(ri.quantityNeeded, ' ', u.unitName) AS ingredientQty
+            ri.quantityNeeded,
+            u.unitName
         FROM recipe_ingredients ri
         JOIN ingredients i ON ri.ingredientID = i.ingredientID
         JOIN units u ON ri.unitID = u.unitID
         WHERE ri.recipeID = ?
     ");
     $stmt2->execute([$recipeID]);
-    $ingredients = $stmt2->fetchAll();
+    $ingredients = $stmt2->fetchAll(PDO::FETCH_ASSOC);
 
     $recipe["ingredients"] = $ingredients;
 

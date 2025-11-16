@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { apiGet, apiPost } from "../lib/api";
+import { UnreadBus } from "../utils/unreadBus";
 
 // ---- Module-level caches (persist while page lives) ----
 let CATS_CACHE = null;      // [{ id, name }]
@@ -229,6 +230,8 @@ export default function FoodFormModal({
           categoryID: f.categoryID,
           unitID: f.unitID,
         });
+        UnreadBus.inc(1);          // instant bump
+        window.refreshUnread?.();  // reconcile exact count
         onClose?.();
       } else {
         const foodID = initialSnapRef.current.foodID || initialSnapRef.current.id;

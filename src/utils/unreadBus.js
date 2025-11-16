@@ -1,13 +1,12 @@
-// simple global pub/sub using the window
+// utils/unreadBus.js
 export const UnreadBus = {
-  get() {
-    return Number(localStorage.getItem('unread_hint') || 0);
+  _v: 0,
+  get(){ return this._v; },
+  set(n){
+    this._v = Number(n || 0);
+    window.dispatchEvent(new CustomEvent('unread:set', { detail: { value: this._v }}));
   },
-  set(n) {
-    const v = Math.max(0, Number(n || 0));
-    localStorage.setItem('unread_hint', String(v));
-    window.dispatchEvent(new CustomEvent('unread:set', { detail: { value: v }}));
-  },
-  dec() { this.set(this.get() - 1); },
-  clear() { this.set(0); },
+  inc(k=1){ this.set(this._v + Number(k)); },
+  dec(k=1){ this.set(Math.max(0, this._v - Number(k))); },
+  clear(){ this.set(0); }
 };
