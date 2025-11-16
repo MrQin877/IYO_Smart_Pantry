@@ -220,7 +220,7 @@ export default function Notification() {
                 <div className="noti-row-bottom">
                   <span className="noti-stamp">
                     <CalendarClock size={14} />{" "}
-                    {new Date(n.createdAt + "Z").toLocaleString()}
+                    {formatDateTime(n.createdAt)}
                   </span>
                 </div>
               </div>
@@ -355,4 +355,27 @@ function timeAgo(ts) {
   if (h < 24) return `${h}h ago`;
   const d = Math.floor(h / 24);
   return d === 1 ? "1 day ago" : `${d} days ago`;
+}
+
+function formatDateTime(value) {
+  if (!value) return "—";
+
+  let d;
+
+  if (typeof value === "number") {
+    d = new Date(value);
+  } else if (typeof value === "string") {
+    const s = value.trim();
+
+    // handle: 2025-11-18 13:45:12  (MySQL DATETIME)
+    if (/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(s)) {
+      d = new Date(s.replace(" ", "T"));
+    } else {
+      // ISO like 2025-11-18T13:45:12+08:00
+      d = new Date(s);
+    }
+  }
+
+  if (!d || isNaN(d.getTime())) return "—";
+  return d.toLocaleString();
 }
