@@ -37,29 +37,48 @@ export default function CustomMealPlan() {
 // In CustomMealPlan.jsx
 
   const handleSave = async () => {
-      if (!mealName.trim()) return alert("Meal name is required!");
+    // Clear previous message
+    setMessage("");
 
-      try {
-        const response = await apiPost("/save_custom_meal.php", {
-          mealName,
-          notes,
-          servings,
-          ingredients,
-          userID: "U2",
-        });
+    // Client-side validation
+    if (!mealName.trim()) {
+      const msg = "Meal name is required.";
+      alert(msg);
+      return;
+    }
 
-        // Check if the backend itself reported an error
-        if (response.success === false) {
-          throw new Error(response.message || "Unknown server error");
-        }
+    if (!ingredients || ingredients.length === 0) {
+      const msg = "Please add at least one ingredient to save the meal.";
+      alert(msg);
+      return;
+    }
 
-        alert("Custom meal saved successfully!");
-        navigate(-1);
-      } catch (err) {
-        console.error("Error saving meal:", err);
-        // This will now show the specific message from your PHP script
-        alert("Failed to save custom meal: " + err.message); 
+    try {
+      setLoading(true);
+
+      const response = await apiPost("/save_custom_meal.php", {
+        mealName,
+        notes,
+        servings,
+        ingredients,
+        userID: "",
+      });
+
+      // Check if the backend itself reported an error
+      if (response.success === false) {
+        throw new Error(response.message || "Unknown server error");
       }
+
+      alert("Custom meal saved successfully!");
+      navigate(-1);
+    } catch (err) {
+      console.error("Error saving meal:", err);
+      const errMsg = err.message || 'Failed to save custom meal';
+      setMessage(errMsg);
+      alert("Failed to save custom meal: " + errMsg);
+    } finally {
+      setLoading(false);
+    }
   };
 
 
@@ -144,7 +163,7 @@ export default function CustomMealPlan() {
           <button
             className="save-btn"
             onClick={handleSave}
-            disabled={loading || !mealName.trim()}
+            disabled={loading}
           >
             {loading ? "Saving..." : "Save Meal"}
           </button>
