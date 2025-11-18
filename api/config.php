@@ -7,6 +7,8 @@ if (session_status() === PHP_SESSION_NONE) {
   session_start();
 }
 
+date_default_timezone_set('Asia/Kuala_Lumpur');
+
 // 建议：线上关闭屏幕报错，避免污染 JSON；调试时可改为 1
 ini_set('display_errors', 0);
 ini_set('log_errors', 1);
